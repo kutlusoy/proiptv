@@ -346,6 +346,8 @@ The in-app update (GitHub API, SHA-256 check, system installer, button only) is 
 
 ## 12. Roadmap
 
+**Status:** version 0.0.1 as built contains the scope of the rows 0.0.1 to 0.0.4 (accounts, Xtream and M3U sync, live list, favorites with manual sort, zapping, EPG now and next and program list) and the parts of 0.0.8 for VOD, series, resume and catch-up. The rows for the engine (0.0.5 to 0.0.7: stream hub, time shift, recording, multiview), the further sources (0.0.9) and the remaining parts of 0.0.8 (PIN, backup) are still open. The EPG grid view is not built yet, the guide is a program list per channel. The app is a single Gradle module with packages for data, net, parse, sync and ui, the split into modules from section 5.2 follows when the engine is added.
+
 | Version | Content | Exit criterion |
 |---|---|---|
 | **0.0.1** | Skeleton: Gradle project, `version.txt`, `tools/`, CI and Release workflows, debug keystore, string scaffold in three languages, placeholder splash, empty adaptive Compose shell | CI green, `v0.0.1-rc1` published with fingerprint on the page |

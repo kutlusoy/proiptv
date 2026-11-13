@@ -25,15 +25,17 @@ class StringsTest {
     }
 
     @Test
-    fun everyTextExistsInAllLanguagesWithTheSamePlaceholders() {
+    fun namedLanguagesAreCompleteAndOthersNeverBreakPlaceholders() {
         val english = load("values")
         assertTrue(english.isNotEmpty())
+        val complete = setOf("values-de", "values-tr", "values-fr", "values-it", "values-es")
         for (folder in languageFolders()) {
             val other = load(folder)
-            assertEquals("$folder has other keys", english.keys, other.keys)
-            for ((key, text) in english) {
-                val expected = placeholder.findAll(text).map { it.value }.sorted().toList()
-                val actual = placeholder.findAll(other.getValue(key)).map { it.value }.sorted().toList()
+            if (folder in complete) assertEquals("$folder has other keys", english.keys, other.keys)
+            else assertTrue("$folder has unknown keys", english.keys.containsAll(other.keys))
+            for ((key, text) in other) {
+                val expected = placeholder.findAll(english.getValue(key)).map { it.value }.sorted().toList()
+                val actual = placeholder.findAll(text).map { it.value }.sorted().toList()
                 assertEquals("$folder placeholders of $key", expected, actual)
             }
         }

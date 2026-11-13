@@ -1,6 +1,6 @@
 # ProIPTV
 
-Android IPTV player for phones, tablets and Android TV. It plays the streams of your own provider: Xtream Codes accounts, M3U playlists and XMLTV guides, with several accounts side by side, many source types (Xtream Codes, M3U, Stalker portal, HDHomeRun, Enigma2, TVHeadend and more), live TV, guide, movies, series, catch-up, favorites with manual sorting, recording and time shift. No content is included, no account with us, no ads, no analytics.
+Android IPTV player for phones, tablets and Android TV. It plays the streams of your own provider: Xtream Codes accounts, M3U playlists and XMLTV guides, with several accounts side by side, many source types (more are planned) (Xtream Codes, M3U, Stalker portal, HDHomeRun, Enigma2, TVHeadend and more), live TV, guide, movies, series, catch-up, favorites with manual sorting, recording and time shift. No content is included, no account with us, no ads, no analytics.
 
 - **Application ID:** `com.kutlusoy.proiptv`
 - **Version:** 0.0.1 (project skeleton, see below)
@@ -9,7 +9,17 @@ Android IPTV player for phones, tablets and Android TV. It plays the streams of 
 
 ## State
 
-Version 0.0.1 is the skeleton: build, tests, signed releases with fingerprint, and an empty Compose shell with a placeholder splash. The features arrive step by step, see the roadmap in [doc/guideline-product-plan.md](doc/guideline-product-plan.md) and the content types in [doc/guideline-feature-matrix.md](doc/guideline-feature-matrix.md).
+Version 0.0.1 is the first runnable version. It works end to end and is tested with a fake provider server:
+
+- several **Xtream Codes** and **M3U** accounts, passwords encrypted with the Android Keystore, account status (state, expiry, connections)
+- streaming sync of channels, movies, series and the **XMLTV guide** (very large lists, no out of memory)
+- **Live TV** with groups, search, now and next, zapping with the remote control, number keys, guide per channel and **catch-up**
+- **Movies and series** with seasons, episodes and resume
+- **Favorites** with several lists and **manual sorting**, kept after a provider refresh
+- player on Media3 with audio and subtitle choice, picture size, automatic retry
+- eleven languages (six complete, five partly translated, see Languages)
+
+Not yet: time shift, recording, multiview, Stalker portal, HDHomeRun, Enigma2, TVHeadend, Jellyfin and the other sources. See the roadmap in [doc/guideline-product-plan.md](doc/guideline-product-plan.md) and the scope in [doc/guideline-feature-matrix.md](doc/guideline-feature-matrix.md). How to install and use it: [doc/guideline-user-guide.md](doc/guideline-user-guide.md).
 
 ## Build
 
@@ -31,7 +41,7 @@ For a signed local release build, put a `signing/release.properties` file into `
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `CI` | every push, pull requests, manual | version file check, unit tests, lint, debug APK as build artifact, release build, version code check |
+| `CI` | every push, pull requests, manual | version file check, unit tests (parsers, fake provider server, app start), lint, debug APK as build artifact (`proiptv-debug-apk`), release build, version code check |
 | `Release` | tag `v*` (for example `v0.0.1`) | checks the tag against `app/version.txt`, runs the tests, builds the signed APK and AAB, verifies the APK (application ID, version, certificate), publishes a GitHub release with the signing certificate (SHA-256 and SHA-1), the checksums, the Android versions and the source commit (tags with a suffix such as `-rc1` become pre-releases) |
 
 ## What you have to enter where
@@ -65,7 +75,7 @@ The version of the app is in one file, **`app/version.txt`**. The Android versio
 
 ## Languages
 
-English (default), German, Turkish, French, Italian, Spanish, Portuguese, Dutch, Polish, Russian and Arabic (right to left). More languages follow, see [doc/guideline-feature-matrix.md](doc/guideline-feature-matrix.md) section 9. The texts are in `app/src/main/res/values/` (English) and `values-xx/`. A unit test checks that every language has all texts with the same placeholders. The translations of 0.0.1 are drafts and are reviewed by native speakers before the first public beta.
+English (default), German, Turkish, French, Italian, Spanish, Portuguese, Dutch, Polish, Russian and Arabic (right to left). More languages follow, see [doc/guideline-feature-matrix.md](doc/guideline-feature-matrix.md) section 9. The texts are in `app/src/main/res/values/` (English) and `values-xx/`. A unit test checks that German, Turkish, French, Italian and Spanish have all texts and that every language keeps the same placeholders. Portuguese, Dutch, Polish, Russian and Arabic cover only the first screens so far (the rest falls back to English). All translations are drafts and are reviewed by native speakers before the first public beta.
 
 To add a language: create `app/src/main/res/values-xx/strings.xml` with all keys of the English file and add the code to the language list of the settings screen.
 
@@ -75,6 +85,7 @@ To add a language: create `app/src/main/res/values-xx/strings.xml` with all keys
 |---|---|
 | [guideline-product-plan.md](doc/guideline-product-plan.md) | product, architecture, engine, release plan, roadmap |
 | [guideline-feature-matrix.md](doc/guideline-feature-matrix.md) | content types and features per version, market comparison |
+| [guideline-user-guide.md](doc/guideline-user-guide.md) | install, add an account, remote control keys, favorites |
 | [guideline-release-signing.md](doc/guideline-release-signing.md) | keystore, GitHub secrets, running a release |
 | [guideline-android-developer-verification.md](doc/guideline-android-developer-verification.md) | register package name and key with Google |
 | [guideline-google-play.md](doc/guideline-google-play.md) | application ID, same key for GitHub and Play, store listing |

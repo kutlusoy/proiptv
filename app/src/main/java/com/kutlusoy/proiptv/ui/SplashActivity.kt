@@ -3,7 +3,7 @@ package com.kutlusoy.proiptv.ui
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import com.kutlusoy.proiptv.R
 
-class SplashActivity : ComponentActivity() {
+class SplashActivity : AppCompatActivity() {
     private var finished = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
