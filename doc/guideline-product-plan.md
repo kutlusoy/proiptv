@@ -29,7 +29,7 @@ Decisions taken:
 | Distribution | GitHub releases first, Google Play later with the same ID and the same key |
 | Splash | animated start screen built like in TVSig, logo will be delivered by the maintainer |
 | Size | lean: release APK under 20 MB, few dependencies, no analytics, no ads |
-| Windows | planned after the engine is stable (libVLC as player, Azure Artifact Signing for the installer), same Kotlin code base with a second build target and its own player engine, the Android APK itself cannot run on Windows, see [`guideline-windows-version.md`](./guideline-windows-version.md) |
+| Windows | planned after the engine is stable (libVLC as player, free SignPath Foundation certificate for the installer), same Kotlin code base with a second build target and its own player engine, the Android APK itself cannot run on Windows, see [`guideline-windows-version.md`](./guideline-windows-version.md) |
 
 ## 2. What TVSig gives us
 

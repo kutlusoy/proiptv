@@ -2,7 +2,7 @@
 
 - **Version:** 0.1 (draft)
 - **Date:** November 13, 2026
-- **Audience:** Maintainers who set up signing for the Windows installer
+- **Audience:** Maintainers who set up signing for the Windows installer with Azure. This is the **alternative** route, the chosen route is the free SignPath Foundation certificate: [`guideline-windows-signing-signpath.md`](./guideline-windows-signing-signpath.md)
 - **Reference implementation:** the Windows job described in [`guideline-windows-version.md`](./guideline-windows-version.md) section 4 (the job is added to `.github/workflows/release.yml` when the desktop app exists)
 - **See also:** [`guideline-release-signing.md`](./guideline-release-signing.md) for the Android key, which is a different key
 

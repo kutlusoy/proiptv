@@ -1,10 +1,10 @@
 # ProIPTV: Windows version
 
-- **Version:** 0.2 (draft)
+- **Version:** 0.3 (draft)
 - **Date:** November 13, 2026
 - **Audience:** Maintainers who decide on and build a Windows release
 - **Reference implementation:** [`guideline-product-plan.md`](./guideline-product-plan.md) sections 5, 6 and 11, `.github/workflows/release.yml`
-- **See also:** [`guideline-release-signing.md`](./guideline-release-signing.md), [`guideline-windows-signing-azure.md`](./guideline-windows-signing-azure.md)
+- **See also:** [`guideline-release-signing.md`](./guideline-release-signing.md), [`guideline-windows-signing-signpath.md`](./guideline-windows-signing-signpath.md), [`guideline-windows-signing-azure.md`](./guideline-windows-signing-azure.md)
 
 Requirement levels follow common practice: **MUST** = mandatory, **SHOULD** = strongly recommended, **MAY** = optional.
 
@@ -74,13 +74,15 @@ The release workflow gets a second job on `windows-latest`:
 | Route | Cost | Remark |
 |---|---|---|
 | No signature | free | SmartScreen warning "unknown publisher", acceptable only for tests |
-| SignPath Foundation | free for open source projects, check eligibility | signing runs in the GitHub workflow |
-| **Azure Artifact Signing (chosen)** | about 10 USD per month, needs a paid Azure subscription and a **registered organization** in a supported country (individuals only in the USA and Canada) | no hardware token, no key file. Step by step: [`guideline-windows-signing-azure.md`](./guideline-windows-signing-azure.md) |
+| **SignPath Foundation (chosen)** | free for open source projects | no key file, signing runs at SignPath and is started by the GitHub workflow. The publisher shown by Windows is "SignPath Foundation". Needs a public repository, an earlier release and a manual approval per release. Step by step: [`guideline-windows-signing-signpath.md`](./guideline-windows-signing-signpath.md) |
+| Azure Artifact Signing (alternative) | about 10 USD per month, needs a paid Azure subscription and a **registered organization** in a supported country (individuals only in the USA and Canada) | the publisher is your organization. Step by step: [`guideline-windows-signing-azure.md`](./guideline-windows-signing-azure.md) |
 | Authenticode certificate (OV or EV) | yearly fee | EV removes the warning fastest |
 
-With Azure Artifact Signing GitHub signs through a short-lived token, so no certificate file is stored. The names of the secrets and variables to enter are listed in [`guideline-windows-signing-azure.md`](./guideline-windows-signing-azure.md) section 4. The secrets `PROIPTV_WIN_CERT_*` are only needed if a certificate file from another route is used instead.
+With SignPath the signing happens at SignPath, so no certificate file is stored on GitHub. The names of the secret and the variables to enter are listed in [`guideline-windows-signing-signpath.md`](./guideline-windows-signing-signpath.md) section 6 (Azure: [`guideline-windows-signing-azure.md`](./guideline-windows-signing-azure.md) section 4). The secrets `PROIPTV_WIN_CERT_*` are only needed if a certificate file from another route is used instead.
 
-The Azure certificate changes with every signing run, so the release check compares the verified organization name of the signature, not a fixed fingerprint.
+The certificate is renewed by the signing service, so the release check compares the signer name ("SignPath Foundation") and shows the SHA-256 of the signed installer, not a fixed certificate fingerprint.
+
+**Order of events with SignPath:** the first Windows installer is published unsigned (SmartScreen warns), then the project applies to SignPath Foundation, and later releases are signed. The application needs an earlier release.
 
 The Windows signing identity MUST NOT be mixed with the Android release key.
 
@@ -122,7 +124,7 @@ The same desktop target also builds for Linux and macOS with little extra work (
 
 - [ ] Android engine finished (0.0.7)
 - [ ] libVLC version chosen, license of every bundled plugin checked, notices added
-- [ ] Azure Artifact Signing set up (see the Azure guide checklist)
+- [ ] First unsigned Windows release published, then SignPath Foundation set up (see the SignPath guide checklist)
 - [ ] Multiplatform refactor merged, Android release unchanged
 - [ ] Windows installer builds in the release workflow
 - [ ] First Windows pre-release tested on a clean Windows machine
@@ -130,9 +132,9 @@ The same desktop target also builds for Linux and macOS with little extra work (
 
 ## 9. Decisions and open questions
 
-Decided: the player library is libVLC, the signing route is Azure Artifact Signing.
+Decided: the player library is libVLC, the signing route is the free SignPath Foundation certificate (Azure only as an alternative if a registered company exists).
 
 Open:
 
-1. Is the project published under a registered organization? Azure needs one in the EU, otherwise another route is needed (see the Azure guide section 1).
+1. Does SignPath Foundation accept the project (one maintainer, application after the first unsigned release)?
 2. Should Linux and macOS be built from the same desktop target after Windows?

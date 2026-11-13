@@ -89,7 +89,9 @@ To add a language: create `app/src/main/res/values-xx/strings.xml` with all keys
 | [guideline-feature-matrix.md](doc/guideline-feature-matrix.md) | content types and features per version, market comparison |
 | [guideline-user-guide.md](doc/guideline-user-guide.md) | install, add an account, remote control keys, favorites |
 | [guideline-windows-version.md](doc/guideline-windows-version.md) | plan for a Windows version from the same code (libVLC) |
-| [guideline-windows-signing-azure.md](doc/guideline-windows-signing-azure.md) | step by step: Azure Artifact Signing for the Windows installer |
+| [guideline-windows-signing-signpath.md](doc/guideline-windows-signing-signpath.md) | step by step: free SignPath Foundation certificate for the Windows installer |
+| [guideline-windows-signing-azure.md](doc/guideline-windows-signing-azure.md) | alternative: Azure Artifact Signing (needs a registered company) |
+| [PRIVACY.md](PRIVACY.md) | privacy statement |
 | [guideline-release-signing.md](doc/guideline-release-signing.md) | keystore, GitHub secrets, running a release |
 | [guideline-android-developer-verification.md](doc/guideline-android-developer-verification.md) | register package name and key with Google |
 | [guideline-google-play.md](doc/guideline-google-play.md) | application ID, same key for GitHub and Play, store listing |
