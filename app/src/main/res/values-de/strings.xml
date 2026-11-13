@@ -149,10 +149,14 @@
     <string name="detail_watched">Gesehen</string>
     <string name="detail_season_watched">Staffel als gesehen markieren</string>
     <string name="detail_season_unwatched">Staffel als ungesehen markieren</string>
-    <string name="filter_all_countries">Alle Länder</string>
-    <string name="filter_all_years">Alle Jahre</string>
     <string name="settings_interface">Oberfläche</string>
     <string name="interface_tv">TV (groß, Fernbedienung)</string>
     <string name="interface_touch">Touch (Handy, Tablet)</string>
     <string name="settings_interface_hint">Automatisch nutzt auf Android TV und TV-Boxen die TV-Ansicht: Menü links, größere Texte und Poster, für die Fernbedienung. Ändere es nur, wenn dein Gerät falsch erkannt wird.</string>
+    <string name="player_stop">Beenden</string>
+    <string name="nav_exit">Beenden</string>
+    <string name="account_until">Aktiv bis %1$s</string>
+    <string name="player_more">Mehr</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_play">Wiedergabe</string>
 </resources>

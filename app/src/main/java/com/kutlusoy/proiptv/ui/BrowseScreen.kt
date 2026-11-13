@@ -53,6 +53,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -82,6 +83,24 @@ import com.kutlusoy.proiptv.net.XtreamEpisode
 import com.kutlusoy.proiptv.parse.TitleParser
 import kotlinx.coroutines.delay
 
+private val ItemSaver = Saver<Item?, Any>(
+    save = { item ->
+        item?.let { i ->
+            arrayListOf<Any?>(i.id, i.accountId, i.kind, i.remoteId, i.name, i.categoryRemoteId, i.logo, i.epgId, i.url, i.ext, i.archiveDays, i.catchupSource, i.rating, i.plot, i.ord, i.gen, i.country, i.year)
+        } ?: arrayListOf<Any?>()
+    },
+    restore = { raw ->
+        @Suppress("UNCHECKED_CAST")
+        val v = raw as List<Any?>
+        if (v.isEmpty()) null else Item(
+                id = v[0] as Long, accountId = v[1] as Long, kind = v[2] as Int, remoteId = v[3] as String, name = v[4] as String,
+                categoryRemoteId = v[5] as String, logo = v[6] as String?, epgId = v[7] as String?, url = v[8] as String?, ext = v[9] as String?,
+                archiveDays = v[10] as Int, catchupSource = v[11] as String?, rating = v[12] as String?, plot = v[13] as String?,
+                ord = v[14] as Int, gen = v[15] as Int, country = v[16] as String, year = v[17] as Int,
+        )
+    },
+)
+
 private val StarOn = Color(0xFFFFC107)
 private const val FAV_KEY = "__fav"
 private const val ALL_KEY = "__all"
@@ -98,12 +117,10 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val effective = selected ?: enabled.singleOrNull()?.id
     var category by rememberSaveable(kind, effective) { mutableStateOf<String?>(null) }
     var query by rememberSaveable(kind) { mutableStateOf("") }
-    var country by rememberSaveable(kind) { mutableStateOf<String?>(null) }
-    var year by rememberSaveable(kind) { mutableStateOf<Int?>(null) }
     var favMode by rememberSaveable(kind) { mutableStateOf(false) }
     var favList by rememberSaveable { mutableStateOf<Long?>(null) }
-    var series by remember { mutableStateOf<Item?>(null) }
-    var movie by remember { mutableStateOf<Item?>(null) }
+    var series by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
+    var movie by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
     var favDialog by remember { mutableStateOf<Item?>(null) }
     val toggleFavorite: (Item) -> Unit = { item ->
         val fav = Triple(item.accountId, item.kind, item.remoteId) in favKeys
@@ -191,32 +208,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             }
         }
 
-        if (!favMode) {
-            val countries by vm.countries(kind, ids).collectAsState(initial = emptyList())
-            val years by vm.years(kind, ids).collectAsState(initial = emptyList())
-            if (countries.isNotEmpty() || years.isNotEmpty()) {
-                Row(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (countries.isNotEmpty()) {
-                        DropdownField<String?>(
-                            selected = country?.let { countryLabel(it) } ?: stringResource(R.string.filter_all_countries),
-                            options = listOf<Pair<String?, String>>(null to stringResource(R.string.filter_all_countries)) + countries.map { it to countryLabel(it) },
-                            onSelect = { country = it },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    if (years.isNotEmpty() && kind != Kind.LIVE) {
-                        DropdownField<Int?>(
-                            selected = year?.toString() ?: stringResource(R.string.filter_all_years),
-                            options = listOf<Pair<Int?, String>>(null to stringResource(R.string.filter_all_years)) + years.map { it to it.toString() },
-                            onSelect = { year = it },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
-        }
-
-        val useRows = kind != Kind.LIVE && !favMode && category == null && query.isBlank() && country == null && year == null && effective != null && categories.isNotEmpty()
+        val useRows = kind != Kind.LIVE && !favMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
         if (favMode) {
             FavoritesPane(vm, kind, favList, onSelect = { favList = it }, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it })
         } else if (useRows) {
@@ -227,9 +219,9 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             }
         } else {
             val cat = if (effective != null) category else null
-            val flow = remember(kind, ids, cat, query, country, year) { vm.pager(kind, ids, cat, query, country, year) }
+            val flow = remember(kind, ids, cat, query) { vm.pager(kind, ids, cat, query) }
             val paged = flow.collectAsLazyPagingItems()
-            val source = Source.Browse(kind, ids, cat, query, country, year)
+            val source = Source.Browse(kind, ids, cat, query)
             if (paged.itemCount == 0) {
                 Text(stringResource(R.string.live_no_results), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
             }
@@ -349,10 +341,6 @@ private fun Badge(text: String) {
     )
 }
 
-private fun countryLabel(code: String): String {
-    val name = if (code.length == 2) java.util.Locale("", code).displayCountry else ""
-    return if (name.isBlank() || name == code) code else "$code  $name"
-}
 
 @Composable
 private fun CategoryRow(

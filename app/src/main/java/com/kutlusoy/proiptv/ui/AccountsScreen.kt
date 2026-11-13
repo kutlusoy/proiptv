@@ -131,11 +131,11 @@ private fun AccountCard(
         state != null -> { summary = syncText(state); summaryColor = MaterialTheme.colorScheme.primary }
         account.lastError != null -> { summary = stringResource(R.string.account_error, account.lastError); summaryColor = MaterialTheme.colorScheme.error }
         days != null && days >= 0 && date != null -> {
-            summary = typeLabel + " \u00B7 " + stringResource(R.string.account_expires, date, days)
+            summary = stringResource(R.string.account_until, date)
             summaryColor = if (days <= 7) MaterialTheme.colorScheme.error else dim
         }
-        days != null && date != null -> { summary = typeLabel + " \u00B7 " + stringResource(R.string.account_expired, date); summaryColor = MaterialTheme.colorScheme.error }
-        else -> { summary = "$typeLabel \u00B7 $countsText"; summaryColor = dim }
+        days != null && date != null -> { summary = stringResource(R.string.account_expired, date); summaryColor = MaterialTheme.colorScheme.error }
+        else -> { summary = typeLabel; summaryColor = dim }
     }
 
     Card(Modifier.fillMaxWidth()) {

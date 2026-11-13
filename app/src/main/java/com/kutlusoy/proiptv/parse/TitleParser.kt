@@ -9,7 +9,7 @@ object TitleParser {
             "ID IE IL IN IQ IR IS IT JO JP KE KR KW KZ LB LT LU LV LY MA MD ME MK MT MX MY NG NL NO NZ OM PE PH PK PL PS PT QA " +
             "RO RS RU SA SE SG SI SK SY TH TN TR TW UA US UY VE VN XK ZA EN LAT"
         ).split(' ').toSet()
-    private val PREFIX = Regex("""^[\s|\[(]*([A-Za-z]{2,3})\s*(?:[|\])]+|:|\s[-–]\s|\s*[-–_]\s)\s*""")
+    private val PREFIX = Regex("""^[\s|\[(]*([A-Za-z]{2,3})\s*(?:[-–_]?\s*[|\])]+|:|\s[-–]\s|\s*[-–_]\s)\s*""")
     private val YEAR_BRACKET = Regex("""[(\[]\s*((?:19|20)\d{2})\s*[)\]]""")
     private val YEAR_TRAIL = Regex("""(?:^|\s)[-–]?\s*((?:19|20)\d{2})\s*$""")
     private const val MAX_YEAR = 2030

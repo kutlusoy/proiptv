@@ -21,6 +21,7 @@ class TitleParserTest {
         check("UK - BBC One", "BBC One", "GB", 0)
         check("IT | Rai 1", "Rai 1", "IT", 0)
         check("USA: CNN", "CNN", "US", 0)
+        check("(DE-) Heartland", "Heartland", "DE", 0)
     }
 
     @Test

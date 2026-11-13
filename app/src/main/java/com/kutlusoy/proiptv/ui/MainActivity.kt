@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.DateRange
@@ -100,6 +103,7 @@ private fun AppRoot(vm: MainViewModel) {
     val request by vm.player.collectAsState()
     var tab by rememberSaveable { mutableStateOf(Tab.LIVE) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
+    val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
     val chromeHidden = remember { mutableStateOf(false) }
 
@@ -110,22 +114,26 @@ private fun AppRoot(vm: MainViewModel) {
 
     BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
 
+    val ctx = LocalContext.current
+    val exit: () -> Unit = { (ctx as? android.app.Activity)?.finishAffinity() }
     val tv = LocalTv.current
     val content: @Composable () -> Unit = {
-        when (tab) {
-            Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
-            Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
-            Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)
-            Tab.RECORDINGS -> RecordingsScreen(vm)
-            Tab.ACCOUNTS -> AccountsScreen(vm)
-            Tab.SETTINGS -> SettingsScreen(vm)
+        holder.SaveableStateProvider(tab.name) {
+            when (tab) {
+                Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
+                Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
+                Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)
+                Tab.RECORDINGS -> RecordingsScreen(vm)
+                Tab.ACCOUNTS -> AccountsScreen(vm)
+                Tab.SETTINGS -> SettingsScreen(vm)
+            }
         }
     }
 
     if (tv) {
         CompositionLocalProvider(LocalChromeHidden provides chromeHidden) {
             Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                if (!chromeHidden.value) TvRail(tab) { tab = it }
+                if (!chromeHidden.value) TvRail(tab, exit) { tab = it }
                 Box(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 36.dp, vertical = 24.dp)) { content() }
             }
         }
@@ -159,6 +167,15 @@ private fun AppRoot(vm: MainViewModel) {
                                 modifier = Modifier.focusHighlight(),
                             )
                         }
+                    HorizontalDivider(Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.nav_exit)) },
+                        icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) },
+                        selected = false,
+                        onClick = exit,
+                        colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
+                        modifier = Modifier.focusHighlight(),
+                    )
                     }
                 }
             },
@@ -190,7 +207,7 @@ private fun AppRoot(vm: MainViewModel) {
 }
 
 @Composable
-private fun TvRail(selected: Tab, onSelect: (Tab) -> Unit) {
+private fun TvRail(selected: Tab, exit: () -> Unit, onSelect: (Tab) -> Unit) {
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
     Column(Modifier.width(250.dp).fillMaxHeight().background(Palette.Surface).padding(horizontal = 14.dp, vertical = 24.dp)) {
@@ -213,5 +230,14 @@ private fun TvRail(selected: Tab, onSelect: (Tab) -> Unit) {
                 )
             }
         }
+        Spacer(Modifier.weight(1f))
+        NavigationDrawerItem(
+            label = { Text(stringResource(R.string.nav_exit), style = MaterialTheme.typography.bodyLarge) },
+            icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) },
+            selected = false,
+            onClick = exit,
+            colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
+            modifier = Modifier.focusHighlight(),
+        )
     }
 }

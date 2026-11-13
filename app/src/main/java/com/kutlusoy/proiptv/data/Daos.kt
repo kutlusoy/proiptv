@@ -68,12 +68,6 @@ interface ItemDao {
     )
     suspend fun at(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, offset: Int): Item?
 
-    @Query("SELECT DISTINCT country FROM items WHERE kind = :kind AND accountId IN (:ids) AND country <> '' ORDER BY country")
-    fun countries(kind: Int, ids: List<Long>): Flow<List<String>>
-
-    @Query("SELECT DISTINCT year FROM items WHERE kind = :kind AND accountId IN (:ids) AND year > 0 ORDER BY year DESC")
-    fun years(kind: Int, ids: List<Long>): Flow<List<Int>>
-
     @Query("SELECT * FROM items WHERE kind = :kind AND accountId = :accountId AND categoryRemoteId = :cat ORDER BY ord LIMIT :limit")
     suspend fun first(kind: Int, accountId: Long, cat: String, limit: Int): List<Item>
 

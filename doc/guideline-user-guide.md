@@ -85,7 +85,7 @@ The refresh only downloads again when the provider's guide has changed, and an u
 
 - **Menu:** the icon with three lines at the top left opens the menu with Live TV, Movies, Series, Recordings, Accounts and Settings (on a TV remote: move the focus to it and press OK, or swipe from the left edge on a touch screen).
 - **Live TV:** the dropdown above the list chooses the group of the provider (`Favorites` for your own lists, `All` for everything). With more than one account a second dropdown selects the account. The magnifier icon opens the search field, the cross closes it again.
-- **Countries and years:** many providers put a country code in front of the title (`DE | Das Erste`, `[TR] Show TV`) and a year behind it (`The Matrix (1999)`). The app reads both, shows them as small badges next to the clean title and offers two more dropdowns under the group list: **All countries** and **All years** (years only for movies and series). Nothing is guessed: titles without such a marker simply have no badge. The original title stays unchanged for the search.
+- **Country and year:** many providers put a country code in front of the title (`DE | Das Erste`, `(DE-) Film`) and a year behind it (`The Matrix (1999)`). The app reads both and shows them as small badges next to the clean title. Titles without such a marker simply have no badge. The original title stays unchanged for the search.
 - **Movies and Series:** with **All** selected the page shows rows per category (like a streaming service), with a category chosen or a search entered it shows a poster grid. Press a poster to open its **info page** first.
   - **Movie info page:** big picture, title, rating, year, length, genre, story, director and cast (as far as the provider delivers them). The red button plays the movie, or resumes it where you stopped, with **From the start** next to it.
   - **Series info page:** the same header, a button **Play S1 E1** (or **Continue S2 E5** after you watched something), a **season dropdown** and the list of episodes with picture, length, short story and a progress bar for what you started.
@@ -164,7 +164,7 @@ The app retries three times. If the channel still fails, it looks for the same c
 
 ## Android TV and TV boxes
 
-When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
+When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has big **Stop** and **Play/Pause** buttons in the middle (Stop ends playback and returns to the list) and a **More** button in the lower right corner for audio and subtitles, screen rotation and picture size. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
 
 ## 6. Favorites and manual order
 
