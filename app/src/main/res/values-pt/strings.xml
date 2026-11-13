@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="main_no_accounts_title">Ainda sem conta</string>
+    <string name="main_no_accounts_text">Abra Contas e adicione uma para começar.</string>
+    <string name="main_version">Versão %1$s</string>
+</resources>
