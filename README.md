@@ -1,3 +1,5 @@
+<p align="center"><img src="doc/logo.png" alt="ProIPTV" width="320"></p>
+
 # ProIPTV
 
 Android IPTV player for phones, tablets and Android TV. It plays the streams of your own provider: Xtream Codes accounts, M3U playlists and XMLTV guides, with several accounts side by side, many source types (more are planned) (Xtream Codes, M3U, Stalker portal, HDHomeRun, Enigma2, TVHeadend and more), live TV, guide, movies, series, catch-up, favorites with manual sorting, recording and time shift. No content is included, no account with us, no ads, no analytics.
