@@ -40,8 +40,7 @@ import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], qualifiers = "de-w411dp-h891dp-port-xxhdpi")
-class ScreenshotTest {
+abstract class ScreenshotBase(private val folder: String) {
     @get:Rule
     val compose = createEmptyComposeRule()
 
@@ -153,7 +152,7 @@ class ScreenshotTest {
 
     private fun shot(name: String) {
         settle()
-        val dir = File("build/screenshots").apply { mkdirs() }
+        val dir = File("build/screenshots/$folder").apply { mkdirs() }
         compose.onRoot().captureRoboImage(File(dir, "$name.png").path)
     }
 
@@ -210,3 +209,9 @@ class ScreenshotTest {
         scenario.close()
     }
 }
+
+@Config(sdk = [34], qualifiers = "de-w411dp-h891dp-port-xxhdpi")
+class ScreenshotTest : ScreenshotBase("phone")
+
+@Config(sdk = [34], qualifiers = "de-w960dp-h540dp-land-television-xhdpi")
+class ScreenshotTvTest : ScreenshotBase("tv")

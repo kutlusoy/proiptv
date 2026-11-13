@@ -93,10 +93,10 @@ android {
             includeAndroidResources = true
             all { testTask ->
                 if (project.hasProperty('screenshots')) {
-                    testTask.include '**/ScreenshotTest*'
+                    testTask.include '**/Screenshot*'
                     testTask.systemProperty 'robolectric.pixelCopyRenderMode', 'hardware'
                 } else {
-                    testTask.exclude '**/ScreenshotTest*'
+                    testTask.exclude '**/Screenshot*'
                 }
             }
         }
