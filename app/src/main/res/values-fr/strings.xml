@@ -156,4 +156,7 @@
     <string name="player_stop">Arrêter</string>
     <string name="nav_exit">Quitter</string>
     <string name="account_until">Actif jusqu\'au %1$s</string>
+    <string name="player_more">Plus</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_play">Lecture</string>
 </resources>

@@ -13,6 +13,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -182,6 +193,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var message by remember { mutableStateOf<Int?>(null) }
     var buffering by remember { mutableStateOf(false) }
     var overlay by remember { mutableStateOf(true) }
+    var playing by remember { mutableStateOf(true) }
+    var moreDialog by remember { mutableStateOf(false) }
     var touched by remember { mutableIntStateOf(0) }
     var digits by remember { mutableStateOf("") }
     var resize by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
@@ -214,7 +227,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val first = remember { FocusRequester() }
     val active = catchup ?: target
     val zapping = request is PlayRequest.Zap && catchup == null
-    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog
+    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog
     val activeNow by rememberUpdatedState(active)
     val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
     val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
@@ -252,6 +265,10 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     message = R.string.player_failed
                     failed = true
                 }
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playing = isPlaying
             }
 
             override fun onPlaybackStateChanged(state: Int) {
@@ -498,6 +515,22 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         if (digits.isNotEmpty()) {
             Text(digits, Modifier.align(Alignment.TopEnd).padding(24.dp).background(Color(0xAA000000)).padding(12.dp), style = MaterialTheme.typography.displaySmall, color = Color.White)
         }
+        AnimatedVisibility(overlay, Modifier.align(Alignment.Center)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
+                val canSeek = active?.live == false || hubActive
+                if (canSeek) {
+                    OutlinedButton(onClick = { shiftBy(-30_000) }, modifier = Modifier.focusHighlight()) { Text("-30 s") }
+                }
+                RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.then(if (!canSeek) Modifier.focusRequester(first) else Modifier))
+                if (canSeek) {
+                    RoundControl(
+                        if (playing) PlayerGlyph.PAUSE else PlayerGlyph.PLAY, stringResource(if (playing) R.string.player_pause else R.string.player_play),
+                        { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, Modifier.focusRequester(first),
+                    )
+                    OutlinedButton(onClick = { shiftBy(30_000) }, modifier = Modifier.focusHighlight()) { Text("+30 s") }
+                }
+            }
+        }
         AnimatedVisibility(overlay, Modifier.align(Alignment.BottomCenter)) {
             Column(
                 Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000)))).navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -526,9 +559,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         color = if (behindMs < LIVE_THRESHOLD_MS) Color(0xFFFF5252) else Color.White,
                     )
                 }
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val i = item
-                    OutlinedButton(onClick = onClose, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_stop)) }
                     if (zapping && i != null) {
                         val fav = Triple(i.accountId, i.kind, i.remoteId) in favKeys
                         OutlinedButton(
@@ -540,41 +572,53 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                                     listsDialog = true
                                 }
                             },
-                            modifier = Modifier.focusRequester(first).focusHighlight(),
-                        ) { Text(stringResource(if (fav) R.string.fav_remove else R.string.fav_add)) }
+                            modifier = Modifier.focusHighlight(),
+                        ) { Text(stringResource(if (fav) R.string.fav_remove else R.string.fav_add), maxLines = 1) }
                     }
                     if (zapping && i?.epgId != null) {
                         OutlinedButton(onClick = { guideDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_guide)) }
                     }
-                    if (active?.live == false || hubActive) {
-                        OutlinedButton(onClick = { if (exo.isPlaying) exo.pause() else exo.play() }, modifier = Modifier.then(if (zapping && i != null) Modifier else Modifier.focusRequester(first)).focusHighlight()) { Text("\u23EF") }
-                    }
                     if (hubActive) {
-                        OutlinedButton(onClick = { shiftBy(-30_000) }, modifier = Modifier.focusHighlight()) { Text("-30 s") }
-                        OutlinedButton(onClick = { shiftBy(30_000) }, modifier = Modifier.focusHighlight()) { Text("+30 s") }
                         OutlinedButton(onClick = { goLive() }, enabled = behindMs >= LIVE_THRESHOLD_MS, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_live)) }
                         OutlinedButton(
                             onClick = { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
                             modifier = Modifier.focusHighlight(),
                         ) { Text(stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record)) }
                     }
-                    OutlinedButton(onClick = { tracksDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_tracks)) }
-                    if (!LocalTv.current) OutlinedButton(onClick = { landscape = !landscape }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_rotate)) }
-                    OutlinedButton(
+                    Spacer(Modifier.weight(1f))
+                    OutlinedButton(onClick = { moreDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_more)) }
+                }
+            }
+        }
+    }
+
+    if (moreDialog) {
+        AlertDialog(
+            onDismissRequest = { moreDialog = false },
+            title = { Text(stringResource(R.string.player_more)) },
+            text = {
+                Column {
+                    TextButton(onClick = { moreDialog = false; tracksDialog = true }, modifier = Modifier.fillMaxWidth().focusHighlight()) { Text(stringResource(R.string.player_tracks), Modifier.fillMaxWidth()) }
+                    if (!LocalTv.current) {
+                        TextButton(onClick = { moreDialog = false; landscape = !landscape }, modifier = Modifier.fillMaxWidth().focusHighlight()) { Text(stringResource(R.string.player_rotate), Modifier.fillMaxWidth()) }
+                    }
+                    TextButton(
                         onClick = {
+                            moreDialog = false
                             resize = when (resize) {
                                 AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                                 AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_FILL
                                 else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                             }
                         },
-                        modifier = Modifier.focusHighlight(),
-                    ) { Text(stringResource(R.string.player_aspect)) }
+                        modifier = Modifier.fillMaxWidth().focusHighlight(),
+                    ) { Text(stringResource(R.string.player_aspect), Modifier.fillMaxWidth()) }
                 }
-            }
-        }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { moreDialog = false }) { Text(stringResource(R.string.action_close)) } },
+        )
     }
-
     if (tracksDialog) TracksDialog(exo, tracks) { tracksDialog = false }
     if (guideDialog) {
         item?.let { i ->
@@ -728,5 +772,33 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
             confirmButton = { TextButton(onClick = { confirm = null; onRecord(p) }) { Text(stringResource(R.string.rec_record)) } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
+    }
+}
+
+private enum class PlayerGlyph { PLAY, PAUSE, STOP }
+
+@Composable
+private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    var focused by remember { mutableStateOf(false) }
+    Box(
+        modifier.size(76.dp).onFocusChanged { focused = it.hasFocus }
+            .background(Color(0xCC000000), CircleShape)
+            .border(if (focused) 3.dp else 1.dp, if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.35f), CircleShape)
+            .semantics { contentDescription = description }
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(30.dp)) {
+            val w = size.width
+            val h = size.height
+            when (glyph) {
+                PlayerGlyph.PLAY -> drawPath(Path().apply { moveTo(w * 0.12f, 0f); lineTo(w, h / 2); lineTo(w * 0.12f, h); close() }, Color.White)
+                PlayerGlyph.PAUSE -> {
+                    drawRect(Color.White, Offset(w * 0.08f, 0f), Size(w * 0.28f, h))
+                    drawRect(Color.White, Offset(w * 0.64f, 0f), Size(w * 0.28f, h))
+                }
+                PlayerGlyph.STOP -> drawRoundRect(Color.White, Offset(w * 0.04f, h * 0.04f), Size(w * 0.92f, h * 0.92f), androidx.compose.ui.geometry.CornerRadius(w * 0.1f))
+            }
+        }
     }
 }

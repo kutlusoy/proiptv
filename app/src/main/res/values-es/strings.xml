@@ -156,4 +156,7 @@
     <string name="player_stop">Detener</string>
     <string name="nav_exit">Salir</string>
     <string name="account_until">Activo hasta el %1$s</string>
+    <string name="player_more">Más</string>
+    <string name="player_pause">Pausa</string>
+    <string name="player_play">Reproducir</string>
 </resources>
