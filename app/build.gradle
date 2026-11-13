@@ -1,0 +1,98 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+def versionText = file('version.txt').text.trim()
+def versionMatch = java.util.regex.Pattern.compile('^(\\d+)\\.(\\d+)\\.(\\d+)(-[0-9A-Za-z.]+)?$').matcher(versionText)
+if (!versionMatch.matches()) {
+    throw new GradleException("app/version.txt must look like 1.2.3 or 1.2.3-rc1, found: ${versionText}")
+}
+// Same scheme as tools/version.py, the release workflow checks that both agree
+def computedVersionCode = versionMatch.group(1).toInteger() * 1_000_000 +
+        versionMatch.group(2).toInteger() * 1_000 + versionMatch.group(3).toInteger()
+
+android {
+    namespace = 'com.kutlusoy.proiptv'
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "com.kutlusoy.proiptv"
+        minSdk rootProject.ext.minSdkVersion
+        targetSdk rootProject.ext.targetSdkVersion
+        versionCode computedVersionCode
+        versionName versionText
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'proiptv-debug'
+            keyPassword 'android'
+        }
+        release {
+            def propsFile = file('signing/release.properties')
+            if (propsFile.exists()) {
+                def props = new Properties()
+                props.load(new FileInputStream(propsFile))
+                storeFile file("signing/${props['storeFile']}")
+                storePassword props['storePassword']
+                keyAlias props['keyAlias']
+                keyPassword props['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = true
+            shrinkResources = true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (file('signing/release.properties').exists()) {
+                signingConfig = signingConfigs.release
+            }
+            debuggable = false
+        }
+
+        debug {
+            signingConfig = signingConfigs.debug
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            debuggable = true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/AL2.0', 'META-INF/LGPL2.1', 'META-INF/*.kotlin_module']
+        }
+    }
+}
+
+dependencies {
+    implementation platform('androidx.compose:compose-bom:2025.09.01')
+    implementation 'androidx.core:core-ktx:1.16.0'
+    implementation 'androidx.activity:activity-compose:1.10.1'
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.tv:tv-material:1.0.0'
+
+    testImplementation 'junit:junit:4.13.2'
+}

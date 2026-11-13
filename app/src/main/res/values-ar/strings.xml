@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">ProIPTV</string>
+    <string name="splash_tagline">بثوثك. مزودك. لا شيء آخر.</string>
+    <string name="main_no_accounts_title">لا يوجد حساب بعد</string>
+    <string name="main_no_accounts_text">ستصل الحسابات والقنوات والدليل في الإصدارات القادمة.</string>
+    <string name="main_version">الإصدار %1$s</string>
+</resources>

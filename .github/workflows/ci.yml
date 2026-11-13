@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Check the version file
+        run: |
+          python3 -I tools/version.py --selftest
+          python3 -I tools/version.py
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Lint
+        run: ./gradlew lintDebug --stacktrace
+        continue-on-error: true
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Release build
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Check the version code of the APK
+        run: |
+          expected=$(python3 -I tools/version.py | sed -n 's/^version_code=//p')
+          actual=$(tools/release-notes.sh facts app/build/outputs/apk/debug/app-debug.apk | sed -n 's/^APK_VERSION_CODE=//p')
+          echo "expected $expected, APK has $actual"
+          [[ $expected == "$actual" ]]
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/tests
+            app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: proiptv-debug-apk
+          path: app/build/outputs/apk/debug/*.apk

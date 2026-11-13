@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">ProIPTV</string>
+    <string name="splash_tagline">Deine Streams. Dein Anbieter. Sonst nichts.</string>
+    <string name="main_no_accounts_title">Noch kein Konto</string>
+    <string name="main_no_accounts_text">Konten, Kanäle und der Programmführer kommen in den nächsten Versionen.</string>
+    <string name="main_version">Version %1$s</string>
+</resources>

@@ -1,6 +1,6 @@
 # ProIPTV: Product and Architecture Plan
 
-- **Version:** 0.2 (draft)
+- **Version:** 0.3 (draft)
 - **Date:** November 13, 2026
 - **Audience:** Maintainers and contributors who build and release ProIPTV
 - **Reference implementation:** [`tvsig`](https://github.com/kutlusoy/tvsig) (`.github/workflows/`, `app/build.gradle`, `tools/`, `doc/guideline-*.md`), read-only reference for release engineering, signing, update, splash and continuous operation
@@ -20,13 +20,15 @@ Decisions taken:
 |---|---|
 | License | MIT for everything, no closed parts |
 | Accounting | several IPTV accounts can be created and used side by side. No subscriptions, no own accounts, no server, no billing |
-| Provider API | Xtream Codes compatible first, plain M3U and XMLTV as second source type |
+| Sources | Xtream Codes first, then as many open source types as sensible through small source adapters (Stalker portal, HDHomeRun, Enigma2, TVHeadend, Jellyfin and more), see the feature matrix section 8. Nothing illegal, no content, no playlist discovery |
+| Languages | English, German, Turkish, French, Italian, Spanish, Portuguese, Dutch, Polish, Russian, Arabic from the start, more later (feature matrix section 9) |
+| Favorites | several favorite lists per account, manual sort by touch and remote control (feature matrix section 10) |
 | Engine | Media3 based engine with a custom stream hub for parallel streams, recording and time shift (section 6) |
 | UI | very modern, Compose, TV first, inspired by the best players on the market |
 | Signing | one release key for GitHub and Google Play, one application ID `com.kutlusoy.proiptv` |
 | Distribution | GitHub releases first, Google Play later with the same ID and the same key |
 | Splash | animated start screen built like in TVSig, logo will be delivered by the maintainer |
-| Size | lean: release APK under 15 MB, few dependencies, no analytics, no ads |
+| Size | lean: release APK under 20 MB, few dependencies, no analytics, no ads |
 
 ## 2. What TVSig gives us
 
@@ -80,7 +82,9 @@ References to read before building the parsers and the TV UI: [OwnTV](https://gi
 - **Parental control:** PIN, locked groups
 - **Offline cache** of lists and EPG, crash recovery, watchdog
 - **Backup and restore** of accounts (credentials only with a password) and settings
-- **Languages:** English, German, Turkish
+- **Sources:** Xtream Codes, M3U, XMLTV and the further source types of the feature matrix section 8
+- **Favorites:** several lists, manual sort (section 10 of the feature matrix)
+- **Languages:** tier 1 of the feature matrix section 9 (11 languages, Arabic with right to left layout)
 
 ### 4.2 Later (1.x)
 
@@ -88,7 +92,7 @@ References to read before building the parsers and the TV UI: [OwnTV](https://gi
 - Phone setup with QR code (as in TVSig)
 - Reminders, sleep timer
 - Optional FFmpeg audio decoder extension (AC3, EAC3, DTS) where the device lacks them
-- Stalker portal
+- Tier 2 sources (Jellyfin and Emby, NextPVR, SAT>IP), see the feature matrix
 
 ### 4.3 Not planned
 
@@ -118,7 +122,8 @@ Any own server or account system, billing, ads, analytics, playlist discovery, b
 app                  navigation, service, boot receiver, splash
 core/model           data classes
 core/database        Room entities, DAOs, migrations, FTS
-core/network         OkHttp client, Xtream API, M3U and XMLTV streaming parsers
+core/network         OkHttp client, M3U and XMLTV streaming parsers
+source/*             one small module per source type behind SourceProvider (xtream, m3u, stalker, hdhomerun, enigma2, tvheadend, ...)
 core/account         accounts, keystore, connection budget
 core/ui              design system, TV and phone components, focus helpers
 engine               stream hub, ring buffer, recorder, player pool (section 6)
@@ -211,7 +216,7 @@ Measured on a reference low-end box (1 GB RAM, Android 9) and a mid-range device
 | EPG grid | 60 fps target while scrolling |
 | Watch, record and time shift the same channel | one provider connection |
 | 72 hours continuous playback and recording | no crash, memory growth under 10% |
-| Release APK | under 15 MB |
+| Release APK | under 20 MB |
 
 ## 7. Accounts
 
@@ -351,6 +356,7 @@ The in-app update (GitHub API, SHA-256 check, system installer, button only) is 
 | 0.0.6 | Recording, scheduler, foreground service, SAF storage | scheduled recording survives an app restart |
 | 0.0.7 | Player pool and multiview, failover, stall detection, continuous operation | 72 hour soak test green |
 | 0.0.8 | VOD, series, catch-up, resume, parental PIN, backup and restore | catch-up URL tests for common Xtream setups |
+| 0.0.9 | More sources: Stalker portal, HDHomeRun, Enigma2, TVHeadend | each adapter passes its fixture tests, a stalled adapter never blocks the others |
 | 0.1.0-rc1 | Feature freeze, in-app update, developer verification registered, real splash with the final logo | update from the previous release verified on a device |
 | 0.1.x | Play channel (flavors, Play App Signing, internal track), PiP, polish | internal track install and update tested |
 | 1.0.0 | Stability, docs, store listing | all gates of section 10 green, 30 days without a blocking issue in beta |
