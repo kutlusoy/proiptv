@@ -1,0 +1,75 @@
+name: Test release
+
+# Builds the debug app with the test key that is part of the repository and publishes it as a pre-release.
+# No secrets are needed. The app installs next to the real app (application ID com.kutlusoy.proiptv.debug).
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: Short note for the release text (optional)
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: test-release
+  cancel-in-progress: false
+
+jobs:
+  test-release:
+    name: Build and publish the test release
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NOTE: ${{ inputs.note }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Build the debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Collect files
+        run: |
+          version=$(tr -d '[:space:]' < app/version.txt)
+          short=${GITHUB_SHA::7}
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "TAG=test-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "NAME=ProIPTV-$version-test${GITHUB_RUN_NUMBER}-$short" >> "$GITHUB_ENV"
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/*.apk "dist/ProIPTV-$version-test${GITHUB_RUN_NUMBER}-$short.apk"
+          (cd dist && sha256sum ./*.apk > SHA256SUMS.txt)
+          {
+            echo "Test build of version $version from commit $short (branch $GITHUB_REF_NAME)."
+            echo
+            echo "Signed with the public test key of the repository. For testing only, not for the store."
+            echo "Application ID: com.kutlusoy.proiptv.debug, so it installs next to the real app."
+            if [[ -n "$NOTE" ]]; then echo; echo "$NOTE"; fi
+          } > dist/NOTES.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-release
+          path: dist
+
+      - name: Publish the pre-release
+        run: |
+          gh release create "$TAG" dist/*.apk dist/SHA256SUMS.txt \
+            --prerelease --target "$GITHUB_SHA" --title "ProIPTV test $GITHUB_RUN_NUMBER ($VERSION)" --notes-file dist/NOTES.md
+
+      - name: Remove old test releases
+        run: |
+          gh release list --limit 100 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease and (.tagName | startswith("test-"))) | .tagName' \
+            | sort -t- -k2 -n -r | tail -n +6 \
+            | while read -r old; do gh release delete "$old" --cleanup-tag --yes; done
