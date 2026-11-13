@@ -68,7 +68,7 @@ Press **Save**. The app connects, loads channels, movies, series and the guide i
 
 If **Error** is shown on the card: `Login failed` means user name, password or server are wrong. Other messages are shown as they come from the server.
 
-Several accounts can exist side by side. The switch on the card turns an account on or off without deleting it.
+Several accounts can exist side by side. Each account is a compact line with the name, a short status (sync progress, an error in red, or the expiry date) and a switch that turns it on or off without deleting it. **Tap the line** to open the details and the buttons (sync, update guide, edit, delete). Only one account is open at a time, a single account is always open.
 
 ### Keeping the guide up to date
 

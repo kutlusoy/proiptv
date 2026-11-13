@@ -3,7 +3,11 @@ package com.kutlusoy.proiptv.ui
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,7 +16,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
@@ -28,12 +36,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kutlusoy.proiptv.R
 import com.kutlusoy.proiptv.data.Account
@@ -51,6 +61,7 @@ fun AccountsScreen(vm: MainViewModel) {
     var editing by remember { mutableStateOf<Account?>(null) }
     var adding by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<Account?>(null) }
+    var expandedId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     LazyColumn(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -67,7 +78,8 @@ fun AccountsScreen(vm: MainViewModel) {
             item { Text(stringResource(R.string.accounts_empty), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)) }
         }
         items(accounts, key = { it.id }) { account ->
-            AccountCard(account, sync[account.id], vm, onEdit = { editing = account }, onDelete = { deleting = account })
+            val open = expandedId == account.id || accounts.size == 1
+            AccountCard(account, sync[account.id], vm, expanded = open, onToggle = { expandedId = if (expandedId == account.id) null else account.id }, onEdit = { editing = account }, onDelete = { deleting = account })
         }
     }
 
@@ -95,53 +107,87 @@ fun AccountsScreen(vm: MainViewModel) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AccountCard(account: Account, state: SyncState?, vm: MainViewModel, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun AccountCard(
+    account: Account,
+    state: SyncState?,
+    vm: MainViewModel,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
     val counts by vm.counts(account.id).collectAsState(initial = Triple(0, 0, 0))
     val dim = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+    val typeLabel = if (account.type == AccountType.XTREAM) "Xtream Codes" else stringResource(R.string.account_type_m3u)
+    val days = account.expiry?.let { ((it * 1000 - System.currentTimeMillis()) / 86_400_000L).toInt() }
+    val date = account.expiry?.let { DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(it * 1000)) }
+    val countsText = stringResource(R.string.account_counts, counts.first, counts.second, counts.third)
+
+    val summary: String
+    val summaryColor: Color
+    when {
+        state != null -> { summary = syncText(state); summaryColor = MaterialTheme.colorScheme.primary }
+        account.lastError != null -> { summary = stringResource(R.string.account_error, account.lastError); summaryColor = MaterialTheme.colorScheme.error }
+        days != null && days >= 0 && date != null -> {
+            summary = typeLabel + " \u00B7 " + stringResource(R.string.account_expires, date, days)
+            summaryColor = if (days <= 7) MaterialTheme.colorScheme.error else dim
+        }
+        days != null && date != null -> { summary = typeLabel + " \u00B7 " + stringResource(R.string.account_expired, date); summaryColor = MaterialTheme.colorScheme.error }
+        else -> { summary = "$typeLabel \u00B7 $countsText"; summaryColor = dim }
+    }
+
     Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().focusHighlight().clickable(onClick = onToggle).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.weight(1f)) {
-                    Text(account.name, style = MaterialTheme.typography.titleLarge)
-                    Text(if (account.type == AccountType.XTREAM) "Xtream Codes" else stringResource(R.string.account_type_m3u), color = dim, style = MaterialTheme.typography.bodySmall)
+                    Text(account.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(summary, style = MaterialTheme.typography.bodySmall, color = summaryColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Switch(checked = account.enabled, onCheckedChange = { on -> vm.run { vm.repo.setEnabled(account, on) } }, modifier = Modifier.focusHighlight())
+                Switch(checked = account.enabled, onCheckedChange = { on -> vm.run { vm.repo.setEnabled(account, on) } }, modifier = Modifier.padding(horizontal = 8.dp).focusHighlight())
+                Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = dim)
             }
-            account.status?.let { Text(stringResource(R.string.account_status, it), color = dim) }
-            account.expiry?.let { expiry ->
-                val days = ((expiry * 1000 - System.currentTimeMillis()) / 86_400_000L).toInt()
-                val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(expiry * 1000))
-                if (days >= 0) {
-                    Text(stringResource(R.string.account_expires, date, days), color = if (days <= 7) MaterialTheme.colorScheme.error else dim)
-                } else {
-                    Text(stringResource(R.string.account_expired, date), color = MaterialTheme.colorScheme.error)
+            AnimatedVisibility(expanded) {
+                Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(typeLabel, color = dim, style = MaterialTheme.typography.bodySmall)
+                    account.status?.let { Text(stringResource(R.string.account_status, it), color = dim) }
+                    if (days != null && date != null) {
+                        if (days >= 0) {
+                            Text(stringResource(R.string.account_expires, date, days), color = if (days <= 7) MaterialTheme.colorScheme.error else dim)
+                        } else {
+                            Text(stringResource(R.string.account_expired, date), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    account.maxConnections?.let { max ->
+                        Text(stringResource(R.string.account_connections, account.activeConnections ?: 0, max), color = dim)
+                    }
+                    Text(countsText, color = dim)
+                    if (state != null) {
+                        Text(syncText(state), color = MaterialTheme.colorScheme.primary)
+                    } else if (account.lastSync > 0) {
+                        val ago = DateUtils.getRelativeTimeSpanString(account.lastSync, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+                        Text(stringResource(R.string.account_last_sync, ago), color = dim)
+                    } else {
+                        Text(stringResource(R.string.account_never_synced), color = dim)
+                    }
+                    if (account.epgSync > 0) {
+                        val ago = DateUtils.getRelativeTimeSpanString(account.epgSync * 1000, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+                        Text(stringResource(R.string.account_guide_updated, ago), color = dim)
+                    } else if (counts.first > 0) {
+                        Text(stringResource(R.string.account_guide_never), color = dim)
+                    }
+                    account.lastError?.let { Text(stringResource(R.string.account_error, it), color = MaterialTheme.colorScheme.error) }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
+                        OutlinedButton(onClick = { vm.repo.sync.sync(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync)) }
+                        OutlinedButton(onClick = { vm.repo.sync.refreshGuide(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync_guide)) }
+                        OutlinedButton(onClick = onEdit, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_edit)) }
+                        OutlinedButton(onClick = onDelete, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
+                    }
                 }
-            }
-            account.maxConnections?.let { max ->
-                Text(stringResource(R.string.account_connections, account.activeConnections ?: 0, max), color = dim)
-            }
-            Text(stringResource(R.string.account_counts, counts.first, counts.second, counts.third), color = dim)
-            if (state != null) {
-                Text(syncText(state), color = MaterialTheme.colorScheme.primary)
-            } else if (account.lastSync > 0) {
-                val ago = DateUtils.getRelativeTimeSpanString(account.lastSync, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
-                Text(stringResource(R.string.account_last_sync, ago), color = dim)
-            } else {
-                Text(stringResource(R.string.account_never_synced), color = dim)
-            }
-            if (account.epgSync > 0) {
-                val ago = DateUtils.getRelativeTimeSpanString(account.epgSync * 1000, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
-                Text(stringResource(R.string.account_guide_updated, ago), color = dim)
-            } else if (counts.first > 0) {
-                Text(stringResource(R.string.account_guide_never), color = dim)
-            }
-            account.lastError?.let { Text(stringResource(R.string.account_error, it), color = Color(0xFFFF8A80)) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                OutlinedButton(onClick = { vm.repo.sync.sync(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync)) }
-                OutlinedButton(onClick = { vm.repo.sync.refreshGuide(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync_guide)) }
-                OutlinedButton(onClick = onEdit, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_edit)) }
-                OutlinedButton(onClick = onDelete, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
             }
         }
     }
