@@ -40,7 +40,7 @@ import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-abstract class ScreenshotBase(private val folder: String) {
+abstract class ScreenshotBase(private val folder: String, private val tv: Boolean = false) {
     @get:Rule
     val compose = createEmptyComposeRule()
 
@@ -157,14 +157,19 @@ abstract class ScreenshotBase(private val folder: String) {
     }
 
     private fun openMenu() {
+        if (tv) return
         compose.onNodeWithContentDescription(str(R.string.nav_menu)).performClick()
+        settle()
+    }
+
+    private fun selectTab(@StringRes id: Int) {
+        compose.onAllNodesWithText(str(id)).onFirst().performClick()
         settle()
     }
 
     private fun goTo(@StringRes id: Int) {
         openMenu()
-        compose.onNodeWithText(str(id)).performClick()
-        settle()
+        selectTab(id)
     }
 
     @Test
@@ -175,7 +180,7 @@ abstract class ScreenshotBase(private val folder: String) {
 
         openMenu()
         shot("02-menu")
-        compose.onNodeWithText(str(R.string.nav_movies)).performClick()
+        selectTab(R.string.nav_movies)
         shot("03-filme")
         compose.onAllNodesWithText(movieTitles[0]).onFirst().performClick()
         shot("04-film-info")
@@ -214,4 +219,4 @@ abstract class ScreenshotBase(private val folder: String) {
 class ScreenshotTest : ScreenshotBase("phone")
 
 @Config(sdk = [34], qualifiers = "de-w960dp-h540dp-land-television-xhdpi")
-class ScreenshotTvTest : ScreenshotBase("tv")
+class ScreenshotTvTest : ScreenshotBase("tv", tv = true)
