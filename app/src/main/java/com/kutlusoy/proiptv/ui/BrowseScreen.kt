@@ -2,6 +2,8 @@ package com.kutlusoy.proiptv.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -95,11 +97,21 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val effective = selected ?: enabled.singleOrNull()?.id
     var category by rememberSaveable(kind, effective) { mutableStateOf<String?>(null) }
     var query by rememberSaveable(kind) { mutableStateOf("") }
-    var favMode by rememberSaveable { mutableStateOf(false) }
+    var favMode by rememberSaveable(kind) { mutableStateOf(false) }
     var favList by rememberSaveable { mutableStateOf<Long?>(null) }
     var series by remember { mutableStateOf<Item?>(null) }
     var movie by remember { mutableStateOf<Item?>(null) }
     var favDialog by remember { mutableStateOf<Item?>(null) }
+    val toggleFavorite: (Item) -> Unit = { item ->
+        val fav = Triple(item.accountId, item.kind, item.remoteId) in favKeys
+        if (favLists.size <= 1) {
+            favLists.firstOrNull()?.let { list ->
+                vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, !fav) }
+            }
+        } else {
+            favDialog = item
+        }
+    }
     var searching by rememberSaveable(kind) { mutableStateOf(query.isNotEmpty()) }
     val chrome = LocalChromeHidden.current
     SideEffect { chrome.value = series != null || movie != null }
@@ -143,7 +155,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                 val favLabel = stringResource(R.string.fav_title)
                 val otherLabel = stringResource(R.string.live_other)
                 val options = buildList<Pair<String, String>> {
-                    if (kind == Kind.LIVE) add(FAV_KEY to favLabel)
+                    add(FAV_KEY to favLabel)
                     add(ALL_KEY to allLabel)
                     if (effective != null) categories.forEach { add(it.remoteId to it.name.ifBlank { otherLabel }) }
                 }
@@ -177,12 +189,12 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
         }
 
         val useRows = kind != Kind.LIVE && !favMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
-        if (kind == Kind.LIVE && favMode) {
-            FavoritesPane(vm, favList) { favList = it }
+        if (favMode) {
+            FavoritesPane(vm, kind, favList, onSelect = { favList = it }, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it })
         } else if (useRows) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(categories, key = { it.id }) { c ->
-                    CategoryRow(vm, effective!!, kind, c, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it }, onAll = { category = c.remoteId })
+                    CategoryRow(vm, effective!!, kind, c, favKeys, onToggleFavorite = toggleFavorite, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it }, onAll = { category = c.remoteId })
                 }
             }
         } else {
@@ -201,14 +213,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                         ChannelRow(
                             vm, item.name, item.logo, item.accountId, item.epgId, fav, true,
                             onClick = { vm.player.value = PlayRequest.Zap(source, i) },
-                            onStar = {
-                                if (favLists.size <= 1) {
-                                    val list = favLists.firstOrNull() ?: return@ChannelRow
-                                    vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, !fav) }
-                                } else {
-                                    favDialog = item
-                                }
-                            },
+                            onStar = { toggleFavorite(item) },
                         )
                     }
                 }
@@ -216,7 +221,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                 LazyVerticalGrid(GridCells.Adaptive(130.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(paged.itemCount, key = paged.itemKey { it.id }) { i ->
                         val item = paged[i] ?: return@items
-                        PosterCard(item) { if (item.kind == Kind.SERIES) series = item else movie = item }
+                        PosterCard(item, favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { toggleFavorite(item) }) { if (item.kind == Kind.SERIES) series = item else movie = item }
                     }
                 }
             }
@@ -237,6 +242,7 @@ fun ChannelRow(
     available: Boolean,
     onClick: () -> Unit,
     onStar: () -> Unit,
+    tall: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
@@ -244,7 +250,7 @@ fun ChannelRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Logo(logo, Modifier.size(width = 64.dp, height = 40.dp))
+        if (tall) Logo(logo, Modifier.size(width = 48.dp, height = 70.dp), ContentScale.Crop) else Logo(logo, Modifier.size(width = 64.dp, height = 40.dp))
         Column(Modifier.weight(1f)) {
             Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (available) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
             if (!available) {
@@ -278,23 +284,32 @@ private fun NowPlaying(vm: MainViewModel, accountId: Long, epgId: String?) {
     LinearProgressIndicator(progress = { done }, modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PosterCard(item: Item, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boolean = false, onLongClick: () -> Unit = {}, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "poster")
     Column(
         modifier.graphicsLayer { scaleX = scale; scaleY = scale }
             .onFocusChanged { focused = it.hasFocus }
             .then(if (focused) Modifier.border(2.dp, Palette.Wine, RoundedCornerShape(10.dp)) else Modifier)
-            .clickable(onClick = onClick).padding(2.dp),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(2.dp),
     ) {
-        Logo(item.logo, Modifier.fillMaxWidth().aspectRatio(0.68f).clip(RoundedCornerShape(8.dp)), ContentScale.Crop)
+        Box {
+            Logo(item.logo, Modifier.fillMaxWidth().aspectRatio(0.68f).clip(RoundedCornerShape(8.dp)), ContentScale.Crop)
+            if (favorite) {
+                Icon(Icons.Filled.Star, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = StarOn)
+            }
+        }
         Text(item.name, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp))
     }
 }
 
 @Composable
-private fun CategoryRow(vm: MainViewModel, accountId: Long, kind: Int, category: com.kutlusoy.proiptv.data.Category, onOpen: (Item) -> Unit, onAll: () -> Unit) {
+private fun CategoryRow(
+    vm: MainViewModel, accountId: Long, kind: Int, category: com.kutlusoy.proiptv.data.Category,
+    favKeys: Set<Triple<Long, Int, String>>, onToggleFavorite: (Item) -> Unit, onOpen: (Item) -> Unit, onAll: () -> Unit,
+) {
     val items by produceState<List<Item>>(emptyList(), accountId, kind, category.remoteId) {
         value = vm.repo.db.items().first(kind, accountId, category.remoteId, 20)
     }
@@ -306,13 +321,15 @@ private fun CategoryRow(vm: MainViewModel, accountId: Long, kind: Int, category:
             Text(stringResource(R.string.detail_see_all), color = Palette.WineSoft, style = MaterialTheme.typography.labelLarge)
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)) {
-            items(items, key = { it.id }) { item -> PosterCard(item, Modifier.width(118.dp)) { onOpen(item) } }
+            items(items, key = { it.id }) { item ->
+                PosterCard(item, Modifier.width(118.dp), favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { onToggleFavorite(item) }) { onOpen(item) }
+            }
         }
     }
 }
 
 @Composable
-private fun FavoritesPane(vm: MainViewModel, selectedList: Long?, onSelect: (Long) -> Unit) {
+private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onSelect: (Long) -> Unit, onOpen: (Item) -> Unit) {
     val lists by vm.favLists.collectAsState()
     val listId = selectedList?.takeIf { id -> lists.any { it.id == id } } ?: lists.firstOrNull()?.id
     var sort by remember { mutableStateOf(false) }
@@ -347,7 +364,7 @@ private fun FavoritesPane(vm: MainViewModel, selectedList: Long?, onSelect: (Lon
             }
         }
         if (current != null) {
-            val rows by vm.favoriteRows(current.id).collectAsState(initial = emptyList())
+            val rows by vm.favoriteRows(current.id, kind).collectAsState(initial = emptyList())
             if (rows.isEmpty()) {
                 Text(stringResource(R.string.fav_empty), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
             }
@@ -355,17 +372,23 @@ private fun FavoritesPane(vm: MainViewModel, selectedList: Long?, onSelect: (Lon
                 itemsIndexed(rows, key = { _, r -> "${r.accountId}-${r.kind}-${r.remoteId}" }) { index, row ->
                     ChannelRow(
                         vm, row.name, row.logo, row.accountId, row.epgId, true, row.itemId != null,
+                        tall = kind != Kind.LIVE,
                         onClick = {
-                            val present = rows.take(index).count { it.itemId != null }
-                            vm.player.value = PlayRequest.Zap(Source.Favs(current.id), present)
+                            if (kind == Kind.LIVE) {
+                                val present = rows.take(index).count { it.itemId != null }
+                                vm.player.value = PlayRequest.Zap(Source.Favs(current.id), present)
+                            } else {
+                                val id = row.itemId ?: return@ChannelRow
+                                vm.run { vm.repo.db.items().get(id)?.let(onOpen) }
+                            }
                         },
                         onStar = { vm.run { vm.repo.setFavorite(current.id, row.accountId, row.kind, row.remoteId, row.name, false) } },
                         trailing = {
                             if (sort) {
-                                IconButton(onClick = { vm.run { vm.repo.moveFavorite(current.id, index, index - 1) } }, enabled = index > 0, modifier = Modifier.focusHighlight()) {
+                                IconButton(onClick = { vm.run { vm.repo.moveFavorite(current.id, kind, index, index - 1) } }, enabled = index > 0, modifier = Modifier.focusHighlight()) {
                                     Icon(Icons.Filled.KeyboardArrowUp, stringResource(R.string.fav_move_up))
                                 }
-                                IconButton(onClick = { vm.run { vm.repo.moveFavorite(current.id, index, index + 1) } }, enabled = index < rows.lastIndex, modifier = Modifier.focusHighlight()) {
+                                IconButton(onClick = { vm.run { vm.repo.moveFavorite(current.id, kind, index, index + 1) } }, enabled = index < rows.lastIndex, modifier = Modifier.focusHighlight()) {
                                     Icon(Icons.Filled.KeyboardArrowDown, stringResource(R.string.fav_move_down))
                                 }
                             }

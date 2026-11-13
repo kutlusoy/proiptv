@@ -63,7 +63,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             db.items().paging(kind, ids, category, query)
         }.flow
 
-    fun favoriteRows(listId: Long) = db.favorites().rows(listId)
+    fun favoriteRows(listId: Long, kind: Int) = db.favorites().rows(listId, kind)
 
     fun stopRecording(id: Long) = (getApplication<Application>() as ProIptvApp).recordings.stop(id)
 

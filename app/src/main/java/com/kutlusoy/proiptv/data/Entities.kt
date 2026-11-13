@@ -125,6 +125,7 @@ data class Progress(
     val positionMs: Long,
     val durationMs: Long,
     val updated: Long,
+    val watched: Boolean = false,
 )
 
 data class FavoriteRow(

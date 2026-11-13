@@ -166,9 +166,9 @@ class SyncIntegrationTest {
         waitForSync(id)
         val list = repo.createList("L")
         for (remote in listOf("10", "11", "12")) repo.setFavorite(list, id, Kind.LIVE, remote, "n$remote", true)
-        repo.moveFavorite(list, 2, 0)
+        repo.moveFavorite(list, Kind.LIVE, 2, 0)
         assertEquals(listOf("12", "10", "11"), db.favorites().entries(list).map { it.remoteId })
-        repo.moveFavorite(list, 0, 1)
+        repo.moveFavorite(list, Kind.LIVE, 0, 1)
         assertEquals(listOf("10", "12", "11"), db.favorites().entries(list).map { it.remoteId })
 
         server.dispatcher = object : Dispatcher() {
@@ -184,7 +184,7 @@ class SyncIntegrationTest {
         repo.sync.sync(id)
         waitForSync(id)
         assertEquals(2, db.items().count(Kind.LIVE, listOf(id), null, ""))
-        val rows = db.favorites().rows(list).first()
+        val rows = db.favorites().rows(list, Kind.LIVE).first()
         assertEquals(listOf("10", "12", "11"), rows.map { it.remoteId })
         assertNotNull(rows[0].itemId)
         assertNull(rows[2].itemId)
@@ -358,5 +358,72 @@ class SyncIntegrationTest {
         }
         migrated.close()
         assertEquals(fromRoom.sorted(), fromMigration.sorted())
+    }
+
+    @Test
+    fun favoritesAreSeparatedByKindAndZappingUsesLiveChannelsOnly() = runBlocking {
+        val id = repo.saveAccount(Account(name = "Test", type = AccountType.XTREAM, url = base(), username = "bob"), "secret")
+        waitForSync(id)
+        val list = repo.createList("Mixed")
+        repo.setFavorite(list, id, Kind.LIVE, "10", "One", true)
+        repo.setFavorite(list, id, Kind.MOVIE, "50", "Film A", true)
+        repo.setFavorite(list, id, Kind.MOVIE, "51", "Film B", true)
+        assertEquals(listOf("10"), db.favorites().rows(list, Kind.LIVE).first().map { it.remoteId })
+        assertEquals(listOf("50", "51"), db.favorites().rows(list, Kind.MOVIE).first().map { it.remoteId })
+        assertEquals(1, db.favorites().presentCount(list))
+        assertEquals("10", db.favorites().itemAt(list, 0)!!.remoteId)
+        repo.moveFavorite(list, Kind.MOVIE, 1, 0)
+        assertEquals(listOf("51", "50"), db.favorites().rows(list, Kind.MOVIE).first().map { it.remoteId })
+        assertEquals(listOf("10"), db.favorites().rows(list, Kind.LIVE).first().map { it.remoteId })
+    }
+
+    @Test
+    fun watchedFlagIsKeptAndCanBeSetByHand() = runBlocking {
+        val target = com.kutlusoy.proiptv.data.PlayTarget("u", null, "t", false, 1, Kind.EPISODE, "e1")
+        repo.saveProgress(target, 1_000, 10_000)
+        assertEquals(false, db.progress().get(1, Kind.EPISODE, "e1")!!.watched)
+        repo.saveProgress(target, 9_800, 10_000)
+        val done = db.progress().get(1, Kind.EPISODE, "e1")!!
+        assertEquals(true, done.watched)
+        assertEquals(0L, done.positionMs)
+        repo.saveProgress(target, 3_000, 10_000)
+        val again = db.progress().get(1, Kind.EPISODE, "e1")!!
+        assertEquals(true, again.watched)
+        assertEquals(3_000L, again.positionMs)
+        repo.setWatched(1, Kind.EPISODE, listOf("e1", "e2"), false)
+        assertEquals(listOf(false, false), listOf("e1", "e2").map { db.progress().get(1, Kind.EPISODE, it)!!.watched })
+        assertEquals(0L, db.progress().get(1, Kind.EPISODE, "e1")!!.positionMs)
+        repo.setWatched(1, Kind.EPISODE, listOf("e2"), true)
+        assertEquals(true, db.progress().get(1, Kind.EPISODE, "e2")!!.watched)
+        assertEquals(false, db.progress().get(1, Kind.EPISODE, "e1")!!.watched)
+    }
+
+    @Test
+    fun migrationToVersion5AddsTheWatchedColumn() {
+        fun describe(c: android.database.Cursor): List<String> = c.use {
+            val rows = mutableListOf<String>()
+            while (it.moveToNext()) rows += "${it.getString(1)}|${it.getString(2)}|${it.getInt(3)}|${it.getInt(5)}"
+            rows.sorted()
+        }
+        val schema = org.json.JSONObject(java.io.File("schemas/com.kutlusoy.proiptv.data.AppDatabase/4.json").readText())
+        val entities = schema.getJSONObject("database").getJSONArray("entities")
+        var createV4 = ""
+        for (i in 0 until entities.length()) {
+            val e = entities.getJSONObject(i)
+            if (e.getString("tableName") == "progress") createV4 = e.getString("createSql").replace("\${TABLE_NAME}", "progress")
+        }
+        assertTrue(createV4.isNotEmpty())
+        val migrated = android.database.sqlite.SQLiteDatabase.create(null)
+        migrated.execSQL(createV4)
+        migrated.execSQL("INSERT INTO progress (accountId, kind, remoteId, positionMs, durationMs, updated) VALUES (1, 3, 'e', 5, 10, 1)")
+        for (sql in AppDatabase.MIGRATION_4_5_SQL) migrated.execSQL(sql)
+        migrated.rawQuery("SELECT watched FROM progress", null).use {
+            assertTrue(it.moveToFirst())
+            assertEquals(0, it.getInt(0))
+        }
+        val fromMigration = describe(migrated.rawQuery("PRAGMA table_info(progress)", null))
+        migrated.close()
+        val fromRoom = describe(db.openHelper.writableDatabase.query("PRAGMA table_info(progress)"))
+        assertEquals(fromRoom, fromMigration)
     }
 }

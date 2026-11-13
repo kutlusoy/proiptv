@@ -226,7 +226,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         controller?.hide(WindowInsetsCompat.Type.systemBars())
         onDispose {
-            controller?.show(WindowInsetsCompat.Type.systemBars())
             if (previous != null) activity.requestedOrientation = previous
         }
     }

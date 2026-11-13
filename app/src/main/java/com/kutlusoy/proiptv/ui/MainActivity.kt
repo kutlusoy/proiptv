@@ -66,6 +66,11 @@ private enum class Tab(val label: Int, val icon: ImageVector) {
 class MainActivity : AppCompatActivity() {
     private val vm: MainViewModel by viewModels()
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) enterImmersive()
+    }
+
     override fun onStart() {
         super.onStart()
         vm.repo.sync.syncStaleGuides()
@@ -73,6 +78,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enterImmersive()
         setContent {
             ProIptvTheme { AppRoot(vm) }
         }

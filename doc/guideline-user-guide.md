@@ -89,7 +89,12 @@ The refresh only downloads again when the provider's guide has changed, and an u
   - **Movie info page:** big picture, title, rating, year, length, genre, story, director and cast (as far as the provider delivers them). The red button plays the movie, or resumes it where you stopped, with **From the start** next to it.
   - **Series info page:** the same header, a button **Play S1 E1** (or **Continue S2 E5** after you watched something), a **season dropdown** and the list of episodes with picture, length, short story and a progress bar for what you started.
   - Playback resumes where you stopped.
-- Press the **star** next to a channel to add it to your favorites.
+  - **Watched marks:** a finished episode or movie gets a check mark. In the episode list the check button at the right of an episode switches the mark by hand, the three dots menu next to the season dropdown marks a whole season as watched or unwatched. On the movie page there is a button **Mark as watched**. The series button then offers the next unwatched episode (**Continue S1 E3**).
+  - **Favorites for movies and series:** the star in the top right corner of the info page, or a long press (touch) or a long press on OK (remote control) on a poster. In the Movies and Series tabs choose **Favorites** in the dropdown to see them. The order can be changed like with channels.- Press the **star** next to a channel to add it to your favorites.
+
+### Full screen
+
+The app runs in full screen mode, the buttons of Android are hidden. Swipe from the edge of the screen (bottom for the buttons, top for the status bar) to show them for a moment.
 
 ### Screen orientation while playing
 
@@ -184,7 +189,6 @@ Tab **Settings**. The settings are grouped in sections with dropdown menus (lang
 - Pause, rewind and recording need TS streams, not HLS.
 - Stalker portal, HDHomeRun, Enigma2 and TVHeadend sources are not implemented yet.
 - Series in M3U playlists are listed as single movies.
-- Favorites can be set for live channels only.
 - The translations of Portuguese, Dutch, Polish, Russian and Arabic cover only the first screens, the rest shows English.
 - The splash screen and icons are placeholders until the logo is delivered.
 

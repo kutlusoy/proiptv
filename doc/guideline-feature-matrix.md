@@ -24,7 +24,7 @@ ProIPTV MUST handle every kind of content a provider can offer, from both source
 | Series | `get_series_categories`, `get_series`, `get_series_info` with seasons and episodes | entries grouped by the `SxxExx` pattern in the title, shown as seasons | 0.0.8 |
 | Posters, plot, cast, rating, trailer | from the Xtream info calls | from `tvg-logo` only | 0.0.8 |
 | Resume and watched marks | local, per account | local, per account | 0.0.8 |
-| Favorites for channels, movies and series | local, per account | local, per account | 0.0.3 |
+| Favorites for channels, movies and series | local, per account | local, per account | 0.0.1 (built) |
 
 Notes:
 

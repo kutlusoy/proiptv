@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Account::class, Category::class, Item::class, Program::class, FavoriteList::class, Favorite::class, Progress::class, Recording::class],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +32,16 @@ abstract class AppDatabase : RoomDatabase() {
                 for (sql in MIGRATION_2_3_SQL) db.execSQL(sql)
             }
         }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                for (sql in MIGRATION_4_5_SQL) db.execSQL(sql)
+            }
+        }
+
+        val MIGRATION_4_5_SQL = listOf(
+            "ALTER TABLE progress ADD COLUMN watched INTEGER NOT NULL DEFAULT 0",
+        )
 
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -57,6 +67,6 @@ abstract class AppDatabase : RoomDatabase() {
         )
 
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
     }
 }

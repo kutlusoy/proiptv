@@ -147,7 +147,21 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
     suspend fun saveProgress(t: PlayTarget, positionMs: Long, durationMs: Long) {
         if (t.live || durationMs <= 0) return
         val finished = positionMs > durationMs * 0.95
-        db.progress().save(Progress(t.accountId, t.kind, t.remoteId, if (finished) 0 else positionMs, durationMs, System.currentTimeMillis()))
+        val previous = db.progress().get(t.accountId, t.kind, t.remoteId)
+        db.progress().save(
+            Progress(
+                t.accountId, t.kind, t.remoteId, if (finished) 0 else positionMs, durationMs, System.currentTimeMillis(),
+                watched = finished || previous?.watched == true,
+            ),
+        )
+    }
+
+    suspend fun setWatched(accountId: Long, kind: Int, remoteIds: List<String>, watched: Boolean) {
+        val now = System.currentTimeMillis()
+        for (id in remoteIds) {
+            val p = db.progress().get(accountId, kind, id) ?: Progress(accountId, kind, id, 0, 0, now)
+            db.progress().save(p.copy(watched = watched, positionMs = 0, updated = now))
+        }
     }
 
     suspend fun nowAndNext(accountId: Long, epgId: String?): Pair<Program?, Program?> {
@@ -201,8 +215,8 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         }
     }
 
-    suspend fun moveFavorite(listId: Long, from: Int, to: Int) {
-        val entries = db.favorites().entries(listId)
+    suspend fun moveFavorite(listId: Long, kind: Int, from: Int, to: Int) {
+        val entries = db.favorites().entries(listId).filter { it.kind == kind }
         if (from !in entries.indices || to !in entries.indices || from == to) return
         val moved = entries[from]
         val rest = entries.toMutableList().also { it.removeAt(from) }

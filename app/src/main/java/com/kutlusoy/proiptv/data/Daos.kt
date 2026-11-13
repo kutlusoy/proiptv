@@ -163,19 +163,19 @@ interface FavoriteDao {
         "SELECT f.listId AS listId, f.accountId AS accountId, f.kind AS kind, f.remoteId AS remoteId, f.name AS name, " +
             "f.sortKey AS sortKey, i.logo AS logo, i.epgId AS epgId, i.id AS itemId FROM favorites f " +
             "LEFT JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
-            "WHERE f.listId = :listId ORDER BY f.sortKey",
+            "WHERE f.listId = :listId AND f.kind = :kind ORDER BY f.sortKey",
     )
-    fun rows(listId: Long): Flow<List<FavoriteRow>>
+    fun rows(listId: Long, kind: Int): Flow<List<FavoriteRow>>
 
     @Query(
         "SELECT i.* FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
-            "WHERE f.listId = :listId ORDER BY f.sortKey LIMIT 1 OFFSET :offset",
+            "WHERE f.listId = :listId AND i.kind = 0 ORDER BY f.sortKey LIMIT 1 OFFSET :offset",
     )
     suspend fun itemAt(listId: Long, offset: Int): Item?
 
     @Query(
         "SELECT COUNT(*) FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
-            "WHERE f.listId = :listId",
+            "WHERE f.listId = :listId AND i.kind = 0",
     )
     suspend fun presentCount(listId: Long): Int
 
