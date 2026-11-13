@@ -65,6 +65,9 @@ interface ItemDao {
     )
     suspend fun at(kind: Int, ids: List<Long>, cat: String?, q: String, offset: Int): Item?
 
+    @Query("SELECT * FROM items WHERE kind = :kind AND accountId = :accountId AND categoryRemoteId = :cat ORDER BY ord LIMIT :limit")
+    suspend fun first(kind: Int, accountId: Long, cat: String, limit: Int): List<Item>
+
     @Query("SELECT * FROM items WHERE id = :id")
     suspend fun get(id: Long): Item?
 
@@ -211,6 +214,9 @@ interface ProgressDao {
 
     @Query("SELECT * FROM progress WHERE accountId = :accountId AND kind = :kind AND remoteId = :remoteId")
     suspend fun get(accountId: Long, kind: Int, remoteId: String): Progress?
+
+    @Query("SELECT * FROM progress WHERE accountId = :accountId AND kind = :kind AND remoteId IN (:ids)")
+    suspend fun forIds(accountId: Long, kind: Int, ids: List<String>): List<Progress>
 
     @Query("DELETE FROM progress WHERE accountId = :accountId")
     suspend fun deleteAccount(accountId: Long)

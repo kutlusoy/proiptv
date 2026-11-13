@@ -2,6 +2,8 @@ package com.kutlusoy.proiptv.data
 
 import com.kutlusoy.proiptv.net.Http
 import com.kutlusoy.proiptv.net.StreamUrls
+import com.kutlusoy.proiptv.net.SeriesDetail
+import com.kutlusoy.proiptv.net.VodInfo
 import com.kutlusoy.proiptv.net.XtreamApi
 import com.kutlusoy.proiptv.net.XtreamEpisode
 import com.kutlusoy.proiptv.net.XtreamUrl
@@ -114,9 +116,23 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
     private fun api(account: Account) =
         XtreamApi(Http.client, account.url, account.username, secrets.decrypt(account.password), account.userAgent)
 
-    suspend fun episodes(item: Item): List<XtreamEpisode> = withContext(Dispatchers.IO) {
-        val account = db.accounts().get(item.accountId) ?: return@withContext emptyList()
-        api(account).seriesEpisodes(item.remoteId)
+    suspend fun seriesDetail(item: Item): SeriesDetail = withContext(Dispatchers.IO) {
+        val account = db.accounts().get(item.accountId) ?: return@withContext SeriesDetail(null, emptyList())
+        api(account).seriesDetail(item.remoteId)
+    }
+
+    suspend fun vodInfo(item: Item): VodInfo? = withContext(Dispatchers.IO) {
+        val account = db.accounts().get(item.accountId) ?: return@withContext null
+        if (account.type != AccountType.XTREAM) return@withContext null
+        api(account).vodInfo(item.remoteId)
+    }
+
+    suspend fun episodeProgress(accountId: Long, episodeIds: List<String>): Map<String, Progress> {
+        val result = HashMap<String, Progress>()
+        for (chunk in episodeIds.chunked(500)) {
+            for (p in db.progress().forIds(accountId, Kind.EPISODE, chunk)) result[p.remoteId] = p
+        }
+        return result
     }
 
     suspend fun episodeTarget(series: Item, episode: XtreamEpisode): PlayTarget? = withContext(Dispatchers.IO) {

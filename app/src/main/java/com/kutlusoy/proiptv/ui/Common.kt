@@ -3,6 +3,9 @@ package com.kutlusoy.proiptv.ui
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -39,4 +42,44 @@ fun Logo(url: String?, modifier: Modifier = Modifier, scale: ContentScale = Cont
 @Composable
 fun Centered(content: @Composable () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) { content() }
+}
+
+fun formatClock(ms: Long): String {
+    val s = (ms / 1000).coerceAtLeast(0)
+    return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s % 3600 / 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
+}
+
+@Composable
+fun <T> DropdownField(
+    selected: String,
+    options: List<Pair<T, String>>,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    label: String? = null,
+) {
+    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.foundation.layout.Column(modifier) {
+        if (label != null) {
+            androidx.compose.material3.Text(
+                label, style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        }
+        Box {
+            androidx.compose.material3.OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth().focusHighlight()) {
+                androidx.compose.material3.Text(selected, Modifier.weight(1f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.ArrowDropDown, null)
+            }
+            androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                options.forEach { (value, name) ->
+                    androidx.compose.material3.DropdownMenuItem(text = { androidx.compose.material3.Text(name) }, onClick = { open = false; onSelect(value) })
+                }
+            }
+        }
+    }
+}
+
+val LocalChromeHidden = androidx.compose.runtime.compositionLocalOf<androidx.compose.runtime.MutableState<Boolean>> {
+    androidx.compose.runtime.mutableStateOf(false)
 }

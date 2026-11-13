@@ -83,9 +83,17 @@ The refresh only downloads again when the provider's guide has changed, and an u
 
 ## 4. Watch
 
-- **Live TV:** the chips above the list are the groups of the provider. `Favorites` shows your own lists, `All` shows everything. With more than one account an account selector appears. The search field filters by name.
-- **Movies and Series:** posters, press one to play it. For a series, choose the season and then the episode. Playback resumes where you stopped.
+- **Menu:** the icon with three lines at the top left opens the menu with Live TV, Movies, Series, Recordings, Accounts and Settings (on a TV remote: move the focus to it and press OK, or swipe from the left edge on a touch screen).
+- **Live TV:** the dropdown above the list chooses the group of the provider (`Favorites` for your own lists, `All` for everything). With more than one account a second dropdown selects the account. The magnifier icon opens the search field, the cross closes it again.
+- **Movies and Series:** with **All** selected the page shows rows per category (like a streaming service), with a category chosen or a search entered it shows a poster grid. Press a poster to open its **info page** first.
+  - **Movie info page:** big picture, title, rating, year, length, genre, story, director and cast (as far as the provider delivers them). The red button plays the movie, or resumes it where you stopped, with **From the start** next to it.
+  - **Series info page:** the same header, a button **Play S1 E1** (or **Continue S2 E5** after you watched something), a **season dropdown** and the list of episodes with picture, length, short story and a progress bar for what you started.
+  - Playback resumes where you stopped.
 - Press the **star** next to a channel to add it to your favorites.
+
+### Screen orientation while playing
+
+On a phone the player switches to **landscape** by itself and hides the system bars (swipe from the edge to show them). The button **Rotate screen** in the information bar switches between landscape and portrait. When you leave the player the orientation is as before. TVs are not affected.
 
 ### Remote control keys while playing
 
@@ -150,9 +158,9 @@ The app retries three times. If the channel still fails, it looks for the same c
 
 ## 6. Favorites and manual order
 
-1. Live TV, chip **Favorites**.
-2. The chips on top are your lists. **New list** creates another one ("Sport", "Kids"). **Rename** and **Delete** act on the selected list.
-3. Press **Sort**: every channel gets an arrow up and an arrow down. Move a channel with them (works with touch and with the remote control), then press **Done**.
+1. Live TV, in the dropdown choose **Favorites**.
+2. The dropdown on top of the favorites chooses your list. The three dots menu next to it has **New list** ("Sport", "Kids"), **Sort**, **Rename** and **Delete** for the selected list.
+3. Choose **Sort** in the three dots menu: every channel gets an arrow up and an arrow down. Move a channel with them (works with touch and with the remote control), then press **Done**.
 4. Channels that the provider removed stay in the list, greyed out, so your order is not lost. They return when the provider adds them again.
 
 With more than one list the star opens a dialog where you tick the lists of the channel. With one list the star toggles it directly.
@@ -166,9 +174,9 @@ Settings, section **Backup**.
 - **Create backup:** choose a password or leave the field empty, then choose where to save the file (for example a USB stick). The file holds your accounts (server, user name, options), favorite lists with their order and the time shift settings. **Without a password the file contains no account passwords.** With a password the whole file is encrypted and the account passwords are included. The password cannot be recovered, keep it safe.
 - **Restore backup:** choose the file, enter the password if the file is protected. Restoring **adds** what is missing, it never deletes. Accounts that already exist (same type, address and user name) are kept as they are, favorite lists with the same name are merged. Restored accounts start to load their channels at once. An account from a backup without password shows `Login failed` until you open **Edit** on the card and enter the password.
 
-## 8. Language
+## 8. Language and look
 
-Tab **Settings**, **Language**. `Automatic` follows the device. The change applies at once.
+Tab **Settings**. The settings are grouped in sections with dropdown menus (language, buffer size, live stream format of an account, season of a series). In **Language**, `Automatic` follows the device, the change applies at once. The app uses a dark black and wine red design on every device.
 
 ## 9. Limits of this version
 

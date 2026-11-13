@@ -86,7 +86,6 @@ fun BackupSettings() {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(stringResource(R.string.settings_backup), style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { exportDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.backup_create)) }
             OutlinedButton(onClick = { opener.launch(arrayOf("*/*")) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.backup_restore)) }

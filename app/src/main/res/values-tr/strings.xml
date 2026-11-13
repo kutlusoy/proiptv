@@ -129,4 +129,20 @@
     <string name="backup_restored">Geri yüklendi: %1$d hesap, %2$d favori.</string>
     <string name="backup_wrong_password">Yanlış şifre.</string>
     <string name="backup_invalid">Bu dosya bir ProIPTV yedeği değil.</string>
+    <string name="player_rotate">Ekranı döndür</string>
+    <string name="detail_play">Oynat</string>
+    <string name="detail_resume">%1$s konumundan devam et</string>
+    <string name="detail_restart">Baştan</string>
+    <string name="detail_cast">Oyuncular</string>
+    <string name="detail_director">Yönetmen</string>
+    <string name="detail_released">Yayın tarihi</string>
+    <string name="detail_no_info">Başka bilgi yok.</string>
+    <string name="detail_play_episode">S%1$d B%2$d oynat</string>
+    <string name="detail_continue_episode">S%1$d B%2$d ile devam et</string>
+    <string name="action_back">Geri</string>
+    <string name="detail_duration_hm">%1$d sa %2$d dk</string>
+    <string name="detail_duration_m">%1$d dk</string>
+    <string name="detail_see_all">Tümünü gör</string>
+    <string name="nav_menu">Menü</string>
+    <string name="action_more">Diğer seçenekler</string>
 </resources>

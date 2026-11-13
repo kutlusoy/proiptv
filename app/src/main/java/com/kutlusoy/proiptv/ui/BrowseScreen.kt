@@ -1,7 +1,13 @@
 package com.kutlusoy.proiptv.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +27,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Star
@@ -38,7 +47,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -49,7 +60,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +80,8 @@ import com.kutlusoy.proiptv.net.XtreamEpisode
 import kotlinx.coroutines.delay
 
 private val StarOn = Color(0xFFFFC107)
+private const val FAV_KEY = "__fav"
+private const val ALL_KEY = "__all"
 
 @Composable
 fun BrowseScreen(kind: Int, vm: MainViewModel) {
@@ -81,7 +98,12 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     var favMode by rememberSaveable { mutableStateOf(false) }
     var favList by rememberSaveable { mutableStateOf<Long?>(null) }
     var series by remember { mutableStateOf<Item?>(null) }
+    var movie by remember { mutableStateOf<Item?>(null) }
     var favDialog by remember { mutableStateOf<Item?>(null) }
+    var searching by rememberSaveable(kind) { mutableStateOf(query.isNotEmpty()) }
+    val chrome = LocalChromeHidden.current
+    SideEffect { chrome.value = series != null || movie != null }
+    DisposableEffect(Unit) { onDispose { chrome.value = false } }
 
     if (enabled.isEmpty()) {
         Centered {
@@ -95,57 +117,74 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
 
     series?.let {
         BackHandler { series = null }
-        SeriesDetail(vm, it) { series = null }
+        SeriesDetailScreen(vm, it) { series = null }
+        return
+    }
+    movie?.let {
+        BackHandler { movie = null }
+        MovieDetail(vm, it) { movie = null }
         return
     }
 
     val categories by (effective?.let { vm.categories(it, kind) } ?: kotlinx.coroutines.flow.flowOf(emptyList())).collectAsState(initial = emptyList())
 
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                query, { query = it }, singleLine = true, modifier = Modifier.weight(1f),
-                placeholder = { Text(stringResource(R.string.live_search)) },
-            )
-            if (enabled.size > 1) {
-                var menu by remember { mutableStateOf(false) }
-                Box {
-                    OutlinedButton(onClick = { menu = true }, modifier = Modifier.focusHighlight()) {
-                        Text(enabled.firstOrNull { it.id == selected }?.name ?: stringResource(R.string.live_all_accounts), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(text = { Text(stringResource(R.string.live_all_accounts)) }, onClick = { accountSel = null; menu = false })
-                        enabled.forEach { a -> DropdownMenuItem(text = { Text(a.name) }, onClick = { accountSel = a.id; menu = false }) }
-                    }
+        Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (searching) {
+                OutlinedTextField(
+                    query, { query = it }, singleLine = true, modifier = Modifier.weight(1f),
+                    placeholder = { Text(stringResource(R.string.live_search)) },
+                    trailingIcon = {
+                        IconButton(onClick = { query = ""; searching = false }) { Icon(Icons.Filled.Close, stringResource(R.string.action_close)) }
+                    },
+                )
+            } else {
+                val allLabel = stringResource(R.string.live_all)
+                val favLabel = stringResource(R.string.fav_title)
+                val otherLabel = stringResource(R.string.live_other)
+                val options = buildList<Pair<String, String>> {
+                    if (kind == Kind.LIVE) add(FAV_KEY to favLabel)
+                    add(ALL_KEY to allLabel)
+                    if (effective != null) categories.forEach { add(it.remoteId to it.name.ifBlank { otherLabel }) }
                 }
-            }
-        }
-        LazyRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (kind == Kind.LIVE) {
-                item {
-                    FilterChip(
-                        selected = favMode, onClick = { favMode = true },
-                        label = { Text(stringResource(R.string.fav_title)) },
-                        leadingIcon = { Icon(Icons.Filled.Star, null, tint = StarOn, modifier = Modifier.size(18.dp)) },
-                        modifier = Modifier.focusHighlight(),
+                val current = when {
+                    favMode -> FAV_KEY
+                    category == null -> ALL_KEY
+                    else -> category!!
+                }
+                DropdownField(
+                    selected = options.firstOrNull { it.first == current }?.second ?: allLabel,
+                    options = options,
+                    onSelect = { v ->
+                        when (v) {
+                            FAV_KEY -> favMode = true
+                            ALL_KEY -> { favMode = false; category = null }
+                            else -> { favMode = false; category = v }
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                if (enabled.size > 1) {
+                    DropdownField<Long?>(
+                        selected = enabled.firstOrNull { it.id == selected }?.name ?: stringResource(R.string.live_all_accounts),
+                        options = listOf<Pair<Long?, String>>(null to stringResource(R.string.live_all_accounts)) + enabled.map { it.id to it.name },
+                        onSelect = { accountSel = it },
+                        modifier = Modifier.weight(0.7f),
                     )
                 }
-            }
-            item {
-                FilterChip(selected = !favMode && category == null, onClick = { favMode = false; category = null }, label = { Text(stringResource(R.string.live_all)) }, modifier = Modifier.focusHighlight())
-            }
-            if (effective != null) {
-                items(categories, key = { it.id }) { c ->
-                    FilterChip(
-                        selected = !favMode && category == c.remoteId, onClick = { favMode = false; category = c.remoteId },
-                        label = { Text(c.name.ifBlank { stringResource(R.string.live_other) }) }, modifier = Modifier.focusHighlight(),
-                    )
-                }
+                IconButton(onClick = { searching = true }, modifier = Modifier.focusHighlight()) { Icon(Icons.Filled.Search, stringResource(R.string.live_search)) }
             }
         }
 
+        val useRows = kind != Kind.LIVE && !favMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
         if (kind == Kind.LIVE && favMode) {
             FavoritesPane(vm, favList) { favList = it }
+        } else if (useRows) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                items(categories, key = { it.id }) { c ->
+                    CategoryRow(vm, effective!!, kind, c, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it }, onAll = { category = c.remoteId })
+                }
+            }
         } else {
             val cat = if (effective != null) category else null
             val flow = remember(kind, ids, cat, query) { vm.pager(kind, ids, cat, query) }
@@ -177,7 +216,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                 LazyVerticalGrid(GridCells.Adaptive(130.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(paged.itemCount, key = paged.itemKey { it.id }) { i ->
                         val item = paged[i] ?: return@items
-                        PosterCard(item) { if (item.kind == Kind.SERIES) series = item else vm.playItem(item) }
+                        PosterCard(item) { if (item.kind == Kind.SERIES) series = item else movie = item }
                     }
                 }
             }
@@ -240,10 +279,35 @@ private fun NowPlaying(vm: MainViewModel, accountId: Long, epgId: String?) {
 }
 
 @Composable
-private fun PosterCard(item: Item, onClick: () -> Unit) {
-    Column(Modifier.focusHighlight().clickable(onClick = onClick).padding(4.dp)) {
-        Logo(item.logo, Modifier.fillMaxWidth().aspectRatio(0.68f), ContentScale.Crop)
-        Text(item.name, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+private fun PosterCard(item: Item, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "poster")
+    Column(
+        modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+            .onFocusChanged { focused = it.hasFocus }
+            .then(if (focused) Modifier.border(2.dp, Palette.Wine, RoundedCornerShape(10.dp)) else Modifier)
+            .clickable(onClick = onClick).padding(2.dp),
+    ) {
+        Logo(item.logo, Modifier.fillMaxWidth().aspectRatio(0.68f).clip(RoundedCornerShape(8.dp)), ContentScale.Crop)
+        Text(item.name, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp))
+    }
+}
+
+@Composable
+private fun CategoryRow(vm: MainViewModel, accountId: Long, kind: Int, category: com.kutlusoy.proiptv.data.Category, onOpen: (Item) -> Unit, onAll: () -> Unit) {
+    val items by produceState<List<Item>>(emptyList(), accountId, kind, category.remoteId) {
+        value = vm.repo.db.items().first(kind, accountId, category.remoteId, 20)
+    }
+    if (items.isEmpty()) return
+    Column {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onAll).padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.width(4.dp).height(18.dp).background(Palette.Wine, RoundedCornerShape(2.dp)))
+            Text(category.name.ifBlank { stringResource(R.string.live_other) }, Modifier.weight(1f).padding(start = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringResource(R.string.detail_see_all), color = Palette.WineSoft, style = MaterialTheme.typography.labelLarge)
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)) {
+            items(items, key = { it.id }) { item -> PosterCard(item, Modifier.width(118.dp)) { onOpen(item) } }
+        }
     }
 }
 
@@ -257,22 +321,32 @@ private fun FavoritesPane(vm: MainViewModel, selectedList: Long?, onSelect: (Lon
     val current = lists.firstOrNull { it.id == listId }
 
     Column(Modifier.fillMaxSize()) {
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(lists, key = { it.id }) { l ->
-                FilterChip(selected = l.id == listId, onClick = { onSelect(l.id) }, label = { Text(l.name) }, modifier = Modifier.focusHighlight())
+        var menu by remember { mutableStateOf(false) }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DropdownField(
+                selected = current?.name.orEmpty(),
+                options = lists.map { it.id to it.name },
+                onSelect = onSelect,
+                modifier = Modifier.weight(1f),
+            )
+            if (sort) {
+                TextButton(onClick = { sort = false }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.fav_done)) }
             }
-            item {
-                FilterChip(selected = false, onClick = { newDialog = true }, label = { Text(stringResource(R.string.fav_new_list)) }, leadingIcon = { Icon(Icons.Filled.Add, null, Modifier.size(18.dp)) }, modifier = Modifier.focusHighlight())
+            Box {
+                IconButton(onClick = { menu = true }, modifier = Modifier.focusHighlight()) { Icon(Icons.Filled.MoreVert, stringResource(R.string.action_more)) }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.fav_new_list)) }, onClick = { menu = false; newDialog = true })
+                    if (current != null) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.fav_sort)) }, onClick = { menu = false; sort = true })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.fav_rename)) }, onClick = { menu = false; renameDialog = true })
+                        if (lists.size > 1) {
+                            DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = { menu = false; vm.run { vm.repo.deleteList(current.id) } })
+                        }
+                    }
+                }
             }
         }
         if (current != null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = { sort = !sort }, modifier = Modifier.focusHighlight()) { Text(stringResource(if (sort) R.string.fav_done else R.string.fav_sort)) }
-                TextButton(onClick = { renameDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.fav_rename)) }
-                if (lists.size > 1) {
-                    TextButton(onClick = { vm.run { vm.repo.deleteList(current.id) } }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
-                }
-            }
             val rows by vm.favoriteRows(current.id).collectAsState(initial = emptyList())
             if (rows.isEmpty()) {
                 Text(stringResource(R.string.fav_empty), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
@@ -342,46 +416,4 @@ internal fun ListsDialog(vm: MainViewModel, item: Item, onDismiss: () -> Unit) {
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.fav_done)) } },
     )
-}
-
-@Composable
-private fun SeriesDetail(vm: MainViewModel, series: Item, onBack: () -> Unit) {
-    val episodes by produceState<List<XtreamEpisode>?>(null, series.id) {
-        value = runCatching { vm.repo.episodes(series) }.getOrDefault(emptyList())
-    }
-    var season by remember { mutableIntStateOf(-1) }
-    Column(Modifier.fillMaxSize().padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_close)) }
-            Text(series.name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        val list = episodes
-        if (list == null) {
-            Text(stringResource(R.string.series_loading), Modifier.padding(16.dp))
-            return
-        }
-        val seasons = list.map { it.season }.distinct()
-        val active = if (season in seasons) season else seasons.firstOrNull() ?: 1
-        series.plot?.let { Text(it, maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 4.dp)) }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-            items(seasons) { s ->
-                FilterChip(selected = s == active, onClick = { season = s }, label = { Text(stringResource(R.string.series_season, s)) }, modifier = Modifier.focusHighlight())
-            }
-        }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            items(list.filter { it.season == active }, key = { it.id }) { ep ->
-                Column(
-                    Modifier.fillMaxWidth().focusHighlight().clickable {
-                        vm.run {
-                            val t = vm.repo.episodeTarget(series, ep) ?: return@run
-                            vm.player.value = PlayRequest.Single(t)
-                        }
-                    }.padding(8.dp),
-                ) {
-                    Text("${ep.number}. ${ep.title}", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    ep.plot?.let { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) }
-                }
-            }
-        }
-    }
 }

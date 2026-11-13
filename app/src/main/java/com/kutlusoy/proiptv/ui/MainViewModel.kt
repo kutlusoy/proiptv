@@ -26,7 +26,7 @@ import kotlinx.coroutines.withContext
 
 sealed interface PlayRequest {
     data class Zap(val source: Source, val index: Int) : PlayRequest
-    data class Single(val target: PlayTarget) : PlayRequest
+    data class Single(val target: PlayTarget, val fromStart: Boolean = false) : PlayRequest
 }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {

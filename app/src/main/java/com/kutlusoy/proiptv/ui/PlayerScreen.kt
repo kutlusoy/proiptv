@@ -4,6 +4,9 @@ package com.kutlusoy.proiptv.ui
 
 import android.content.Context
 import android.Manifest
+import android.app.Activity
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,6 +21,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -60,6 +66,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -130,6 +139,15 @@ private fun isTransportStream(url: String): Boolean {
     return !path.endsWith(".m3u8") && !path.endsWith(".mpd")
 }
 
+private fun Context.findActivity(): Activity? {
+    var c = this
+    while (c is ContextWrapper) {
+        if (c is Activity) return c
+        c = c.baseContext
+    }
+    return null
+}
+
 private class LeaseHolder {
     @Volatile
     var lease: HubLease? = null
@@ -183,6 +201,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var notice by remember { mutableStateOf<String?>(null) }
     var recordDialog by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<String?>(null) }
+    var landscape by remember { mutableStateOf(true) }
+    var skipResume by remember { mutableStateOf((request as? PlayRequest.Single)?.fromStart == true) }
+    val activity = remember { ctx.findActivity() }
     var failed by remember { mutableStateOf(false) }
     val tried = remember { mutableSetOf<Long>() }
     val activeRecs by app.recordings.active.collectAsState()
@@ -197,6 +218,22 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val activeNow by rememberUpdatedState(active)
     val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
     val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
+
+    DisposableEffect(activity) {
+        val previous = activity?.requestedOrientation
+        val window = activity?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller?.hide(WindowInsetsCompat.Type.systemBars())
+        onDispose {
+            controller?.show(WindowInsetsCompat.Type.systemBars())
+            if (previous != null) activity.requestedOrientation = previous
+        }
+    }
+
+    LaunchedEffect(landscape) {
+        activity?.requestedOrientation = if (landscape) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+    }
 
     DisposableEffect(exo) {
         val listener = object : Player.Listener {
@@ -319,8 +356,12 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             start(ctx, exo, t, forceHls)
         }
         if (!t.live) {
-            val saved = vm.repo.progress(t)?.positionMs ?: 0
-            if (saved > 5_000) exo.seekTo(saved)
+            if (skipResume) {
+                skipResume = false
+            } else {
+                val saved = vm.repo.progress(t)?.positionMs ?: 0
+                if (saved > 5_000) exo.seekTo(saved)
+            }
         }
     }
 
@@ -460,7 +501,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
         AnimatedVisibility(overlay, Modifier.align(Alignment.BottomCenter)) {
             Column(
-                Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000)))).padding(horizontal = 24.dp, vertical = 16.dp),
+                Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000)))).navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(active?.title ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -486,7 +527,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         color = if (behindMs < LIVE_THRESHOLD_MS) Color(0xFFFF5252) else Color.White,
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val i = item
                     if (zapping && i != null) {
                         val fav = Triple(i.accountId, i.kind, i.remoteId) in favKeys
@@ -518,6 +559,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         ) { Text(stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record)) }
                     }
                     OutlinedButton(onClick = { tracksDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_tracks)) }
+                    OutlinedButton(onClick = { landscape = !landscape }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_rotate)) }
                     OutlinedButton(
                         onClick = {
                             resize = when (resize) {

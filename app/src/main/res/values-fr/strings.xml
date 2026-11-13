@@ -129,4 +129,20 @@
     <string name="backup_restored">Restauré : %1$d comptes, %2$d favoris.</string>
     <string name="backup_wrong_password">Mot de passe incorrect.</string>
     <string name="backup_invalid">Ce fichier n\'est pas une sauvegarde ProIPTV.</string>
+    <string name="player_rotate">Faire pivoter l\'écran</string>
+    <string name="detail_play">Lire</string>
+    <string name="detail_resume">Reprendre à %1$s</string>
+    <string name="detail_restart">Depuis le début</string>
+    <string name="detail_cast">Distribution</string>
+    <string name="detail_director">Réalisation</string>
+    <string name="detail_released">Sortie</string>
+    <string name="detail_no_info">Aucune autre information disponible.</string>
+    <string name="detail_play_episode">Lire S%1$d É%2$d</string>
+    <string name="detail_continue_episode">Continuer S%1$d É%2$d</string>
+    <string name="action_back">Retour</string>
+    <string name="detail_duration_hm">%1$d h %2$d min</string>
+    <string name="detail_duration_m">%1$d min</string>
+    <string name="detail_see_all">Tout voir</string>
+    <string name="nav_menu">Menu</string>
+    <string name="action_more">Plus d\'options</string>
 </resources>

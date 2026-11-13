@@ -37,7 +37,34 @@ data class XtreamEpisode(
     val ext: String,
     val plot: String?,
     val durationSecs: Int?,
+    val image: String? = null,
+    val rating: String? = null,
 )
+
+data class VodInfo(
+    val plot: String?,
+    val cast: String?,
+    val director: String?,
+    val genre: String?,
+    val releaseDate: String?,
+    val durationSecs: Int?,
+    val rating: String?,
+    val cover: String?,
+    val backdrop: String?,
+)
+
+data class SeriesInfo(
+    val plot: String?,
+    val cast: String?,
+    val director: String?,
+    val genre: String?,
+    val releaseDate: String?,
+    val rating: String?,
+    val cover: String?,
+    val backdrop: String?,
+)
+
+data class SeriesDetail(val info: SeriesInfo?, val episodes: List<XtreamEpisode>)
 
 fun JsonObject.str(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 fun JsonObject.int(key: String): Int? = str(key)?.toDoubleOrNull()?.toInt()
@@ -105,10 +132,50 @@ class XtreamApi(
         }
     }
 
+    private fun text(o: JsonObject, vararg keys: String): String? =
+        keys.firstNotNullOfOrNull { k -> o.str(k)?.trim()?.takeIf { it.isNotEmpty() && it != "null" } }
+
+    private fun firstUrl(e: JsonElement?): String? = when (e) {
+        is JsonArray -> e.firstNotNullOfOrNull { (it as? JsonPrimitive)?.contentOrNull?.takeIf { s -> s.isNotBlank() } }
+        is JsonPrimitive -> e.contentOrNull?.takeIf { it.isNotBlank() }
+        else -> null
+    }
+
     @OptIn(ExperimentalSerializationApi::class)
-    fun seriesEpisodes(seriesId: String): List<XtreamEpisode> {
+    fun vodInfo(vodId: String): VodInfo? {
+        open(url("player_api.php", "&action=get_vod_info&vod_id=${enc(vodId)}")).use { response ->
+            val root = response.body!!.byteStream().use { json.decodeFromStream<JsonElement>(it) } as? JsonObject ?: return null
+            val info = root["info"] as? JsonObject ?: return null
+            return VodInfo(
+                plot = text(info, "plot", "description"),
+                cast = text(info, "cast", "actors"),
+                director = text(info, "director"),
+                genre = text(info, "genre"),
+                releaseDate = text(info, "releasedate", "release_date", "releaseDate"),
+                durationSecs = info.int("duration_secs"),
+                rating = text(info, "rating"),
+                cover = text(info, "movie_image", "cover_big"),
+                backdrop = firstUrl(info["backdrop_path"]),
+            )
+        }
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    fun seriesDetail(seriesId: String): SeriesDetail {
         open(url("player_api.php", "&action=get_series_info&series_id=${enc(seriesId)}")).use { response ->
-            val root = response.body!!.byteStream().use { json.decodeFromStream<JsonElement>(it) } as? JsonObject ?: return emptyList()
+            val root = response.body!!.byteStream().use { json.decodeFromStream<JsonElement>(it) } as? JsonObject ?: return SeriesDetail(null, emptyList())
+            val info = (root["info"] as? JsonObject)?.let {
+                SeriesInfo(
+                    plot = text(it, "plot"),
+                    cast = text(it, "cast"),
+                    director = text(it, "director"),
+                    genre = text(it, "genre"),
+                    releaseDate = text(it, "releaseDate", "release_date", "releasedate"),
+                    rating = text(it, "rating"),
+                    cover = text(it, "cover"),
+                    backdrop = firstUrl(it["backdrop_path"]),
+                )
+            }
             val episodes = root["episodes"]
             val seasons: List<Pair<String, JsonElement>> = when (episodes) {
                 is JsonObject -> episodes.entries.map { it.key to it.value }
@@ -120,19 +187,21 @@ class XtreamApi(
                 for (e in (list as? JsonArray).orEmpty()) {
                     val o = e as? JsonObject ?: continue
                     val id = o.str("id") ?: continue
-                    val info = o["info"] as? JsonObject
+                    val episodeInfo = o["info"] as? JsonObject
                     result += XtreamEpisode(
                         id = id,
                         season = o.int("season") ?: seasonKey.toIntOrNull() ?: 1,
                         number = o.int("episode_num") ?: 0,
                         title = o.str("title") ?: "Episode ${o.int("episode_num") ?: ""}",
                         ext = o.str("container_extension") ?: "mp4",
-                        plot = info?.str("plot"),
-                        durationSecs = info?.int("duration_secs"),
+                        plot = episodeInfo?.let { text(it, "plot") },
+                        durationSecs = episodeInfo?.int("duration_secs"),
+                        image = episodeInfo?.let { text(it, "movie_image") },
+                        rating = episodeInfo?.let { text(it, "rating") },
                     )
                 }
             }
-            return result.sortedWith(compareBy({ it.season }, { it.number }))
+            return SeriesDetail(info, result.sortedWith(compareBy({ it.season }, { it.number })))
         }
     }
 

@@ -200,12 +200,14 @@ private fun AccountDialog(vm: MainViewModel, initial: Account?, onDismiss: () ->
                         visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
                         supportingText = if (initial != null) ({ Text(stringResource(R.string.account_password_keep)) }) else null,
                     )
-                    Text(stringResource(R.string.account_live_format), style = MaterialTheme.typography.labelLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = format == "auto", onClick = { format = "auto" }, label = { Text(stringResource(R.string.option_auto)) })
-                        FilterChip(selected = format == "ts", onClick = { format = "ts" }, label = { Text("TS") })
-                        FilterChip(selected = format == "m3u8", onClick = { format = "m3u8" }, label = { Text("HLS") })
-                    }
+                    val auto = stringResource(R.string.option_auto)
+                    val formats = listOf("auto" to auto, "ts" to "TS", "m3u8" to "HLS")
+                    DropdownField(
+                        label = stringResource(R.string.account_live_format),
+                        selected = formats.firstOrNull { it.first == format }?.second ?: auto,
+                        options = formats,
+                        onSelect = { format = it },
+                    )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.account_use_vod), Modifier.weight(1f))
                         Switch(vod, { vod = it })

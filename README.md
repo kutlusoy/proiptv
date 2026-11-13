@@ -15,7 +15,7 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 - streaming sync of channels, movies, series and the **XMLTV guide** (very large lists, no out of memory)
 - **Program guide that keeps itself current**: refresh when the app opens, while it is open and in the background (WorkManager), only downloads when the guide changed, keeps the old guide if an update fails, and asks the provider for single channels without data
 - **Live TV** with groups, search, now and next, zapping with the remote control, number keys, guide per channel and **catch-up**
-- **Movies and series** with seasons, episodes and resume
+- **Movies and series** with category rows, a film-style **info page** (picture, story, cast, resume) before playing, seasons as a dropdown and episode lists with progress
 - **Favorites** with several lists and **manual sorting**, kept after a provider refresh
 - **stream hub**: one provider connection per channel for watching, **pause and rewind live TV** (disk ring buffer) and **recording** (foreground service, recordings list), connection limit of the account respected
 - **scheduled recordings** from the guide (alarm, restart safe, conflict warning) and **failover** to an equal channel when a stream fails
