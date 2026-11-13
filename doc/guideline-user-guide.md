@@ -162,6 +162,17 @@ If the app is closed by the system or the stream stays down for a long time, the
 
 The app retries three times. If the channel still fails, it looks for the same channel (same guide ID or same name) in your enabled accounts, first in the same account, and switches to it with a short message "Switched to ...". This only happens while you zap in a list, not for movies, episodes or recordings.
 
+## Downloads for offline use
+
+1. Open a movie: the button **Download** under the title saves it on the device. For a series open the series, then use the download symbol next to an episode, or the three dots menu next to the season selector and **Download season**.
+2. The menu entry **Downloads** has two tabs, **Movies** and **Series**. Series are grouped by series and season, tap a series and a season to open it. Each entry shows progress, **Play** and **Delete**. A failed download has **Try again**.
+3. Downloads run one after another in the background with a notification and continue after an interrupted connection. Movies and episodes that are saved are played from the device automatically, also without internet. The place is the app folder on the device (`Android/data/com.kutlusoy.proiptv/files/downloads`), it is removed when the app is uninstalled.
+4. Only movies and episodes can be saved, no live TV. The download uses one connection of the account while it runs.
+
+## Gestures in the player
+
+Double tap on the left half of the picture jumps 10 seconds back, double tap on the right half 10 seconds forward (movies and episodes). A single tap shows or hides the controls.
+
 ## Android TV and TV boxes
 
 When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has big **Stop** and **Play/Pause** buttons in the middle (Stop ends playback and returns to the list) and a **More** button in the lower right corner for audio and subtitles, screen rotation and picture size. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.

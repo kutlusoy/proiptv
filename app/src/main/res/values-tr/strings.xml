@@ -159,4 +159,19 @@
     <string name="player_more">Daha fazla</string>
     <string name="player_pause">Duraklat</string>
     <string name="player_play">Oynat</string>
+    <string name="nav_downloads">İndirilenler</string>
+    <string name="dl_download">İndir</string>
+    <string name="dl_downloaded">İndirildi</string>
+    <string name="dl_queued">Bekliyor</string>
+    <string name="dl_running">İndiriliyor</string>
+    <string name="dl_failed">Başarısız</string>
+    <string name="dl_retry">Tekrar dene</string>
+    <string name="dl_empty">Henüz bir şey indirilmedi. Bir filmde veya bölümde İndir düğmesini kullanın.</string>
+    <string name="dl_notification">Çevrimdışı kullanım için indiriliyor</string>
+    <string name="dl_season">Sezonu indir</string>
+    <string name="dl_delete_confirm">Bu indirme cihazdan silinsin mi?</string>
+    <string name="dl_err_space">yeterli alan yok</string>
+    <string name="dl_err_source">kaynak kullanılamıyor</string>
+    <string name="dl_err_network">ağ hatası</string>
+    <string name="dl_episodes">%1$d bölüm, %2$d sezon</string>
 </resources>

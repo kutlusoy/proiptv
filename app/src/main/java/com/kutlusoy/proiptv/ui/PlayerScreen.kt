@@ -13,6 +13,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -194,6 +197,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var buffering by remember { mutableStateOf(false) }
     var overlay by remember { mutableStateOf(true) }
     var playing by remember { mutableStateOf(true) }
+    var flash by remember { mutableStateOf<String?>(null) }
+    var flashBack by remember { mutableStateOf(false) }
+    var flashTick by remember { mutableIntStateOf(0) }
     var moreDialog by remember { mutableStateOf(false) }
     var touched by remember { mutableIntStateOf(0) }
     var digits by remember { mutableStateOf("") }
@@ -411,6 +417,13 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
 
+    LaunchedEffect(flashTick) {
+        if (flashTick > 0) {
+            delay(700)
+            flash = null
+        }
+    }
+
     LaunchedEffect(overlay, dialogOpen) {
         yield()
         runCatching { if (overlay && !dialogOpen) first.requestFocus() else if (!dialogOpen) root.requestFocus() }
@@ -500,7 +513,21 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     else -> false
                 }
             }
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { overlay = !overlay },
+            .pointerInput(active?.live) {
+                detectTapGestures(
+                    onTap = { overlay = !overlay },
+                    onDoubleTap = { pos ->
+                        if (active?.live == false) {
+                            val back = pos.x < size.width / 2
+                            val limit = exo.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
+                            exo.seekTo((exo.currentPosition + if (back) -SKIP_MS else SKIP_MS).coerceIn(0L, limit))
+                            flash = (if (back) "-" else "+") + "10 s"
+                            flashBack = back
+                            flashTick++
+                        }
+                    },
+                )
+            },
     ) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -515,7 +542,14 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         if (digits.isNotEmpty()) {
             Text(digits, Modifier.align(Alignment.TopEnd).padding(24.dp).background(Color(0xAA000000)).padding(12.dp), style = MaterialTheme.typography.displaySmall, color = Color.White)
         }
-        AnimatedVisibility(overlay, Modifier.align(Alignment.Center)) {
+        flash?.let {
+            Text(
+                it, Modifier.align(if (flashBack) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 56.dp)
+                    .background(Color(0xAA000000), CircleShape).padding(horizontal = 20.dp, vertical = 12.dp),
+                color = Color.White, style = MaterialTheme.typography.titleLarge,
+            )
+        }
+        AnimatedVisibility(overlay, Modifier.align(Alignment.Center).offset(y = 28.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
                 val canSeek = active?.live == false || hubActive
                 if (canSeek) {
@@ -774,6 +808,8 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
         )
     }
 }
+
+private const val SKIP_MS = 10_000L
 
 private enum class PlayerGlyph { PLAY, PAUSE, STOP }
 

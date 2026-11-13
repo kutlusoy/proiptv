@@ -11,7 +11,9 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.kutlusoy.proiptv.download.DownloadManager
 import com.kutlusoy.proiptv.engine.EngineManager
+import com.kutlusoy.proiptv.net.Http
 import com.kutlusoy.proiptv.recording.RecordingManager
 import com.kutlusoy.proiptv.sync.GuideWorker
 import java.io.File
@@ -34,6 +36,8 @@ class ProIptvApp : Application() {
         private set
     lateinit var backup: BackupManager
         private set
+    lateinit var downloads: DownloadManager
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -47,10 +51,12 @@ class ProIptvApp : Application() {
             minOf(wanted, hubDir.usableSpace / 3).coerceAtLeast(64L * 1024 * 1024)
         })
         recordings = RecordingManager(this, db, engine, scope, resolve = { repo.target(it) }, maxConnections = { repo.maxConnections(it) })
+        downloads = DownloadManager(this, db, scope, Http.client, File(getExternalFilesDir(null) ?: filesDir, "downloads"), resolve = { repo.downloadSource(it) })
         backup = BackupManager(repo, { prefs.timeshift to prefs.bufferMb }, { on, mb -> prefs.timeshift = on; prefs.bufferMb = mb }, { secrets.decrypt(it.password) })
         scope.launch {
             recordings.recoverInterrupted()
             recordings.rescheduleAll()
+            downloads.resume()
         }
         scope.launch {
             repo.sync.syncStale(STALE_MS)

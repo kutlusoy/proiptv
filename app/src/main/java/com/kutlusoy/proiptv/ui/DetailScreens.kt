@@ -1,6 +1,9 @@
 package com.kutlusoy.proiptv.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.CircularProgressIndicator
+import com.kutlusoy.proiptv.data.DlStatus
+import com.kutlusoy.proiptv.data.Download
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -170,8 +173,11 @@ fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
+    val downloads by vm.downloads.collectAsState()
+    val dl = downloads.firstOrNull { it.accountId == item.accountId && it.kind == Kind.MOVIE && it.remoteId == item.remoteId }
+
     fun play(fromStart: Boolean) = vm.run {
-        val target = vm.repo.target(item) ?: return@run
+        val target = dl?.let { vm.localTarget(it) } ?: vm.repo.target(item) ?: return@run
         vm.player.value = PlayRequest.Single(target, fromStart)
     }
 
@@ -192,6 +198,9 @@ fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit) {
                 if (saved != null) {
                     OutlinedButton(onClick = { play(true) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.detail_restart)) }
                 }
+                DownloadButton(dl, onStart = {
+                    vm.download(listOf(Download(accountId = item.accountId, kind = Kind.MOVIE, remoteId = item.remoteId, title = item.name, logo = item.logo, ext = item.ext ?: "mp4")))
+                }, onRetry = { dl?.let { vm.retryDownload(it.id) } })
                 val watched = progress?.watched == true
                 OutlinedButton(
                     onClick = { vm.run { vm.repo.setWatched(item.accountId, Kind.MOVIE, listOf(item.remoteId), !watched); refresh++ } },
@@ -233,8 +242,15 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(next?.episode?.id) { if (next != null) runCatching { focus.requestFocus() } }
 
+    val downloads by vm.downloads.collectAsState()
+    fun downloadOf(ep: XtreamEpisode) = downloads.firstOrNull { it.accountId == series.accountId && it.kind == Kind.EPISODE && it.remoteId == ep.id }
+    fun toDownload(ep: XtreamEpisode) = Download(
+        accountId = series.accountId, kind = Kind.EPISODE, remoteId = ep.id, title = ep.title, logo = ep.image ?: series.logo, ext = ep.ext,
+        seriesRemoteId = series.remoteId, seriesName = series.name, season = ep.season, episode = ep.number,
+    )
+
     fun play(ep: XtreamEpisode) = vm.run {
-        val target = vm.repo.episodeTarget(series, ep) ?: return@run
+        val target = downloadOf(ep)?.let { vm.localTarget(it) } ?: vm.repo.episodeTarget(series, ep) ?: return@run
         vm.player.value = PlayRequest.Single(target)
     }
 
@@ -279,6 +295,13 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit) {
                         IconButton(onClick = { menu = true }, modifier = Modifier.focusHighlight()) { Icon(Icons.Filled.MoreVert, stringResource(R.string.action_more)) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.dl_season)) },
+                                onClick = {
+                                    menu = false
+                                    vm.download(episodes.filter { it.season == active && downloadOf(it) == null }.map { toDownload(it) })
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(if (allWatched) R.string.detail_season_unwatched else R.string.detail_season_watched)) },
                                 onClick = {
                                     menu = false
@@ -292,7 +315,8 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit) {
         }
         items(episodes.filter { it.season == active }, key = { it.id }) { ep ->
             EpisodeRow(
-                ep, progress[ep.id], onClick = { play(ep) },
+                ep, progress[ep.id], downloadOf(ep), onClick = { play(ep) },
+                onDownload = { val d = downloadOf(ep); if (d == null) vm.download(listOf(toDownload(ep))) else if (d.status == DlStatus.FAILED) vm.retryDownload(d.id) },
                 onToggleWatched = { vm.run { vm.repo.setWatched(series.accountId, Kind.EPISODE, listOf(ep.id), progress[ep.id]?.watched != true); refresh++ } },
             )
         }
@@ -300,7 +324,7 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit) {
 }
 
 @Composable
-private fun EpisodeRow(ep: XtreamEpisode, progress: Progress?, onClick: () -> Unit, onToggleWatched: () -> Unit) {
+private fun EpisodeRow(ep: XtreamEpisode, progress: Progress?, download: Download?, onClick: () -> Unit, onDownload: () -> Unit, onToggleWatched: () -> Unit) {
     val watched = progress?.watched == true
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).focusHighlight().clickable(onClick = onClick).padding(6.dp),
@@ -324,6 +348,18 @@ private fun EpisodeRow(ep: XtreamEpisode, progress: Progress?, onClick: () -> Un
             durationText(ep.durationSecs)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) }
             ep.plot?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f)) }
         }
+        IconButton(onClick = onDownload, modifier = Modifier.focusHighlight()) {
+            when (download?.status) {
+                DlStatus.RUNNING -> CircularProgressIndicator(
+                    progress = { if (download.total > 0) (download.bytes.toFloat() / download.total).coerceIn(0f, 1f) else 0f },
+                    modifier = Modifier.size(22.dp), strokeWidth = 2.dp,
+                )
+                DlStatus.QUEUED -> CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                DlStatus.DONE -> Icon(DownloadIcon, stringResource(R.string.dl_downloaded), tint = Palette.WineSoft)
+                DlStatus.FAILED -> Icon(DownloadIcon, stringResource(R.string.dl_retry), tint = MaterialTheme.colorScheme.error)
+                else -> Icon(DownloadIcon, stringResource(R.string.dl_download), tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+            }
+        }
         IconButton(onClick = onToggleWatched, modifier = Modifier.focusHighlight()) {
             Icon(
                 Icons.Filled.CheckCircle,
@@ -332,4 +368,20 @@ private fun EpisodeRow(ep: XtreamEpisode, progress: Progress?, onClick: () -> Un
             )
         }
     }
+}
+
+@Composable
+private fun DownloadButton(dl: Download?, onStart: () -> Unit, onRetry: () -> Unit) {
+    val label = when (dl?.status) {
+        null -> stringResource(R.string.dl_download)
+        DlStatus.QUEUED -> stringResource(R.string.dl_queued)
+        DlStatus.RUNNING -> "${stringResource(R.string.dl_running)} ${if (dl.total > 0) (dl.bytes * 100 / dl.total).toInt() else 0} %"
+        DlStatus.DONE -> "\u2713 " + stringResource(R.string.dl_downloaded)
+        else -> stringResource(R.string.dl_retry)
+    }
+    OutlinedButton(
+        onClick = { if (dl == null) onStart() else if (dl.status == DlStatus.FAILED) onRetry() },
+        enabled = dl == null || dl.status == DlStatus.FAILED,
+        modifier = Modifier.focusHighlight(),
+    ) { Text(label) }
 }

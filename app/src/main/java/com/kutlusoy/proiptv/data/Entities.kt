@@ -167,3 +167,30 @@ data class Recording(
     val channelRemoteId: String = "",
     val note: String? = null,
 )
+
+object DlStatus {
+    const val QUEUED = 0
+    const val RUNNING = 1
+    const val DONE = 2
+    const val FAILED = 3
+}
+
+@Entity(tableName = "downloads", indices = [Index(value = ["accountId", "kind", "remoteId"], unique = true)])
+data class Download(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    val kind: Int,
+    val remoteId: String,
+    val title: String,
+    val logo: String? = null,
+    val ext: String = "mp4",
+    val seriesRemoteId: String = "",
+    val seriesName: String = "",
+    val season: Int = 0,
+    val episode: Int = 0,
+    val bytes: Long = 0,
+    val total: Long = 0,
+    val status: Int = DlStatus.QUEUED,
+    val error: String? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+)

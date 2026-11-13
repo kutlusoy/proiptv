@@ -83,3 +83,12 @@ fun <T> DropdownField(
 val LocalChromeHidden = androidx.compose.runtime.compositionLocalOf<androidx.compose.runtime.MutableState<Boolean>> {
     androidx.compose.runtime.mutableStateOf(false)
 }
+
+val DownloadIcon: androidx.compose.ui.graphics.vector.ImageVector by lazy {
+    androidx.compose.ui.graphics.vector.ImageVector.Builder("download", 24.dp, 24.dp, 24f, 24f)
+        .addPath(
+            androidx.compose.ui.graphics.vector.PathParser().parsePathString("M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z").toNodes(),
+            fill = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        )
+        .build()
+}
