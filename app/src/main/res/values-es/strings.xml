@@ -89,4 +89,23 @@
     <string name="account_guide_never">Guía aún sin cargar</string>
     <string name="account_sync_guide">Actualizar guía</string>
     <string name="settings_guide_info">La guía se actualiza sola cada pocas horas en segundo plano y al abrir la aplicación.</string>
+    <string name="nav_recordings">Grabaciones</string>
+    <string name="rec_empty">Aún no hay grabaciones. Pulsa Grabar mientras ves un canal.</string>
+    <string name="rec_record">Grabar</string>
+    <string name="rec_stop">Detener grabación</string>
+    <string name="rec_until_stopped">Hasta que la detenga</string>
+    <string name="rec_minutes">%1$d minutos</string>
+    <string name="rec_until_program_end">Hasta que termine el programa actual</string>
+    <string name="rec_status_recording">Grabando</string>
+    <string name="rec_status_interrupted">Interrumpida</string>
+    <string name="rec_status_done">Finalizada</string>
+    <string name="rec_delete_confirm">¿Eliminar esta grabación?</string>
+    <string name="rec_play">Reproducir</string>
+    <string name="rec_notification">Grabando: %1$s</string>
+    <string name="player_no_connection">Las %1$d conexiones de esta cuenta están todas en uso (%2$s).</string>
+    <string name="player_no_space">No hay suficiente espacio libre para grabar.</string>
+    <string name="player_live">En vivo</string>
+    <string name="settings_timeshift">Pausar y retroceder la TV en directo</string>
+    <string name="settings_buffer">Tamaño del búfer en este dispositivo</string>
+    <string name="settings_buffer_hint">Un búfer mayor permite retroceder más pero usa más espacio.</string>
 </resources>

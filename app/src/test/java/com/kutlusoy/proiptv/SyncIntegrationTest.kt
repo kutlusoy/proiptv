@@ -286,4 +286,20 @@ class SyncIntegrationTest {
         sqlite.close()
         assertNotNull(ctx)
     }
+
+    @Test
+    fun migrationToVersion3CreatesTheSameRecordingsTableAsRoom() {
+        fun describe(c: android.database.Cursor): List<String> = c.use {
+            val rows = mutableListOf<String>()
+            while (it.moveToNext()) rows += "${it.getString(1)}|${it.getString(2)}|${it.getInt(3)}|${it.getInt(5)}"
+            rows
+        }
+        val fromRoom = describe(db.openHelper.writableDatabase.query("PRAGMA table_info(recordings)"))
+        val migrated = android.database.sqlite.SQLiteDatabase.create(null)
+        for (sql in AppDatabase.MIGRATION_2_3_SQL) migrated.execSQL(sql)
+        val fromMigration = describe(migrated.rawQuery("PRAGMA table_info(recordings)", null))
+        migrated.close()
+        assertTrue(fromRoom.isNotEmpty())
+        assertEquals(fromRoom, fromMigration)
+    }
 }

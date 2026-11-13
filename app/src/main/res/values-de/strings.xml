@@ -89,4 +89,23 @@
     <string name="account_guide_never">Programm noch nicht geladen</string>
     <string name="account_sync_guide">Programm aktualisieren</string>
     <string name="settings_guide_info">Der Programmführer aktualisiert sich selbst alle paar Stunden im Hintergrund und beim Öffnen der App.</string>
+    <string name="nav_recordings">Aufnahmen</string>
+    <string name="rec_empty">Noch keine Aufnahmen. Drücke beim Fernsehen auf Aufnehmen.</string>
+    <string name="rec_record">Aufnehmen</string>
+    <string name="rec_stop">Aufnahme beenden</string>
+    <string name="rec_until_stopped">Bis ich sie beende</string>
+    <string name="rec_minutes">%1$d Minuten</string>
+    <string name="rec_until_program_end">Bis die aktuelle Sendung endet</string>
+    <string name="rec_status_recording">Nimmt auf</string>
+    <string name="rec_status_interrupted">Unterbrochen</string>
+    <string name="rec_status_done">Fertig</string>
+    <string name="rec_delete_confirm">Diese Aufnahme löschen?</string>
+    <string name="rec_play">Abspielen</string>
+    <string name="rec_notification">Aufnahme läuft: %1$s</string>
+    <string name="player_no_connection">Alle %1$d Verbindungen dieses Kontos sind belegt (%2$s).</string>
+    <string name="player_no_space">Nicht genug freier Speicher für die Aufnahme.</string>
+    <string name="player_live">Live</string>
+    <string name="settings_timeshift">Live-TV pausieren und zurückspulen</string>
+    <string name="settings_buffer">Puffergröße auf diesem Gerät</string>
+    <string name="settings_buffer_hint">Ein größerer Puffer erlaubt weiteres Zurückspulen, braucht aber mehr Speicher.</string>
 </resources>

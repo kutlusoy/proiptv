@@ -50,10 +50,11 @@ Notes:
 | Feature | Version |
 |---|---|
 | Parallel streams, multiview | 0.0.7 |
-| Time shift (pause, rewind, jump to live) | 0.0.5 |
-| Scheduled recording to internal or external storage | 0.0.6 |
-| One provider connection per channel for watch, time shift and recording | 0.0.5 |
-| Connection budget per account | 0.0.5 |
+| Time shift (pause, rewind, jump to live), TS streams | 0.0.1 (built) |
+| Recording to internal storage, started by hand, with notification and recordings list | 0.0.1 (built) |
+| Scheduled recording for a later time, external storage | 0.0.6 |
+| One provider connection per channel for watch, time shift and recording | 0.0.1 (built) |
+| Connection budget per account | 0.0.1 (built) |
 | Failover to an equal channel, stall detection | 0.0.7 |
 | Picture in picture | 0.1.x |
 

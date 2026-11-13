@@ -39,6 +39,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val favKeys = db.favorites().keys().map { list -> list.map { Triple(it.accountId, it.kind, it.remoteId) }.toSet() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     val player = MutableStateFlow<PlayRequest?>(null)
+    val activeRecordings = (app as ProIptvApp).recordings.active
+    val recordings = db.recordings().all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
         viewModelScope.launch { repo.ensureDefaultList(app.getString(R.string.fav_title)) }
@@ -62,6 +64,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }.flow
 
     fun favoriteRows(listId: Long) = db.favorites().rows(listId)
+
+    fun stopRecording(id: Long) = (getApplication<Application>() as ProIptvApp).recordings.stop(id)
+
+    fun deleteRecording(id: Long) = run { (getApplication<Application>() as ProIptvApp).recordings.delete(id) }
 
     fun refreshAll() {
         accounts.value.filter { it.enabled }.forEach { repo.sync.sync(it.id) }

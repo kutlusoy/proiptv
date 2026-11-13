@@ -105,7 +105,35 @@ On a phone: tap the picture to show the bar.
 
 If a stream fails, the app retries three times and then says so. A stream that stays stuck for about 25 seconds is restarted.
 
-## 5. Favorites and manual order
+## 5. Pause, rewind and record live TV
+
+This works for live channels in **TS** format (the `Automatic` setting uses TS where the provider allows it). Channels in HLS format (`.m3u8`) play directly, without pause and rewind.
+
+While you watch, the app keeps the last minutes of the channel on the device. The information bar then shows:
+
+| Control | Action |
+|---|---|
+| Pause button | stops the picture, the channel keeps being stored, resume continues where you stopped |
+| `-30 s`, `+30 s` | jump back or forward. With the bar hidden, Left and Right on the remote jump 10 seconds. |
+| `Live` | jump to the live picture. The label above shows `Live` or how far you are behind, for example `-02:15`. |
+| `Record` | start a recording, see below |
+
+**Buffer size:** Settings, "Pause and rewind live TV" (switch) and "Buffer size on this device". A bigger buffer allows rewinding further and uses more storage. As a guide, 1 GB holds about 17 minutes of an HD channel (8 Mbit/s) or more than an hour of an SD channel (2 Mbit/s). If the device has little free space, the app uses less than the chosen size.
+
+**Connections:** watching, rewinding and recording the same channel use **one** connection of your provider. If the account has a limit (shown on the account card) and it is used up, the app says which channels use the connections instead of failing silently.
+
+### Recording
+
+1. Press **Record** in the information bar and choose how long: until the current program ends, 30, 60 or 120 minutes, or until you stop it.
+2. On Android 13 and newer the app asks once for permission to show notifications, allow it. A notification "Recording: ..." stays visible while a recording runs.
+3. The recording continues when you leave the player and when the screen turns off. Press **Stop recording** in the bar or in the tab **Recordings** to end it earlier.
+4. Tab **Recordings** lists all recordings with date, length and size. **Play**, **Stop recording** and **Delete** are there. Playback offers audio and subtitle choice and resumes where you stopped.
+
+The files are normal transport stream files (`.ts`) in the app's Movies folder (`Android/data/com.kutlusoy.proiptv/files/Movies`, for the debug app `...proiptv.debug...`). You can copy them with a file manager or over USB and play them with VLC or similar players. Deleting a recording in the app deletes the file.
+
+If the app is closed by the system or the stream stays down for a long time, the recording is marked **Interrupted**, the part that was recorded is kept. For long recordings turn off battery optimization for the app (see the continuous operation notes of your device vendor). A recording does not start if less than 200 MB of storage is free.
+
+## 6. Favorites and manual order
 
 1. Live TV, chip **Favorites**.
 2. The chips on top are your lists. **New list** creates another one ("Sport", "Kids"). **Rename** and **Delete** act on the selected list.
@@ -116,25 +144,27 @@ With more than one list the star opens a dialog where you tick the lists of the 
 
 Zapping with up and down while playing follows the order of the list you started from.
 
-## 6. Language
+## 7. Language
 
 Tab **Settings**, **Language**. `Automatic` follows the device. The change applies at once.
 
-## 7. Limits of this version
+## 8. Limits of this version
 
-- No time shift, no recording and no multiview yet (planned for the versions after 0.0.1, see the roadmap).
+- No multiview yet, and no recording planned from the guide for a later time (recording starts at the moment you press Record). Planned for the next versions, see the roadmap.
+- Pause, rewind and recording need TS streams, not HLS.
 - Stalker portal, HDHomeRun, Enigma2 and TVHeadend sources are not implemented yet.
 - Series in M3U playlists are listed as single movies.
 - Favorites can be set for live channels only.
 - The translations of Portuguese, Dutch, Polish, Russian and Arabic cover only the first screens, the rest shows English.
 - The splash screen and icons are placeholders until the logo is delivered.
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 | Observation | What to check |
 |---|---|
 | `Login failed` on the card | Server address with port, user name, password. Open the address `<server>/player_api.php?username=..&password=..` in a browser, it must show account data. |
 | Account loads but a channel does not play | Try another live format in the account (`TS` or `HLS`). Check that the provider allows another connection (card shows allowed and active connections). |
 | Guide is empty | The channel has no guide id in the playlist, or the provider offers no XMLTV. Enter a guide URL in the account. |
+| Recording does not start | Free storage under 200 MB, or all provider connections are in use (the message names them). |
 | Very large lists load slowly | The first load of a big account takes a minute or more on weak devices. It runs in the background, the app stays usable. |
 | Text in another language than expected | Settings, Language. |

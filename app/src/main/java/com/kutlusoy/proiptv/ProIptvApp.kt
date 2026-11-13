@@ -10,7 +10,10 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.kutlusoy.proiptv.engine.EngineManager
+import com.kutlusoy.proiptv.recording.RecordingManager
 import com.kutlusoy.proiptv.sync.GuideWorker
+import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,12 +25,26 @@ class ProIptvApp : Application() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     lateinit var repo: Repository
         private set
+    lateinit var prefs: Prefs
+        private set
+    lateinit var engine: EngineManager
+        private set
+    lateinit var recordings: RecordingManager
+        private set
 
     override fun onCreate() {
         super.onCreate()
         val db = AppDatabase.create(this)
         val secrets = SecretBox()
         repo = Repository(db, secrets, SyncManager(db, secrets, scope))
+        prefs = Prefs(this)
+        val hubDir = File(cacheDir, "timeshift")
+        engine = EngineManager(hubDir, scope, capacity = {
+            val wanted = prefs.bufferMb * 1024L * 1024L
+            minOf(wanted, hubDir.usableSpace / 3).coerceAtLeast(64L * 1024 * 1024)
+        })
+        recordings = RecordingManager(this, db, engine, scope)
+        scope.launch { recordings.recoverInterrupted() }
         scope.launch {
             repo.sync.syncStale(STALE_MS)
             while (true) {

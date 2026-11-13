@@ -17,10 +17,11 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 - **Live TV** with groups, search, now and next, zapping with the remote control, number keys, guide per channel and **catch-up**
 - **Movies and series** with seasons, episodes and resume
 - **Favorites** with several lists and **manual sorting**, kept after a provider refresh
+- **stream hub**: one provider connection per channel for watching, **pause and rewind live TV** (disk ring buffer) and **recording** (foreground service, recordings list), connection limit of the account respected
 - player on Media3 with audio and subtitle choice, picture size, automatic retry
 - eleven languages (six complete, five partly translated, see Languages)
 
-Not yet: time shift, recording, multiview, Stalker portal, HDHomeRun, Enigma2, TVHeadend, Jellyfin and the other sources. See the roadmap in [doc/guideline-product-plan.md](doc/guideline-product-plan.md) and the scope in [doc/guideline-feature-matrix.md](doc/guideline-feature-matrix.md). How to install and use it: [doc/guideline-user-guide.md](doc/guideline-user-guide.md).
+Not yet: scheduled recording for a later time, multiview, Stalker portal, HDHomeRun, Enigma2, TVHeadend, Jellyfin and the other sources. See the roadmap in [doc/guideline-product-plan.md](doc/guideline-product-plan.md) and the scope in [doc/guideline-feature-matrix.md](doc/guideline-feature-matrix.md). How to install and use it: [doc/guideline-user-guide.md](doc/guideline-user-guide.md).
 
 ## Build
 
@@ -87,7 +88,8 @@ To add a language: create `app/src/main/res/values-xx/strings.xml` with all keys
 | [guideline-product-plan.md](doc/guideline-product-plan.md) | product, architecture, engine, release plan, roadmap |
 | [guideline-feature-matrix.md](doc/guideline-feature-matrix.md) | content types and features per version, market comparison |
 | [guideline-user-guide.md](doc/guideline-user-guide.md) | install, add an account, remote control keys, favorites |
-| [guideline-windows-version.md](doc/guideline-windows-version.md) | plan for a Windows version from the same code |
+| [guideline-windows-version.md](doc/guideline-windows-version.md) | plan for a Windows version from the same code (libVLC) |
+| [guideline-windows-signing-azure.md](doc/guideline-windows-signing-azure.md) | step by step: Azure Artifact Signing for the Windows installer |
 | [guideline-release-signing.md](doc/guideline-release-signing.md) | keystore, GitHub secrets, running a release |
 | [guideline-android-developer-verification.md](doc/guideline-android-developer-verification.md) | register package name and key with Google |
 | [guideline-google-play.md](doc/guideline-google-play.md) | application ID, same key for GitHub and Play, store listing |

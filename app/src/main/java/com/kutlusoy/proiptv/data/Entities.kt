@@ -140,3 +140,22 @@ data class FavoriteRow(
 )
 
 data class FavoriteKey(val accountId: Long, val kind: Int, val remoteId: String)
+
+object RecStatus {
+    const val RECORDING = 0
+    const val DONE = 1
+    const val INTERRUPTED = 2
+}
+
+@Entity(tableName = "recordings")
+data class Recording(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    val title: String,
+    val startedAt: Long,
+    val endedAt: Long? = null,
+    val plannedEnd: Long? = null,
+    val path: String,
+    val bytes: Long = 0,
+    val status: Int = RecStatus.RECORDING,
+)

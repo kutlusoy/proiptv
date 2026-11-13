@@ -89,4 +89,23 @@
     <string name="account_guide_never">Guide pas encore chargé</string>
     <string name="account_sync_guide">Mettre à jour le guide</string>
     <string name="settings_guide_info">Le guide se met à jour automatiquement toutes les quelques heures en arrière-plan et à l\'ouverture de l\'application.</string>
+    <string name="nav_recordings">Enregistrements</string>
+    <string name="rec_empty">Aucun enregistrement. Appuyez sur Enregistrer pendant le visionnage d\'une chaîne.</string>
+    <string name="rec_record">Enregistrer</string>
+    <string name="rec_stop">Arrêter l\'enregistrement</string>
+    <string name="rec_until_stopped">Jusqu\'à l\'arrêt manuel</string>
+    <string name="rec_minutes">%1$d minutes</string>
+    <string name="rec_until_program_end">Jusqu\'à la fin de l\'émission en cours</string>
+    <string name="rec_status_recording">Enregistrement</string>
+    <string name="rec_status_interrupted">Interrompu</string>
+    <string name="rec_status_done">Terminé</string>
+    <string name="rec_delete_confirm">Supprimer cet enregistrement ?</string>
+    <string name="rec_play">Lire</string>
+    <string name="rec_notification">Enregistrement : %1$s</string>
+    <string name="player_no_connection">Les %1$d connexions de ce compte sont toutes utilisées (%2$s).</string>
+    <string name="player_no_space">Pas assez d\'espace libre pour enregistrer.</string>
+    <string name="player_live">Direct</string>
+    <string name="settings_timeshift">Mettre en pause et revenir en arrière en direct</string>
+    <string name="settings_buffer">Taille du tampon sur cet appareil</string>
+    <string name="settings_buffer_hint">Un tampon plus grand permet de revenir plus loin mais utilise plus d\'espace.</string>
 </resources>

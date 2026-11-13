@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -20,10 +23,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import android.text.format.Formatter
 import com.kutlusoy.proiptv.BuildConfig
+import com.kutlusoy.proiptv.ProIptvApp
 import com.kutlusoy.proiptv.R
 
 private val languages = listOf(
@@ -36,7 +42,8 @@ fun SettingsScreen(vm: MainViewModel) {
     var current by remember { mutableStateOf(AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore('-')) }
     LazyColumn(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         item { Text(stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 8.dp)) }
-        item { Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleMedium) }
+        item { TimeshiftSettings() }
+        item { Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp)) }
         item { LanguageRow(stringResource(R.string.option_auto), current.isEmpty()) { current = ""; apply("") } }
         items(languages) { (tag, name) ->
             LanguageRow(name, current == tag) { current = tag; apply(tag) }
@@ -62,4 +69,30 @@ private fun LanguageRow(name: String, selected: Boolean, onClick: () -> Unit) {
 
 private fun apply(tag: String) {
     AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+}
+
+@Composable
+private fun TimeshiftSettings() {
+    val ctx = LocalContext.current
+    val prefs = (ctx.applicationContext as ProIptvApp).prefs
+    var enabled by remember { mutableStateOf(prefs.timeshift) }
+    var size by remember { mutableStateOf(prefs.bufferMb) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_timeshift), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            Switch(checked = enabled, onCheckedChange = { enabled = it; prefs.timeshift = it }, modifier = Modifier.focusHighlight())
+        }
+        if (enabled) {
+            Text(stringResource(R.string.settings_buffer), style = MaterialTheme.typography.labelLarge)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf(256, 512, 1024, 2048, 4096)) { mb ->
+                    FilterChip(
+                        selected = size == mb, onClick = { size = mb; prefs.bufferMb = mb },
+                        label = { Text(Formatter.formatShortFileSize(ctx, mb * 1024L * 1024L)) }, modifier = Modifier.focusHighlight(),
+                    )
+                }
+            }
+            Text(stringResource(R.string.settings_buffer_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
+        }
+    }
 }

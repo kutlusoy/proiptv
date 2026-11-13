@@ -89,4 +89,23 @@
     <string name="account_guide_never">Rehber henüz yüklenmedi</string>
     <string name="account_sync_guide">Rehberi güncelle</string>
     <string name="settings_guide_info">Rehber birkaç saatte bir arka planda ve uygulama açıldığında kendini günceller.</string>
+    <string name="nav_recordings">Kayıtlar</string>
+    <string name="rec_empty">Henüz kayıt yok. Bir kanalı izlerken Kaydet\'e bas.</string>
+    <string name="rec_record">Kaydet</string>
+    <string name="rec_stop">Kaydı durdur</string>
+    <string name="rec_until_stopped">Ben durdurana kadar</string>
+    <string name="rec_minutes">%1$d dakika</string>
+    <string name="rec_until_program_end">Mevcut program bitene kadar</string>
+    <string name="rec_status_recording">Kaydediliyor</string>
+    <string name="rec_status_interrupted">Kesildi</string>
+    <string name="rec_status_done">Tamamlandı</string>
+    <string name="rec_delete_confirm">Bu kayıt silinsin mi?</string>
+    <string name="rec_play">Oynat</string>
+    <string name="rec_notification">Kayıt sürüyor: %1$s</string>
+    <string name="player_no_connection">Bu hesabın %1$d bağlantısının tümü kullanımda (%2$s).</string>
+    <string name="player_no_space">Kayıt için yeterli boş alan yok.</string>
+    <string name="player_live">Canlı</string>
+    <string name="settings_timeshift">Canlı TV\'yi duraklat ve geri sar</string>
+    <string name="settings_buffer">Bu cihazdaki arabellek boyutu</string>
+    <string name="settings_buffer_hint">Daha büyük arabellek daha fazla geri sarmaya izin verir ama daha çok alan kullanır.</string>
 </resources>

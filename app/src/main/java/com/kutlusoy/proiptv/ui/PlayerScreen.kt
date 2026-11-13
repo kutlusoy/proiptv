@@ -3,7 +3,11 @@
 package com.kutlusoy.proiptv.ui
 
 import android.content.Context
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,6 +39,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,6 +59,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -63,11 +69,13 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -77,11 +85,19 @@ import com.kutlusoy.proiptv.R
 import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.PlayTarget
 import com.kutlusoy.proiptv.data.Program
+import com.kutlusoy.proiptv.engine.BudgetExceeded
+import com.kutlusoy.proiptv.engine.HubLease
+import com.kutlusoy.proiptv.engine.StreamHub
 import com.kutlusoy.proiptv.net.Http
+import com.kutlusoy.proiptv.net.Upstream
+import com.kutlusoy.proiptv.player.HubDataSource
+import com.kutlusoy.proiptv.recording.NotEnoughSpace
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 
 private fun buildPlayer(ctx: Context): ExoPlayer {
@@ -90,16 +106,38 @@ private fun buildPlayer(ctx: Context): ExoPlayer {
     return ExoPlayer.Builder(ctx, renderers).setLoadControl(load).build()
 }
 
-private fun start(exo: ExoPlayer, target: PlayTarget, hls: Boolean) {
-    val data = OkHttpDataSource.Factory(Http.client).setUserAgent(target.userAgent?.takeIf { it.isNotBlank() } ?: Http.DEFAULT_AGENT)
-    val extractors = DefaultExtractorsFactory()
-        .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS)
-        .setConstantBitrateSeekingEnabled(true)
+private fun extractors() = DefaultExtractorsFactory()
+    .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS)
+    .setConstantBitrateSeekingEnabled(true)
+
+private fun start(ctx: Context, exo: ExoPlayer, target: PlayTarget, hls: Boolean) {
+    val http = OkHttpDataSource.Factory(Http.client).setUserAgent(target.userAgent?.takeIf { it.isNotBlank() } ?: Http.DEFAULT_AGENT)
     val item = MediaItem.Builder().setUri(target.url).apply { if (hls) setMimeType(MimeTypes.APPLICATION_M3U8) }.build()
-    exo.setMediaSource(DefaultMediaSourceFactory(data, extractors).createMediaSource(item))
+    exo.setMediaSource(DefaultMediaSourceFactory(DefaultDataSource.Factory(ctx, http), extractors()).createMediaSource(item))
     exo.prepare()
     exo.playWhenReady = true
 }
+
+private fun startHub(exo: ExoPlayer, hub: StreamHub, offset: Long) {
+    val item = MediaItem.Builder().setUri("hub://${hub.key}").setMimeType(MimeTypes.VIDEO_MP2T).build()
+    exo.setMediaSource(ProgressiveMediaSource.Factory(HubDataSource.Factory(hub, offset), extractors()).createMediaSource(item))
+    exo.prepare()
+    exo.playWhenReady = true
+}
+
+private fun isTransportStream(url: String): Boolean {
+    val path = url.substringBefore('?').lowercase()
+    return !path.endsWith(".m3u8") && !path.endsWith(".mpd")
+}
+
+private class LeaseHolder {
+    @Volatile
+    var lease: HubLease? = null
+}
+
+private const val LIVE_LAG_MS = 1500L
+private const val LIVE_THRESHOLD_MS = 3000L
+private const val SHIFT_STEP_MS = 10_000L
 
 private fun clock(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
@@ -134,13 +172,26 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var guideTick by remember { mutableIntStateOf(0) }
     var position by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
+    val holder = remember { LeaseHolder() }
+    var hubActive by remember { mutableStateOf(false) }
+    var hubStartTime by remember { mutableLongStateOf(0L) }
+    var behindMs by remember { mutableLongStateOf(0L) }
+    var shiftTime by remember { mutableStateOf<Long?>(null) }
+    var shiftRequest by remember { mutableIntStateOf(0) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    var recordDialog by remember { mutableStateOf(false) }
+    val activeRecs by app.recordings.active.collectAsState()
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val favLists by vm.favLists.collectAsState()
     val favKeys by vm.favKeys.collectAsState()
     val root = remember { FocusRequester() }
     val first = remember { FocusRequester() }
     val active = catchup ?: target
     val zapping = request is PlayRequest.Zap && catchup == null
-    val dialogOpen = tracksDialog || guideDialog || listsDialog
+    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog
+    val activeNow by rememberUpdatedState(active)
+    val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
+    val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
 
     DisposableEffect(exo) {
         val listener = object : Player.Listener {
@@ -166,6 +217,13 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 if (state == Player.STATE_READY) {
                     retry = 0
                     message = null
+                    notice = null
+                }
+                if (state == Player.STATE_ENDED && activeNow?.live == true) {
+                    scope.launch {
+                        delay(1000)
+                        reload++
+                    }
                 }
             }
 
@@ -176,6 +234,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         exo.addListener(listener)
         onDispose {
             exo.removeListener(listener)
+            holder.lease?.close()
             val t = active
             if (t != null && !t.live) {
                 val pos = exo.currentPosition
@@ -194,6 +253,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         retry = 0
         forceHls = false
         message = null
+        notice = null
+        shiftTime = null
         target = i?.let { vm.repo.target(it) }
         overlay = true
         touched++
@@ -204,9 +265,29 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         if (vm.repo.nowAndNext(i.accountId, i.epgId).first == null && vm.repo.fetchShortEpg(i)) guideTick++
     }
 
-    LaunchedEffect(active, reload, forceHls) {
+    LaunchedEffect(active, reload, forceHls, shiftRequest) {
         val t = active ?: return@LaunchedEffect
-        start(exo, t, forceHls)
+        holder.lease?.close()
+        holder.lease = null
+        hubActive = false
+        val useHub = t.live && !forceHls && catchup == null && app.prefs.timeshift && isTransportStream(t.url)
+        if (useHub) {
+            val lease = try {
+                val max = vm.repo.maxConnections(t.accountId)
+                withContext(Dispatchers.IO) { app.engine.acquire(t.accountId, t.remoteId, t.title, max, Upstream.opener(t.url, t.userAgent)) }
+            } catch (e: BudgetExceeded) {
+                notice = ctx.getString(R.string.player_no_connection, e.limit, e.openTitles.joinToString(", "))
+                return@LaunchedEffect
+            }
+            holder.lease = lease
+            hubActive = true
+            val buffer = lease.hub.buffer
+            val offset = shiftTime?.let { buffer.offsetAtTime(it) } ?: buffer.offsetAtTime(System.currentTimeMillis() - LIVE_LAG_MS)
+            hubStartTime = buffer.timeAtOffset(offset)
+            startHub(exo, lease.hub, offset)
+        } else {
+            start(ctx, exo, t, forceHls)
+        }
         if (!t.live) {
             val saved = vm.repo.progress(t)?.positionMs ?: 0
             if (saved > 5_000) exo.seekTo(saved)
@@ -238,6 +319,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         while (overlay) {
             position = exo.currentPosition
             duration = exo.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+            if (hubActive) behindMs = (System.currentTimeMillis() - (hubStartTime + position)).coerceAtLeast(0)
             delay(500)
         }
     }
@@ -258,6 +340,43 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
 
     BackHandler { onClose() }
 
+    fun shiftBy(deltaMs: Long) {
+        val hub = holder.lease?.hub ?: return
+        val now = System.currentTimeMillis()
+        val current = hubStartTime + exo.currentPosition
+        val wanted = (current + deltaMs).coerceIn(hub.buffer.oldestTime(), now)
+        shiftTime = if (now - wanted < LIVE_THRESHOLD_MS) null else wanted
+        shiftRequest++
+        overlay = true
+        touched++
+    }
+
+    fun goLive() {
+        shiftTime = null
+        shiftRequest++
+    }
+
+    fun startRecording(stopAt: Long?) {
+        val t = active ?: return
+        scope.launch {
+            try {
+                if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                app.recordings.start(t, vm.repo.maxConnections(t.accountId), stopAt)
+            } catch (e: BudgetExceeded) {
+                notice = ctx.getString(R.string.player_no_connection, e.limit, e.openTitles.joinToString(", "))
+            } catch (e: NotEnoughSpace) {
+                notice = ctx.getString(R.string.player_no_space)
+            }
+        }
+    }
+
+    val nowNext by produceState<Pair<Program?, Program?>>(null to null, item, position / 60_000, guideTick) {
+        val i = item
+        value = if (i == null) null to null else vm.repo.nowAndNext(i.accountId, i.epgId)
+    }
+
     fun zap(delta: Int) {
         if (!zapping) return
         index = ((index + delta) % count + count) % count
@@ -277,6 +396,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     e.key == Key.DirectionDown || e.key == Key.ChannelUp || e.key == Key.PageDown -> {
                         if (zapping) { zap(1); true } else { overlay = true; false }
                     }
+                    e.key == Key.DirectionLeft && hubActive && !overlay -> { shiftBy(-SHIFT_STEP_MS); true }
+                    e.key == Key.DirectionRight && hubActive && !overlay -> { shiftBy(SHIFT_STEP_MS); true }
                     e.key == Key.DirectionLeft && active?.live == false && !overlay -> { exo.seekBack(); true }
                     e.key == Key.DirectionRight && active?.live == false && !overlay -> { exo.seekForward(); true }
                     (e.key == Key.DirectionCenter || e.key == Key.Enter) && !overlay -> { overlay = true; true }
@@ -298,7 +419,10 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             factory = { c -> PlayerView(c).apply { useController = false; player = exo; keepScreenOn = true } },
             update = { it.resizeMode = resize },
         )
-        message?.let { Text(stringResource(it), Modifier.align(Alignment.Center).background(Color(0xAA000000)).padding(12.dp), color = Color.White) }
+        (notice ?: message?.let { stringResource(it) })?.let { Text(it, Modifier.align(Alignment.Center).background(Color(0xAA000000)).padding(12.dp), color = Color.White, textAlign = TextAlign.Center) }
+        if (recordingHere != null) {
+            Text("\u25CF REC", Modifier.align(Alignment.TopStart).padding(24.dp).background(Color(0xAA000000)).padding(8.dp), color = Color(0xFFFF5252))
+        }
         if (digits.isNotEmpty()) {
             Text(digits, Modifier.align(Alignment.TopEnd).padding(24.dp).background(Color(0xAA000000)).padding(12.dp), style = MaterialTheme.typography.displaySmall, color = Color.White)
         }
@@ -309,17 +433,13 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             ) {
                 Text(active?.title ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (active?.live == true) {
-                    val pair by produceState<Pair<Program?, Program?>>(null to null, item, position / 60_000, guideTick) {
-                        val i = item
-                        value = if (i == null) null to null else vm.repo.nowAndNext(i.accountId, i.epgId)
-                    }
-                    pair.first?.let { now ->
+                    nowNext.first?.let { now ->
                         val total = (now.end - now.start).coerceAtLeast(1)
                         val done = ((System.currentTimeMillis() / 1000 - now.start).toFloat() / total).coerceIn(0f, 1f)
                         Text("${stringResource(R.string.player_now)}: ${now.title}", color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         LinearProgressIndicator(progress = { done }, Modifier.fillMaxWidth())
                     }
-                    pair.second?.let { Text("${stringResource(R.string.player_next)}: ${it.title}", color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    nowNext.second?.let { Text("${stringResource(R.string.player_next)}: ${it.title}", color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 } else if (duration > 0) {
                     Slider(
                         value = (position.toFloat() / duration).coerceIn(0f, 1f),
@@ -327,6 +447,12 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         modifier = Modifier.focusHighlight(),
                     )
                     Text("${clock(position)} / ${clock(duration)}", color = Color.White)
+                }
+                if (hubActive) {
+                    Text(
+                        if (behindMs < LIVE_THRESHOLD_MS) stringResource(R.string.player_live) else "-" + clock(behindMs),
+                        color = if (behindMs < LIVE_THRESHOLD_MS) Color(0xFFFF5252) else Color.White,
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val i = item
@@ -347,8 +473,17 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     if (zapping && i?.epgId != null) {
                         OutlinedButton(onClick = { guideDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_guide)) }
                     }
-                    if (active?.live == false) {
-                        OutlinedButton(onClick = { if (exo.isPlaying) exo.pause() else exo.play() }, modifier = Modifier.focusRequester(first).focusHighlight()) { Text("⏯") }
+                    if (active?.live == false || hubActive) {
+                        OutlinedButton(onClick = { if (exo.isPlaying) exo.pause() else exo.play() }, modifier = Modifier.then(if (zapping && i != null) Modifier else Modifier.focusRequester(first)).focusHighlight()) { Text("\u23EF") }
+                    }
+                    if (hubActive) {
+                        OutlinedButton(onClick = { shiftBy(-30_000) }, modifier = Modifier.focusHighlight()) { Text("-30 s") }
+                        OutlinedButton(onClick = { shiftBy(30_000) }, modifier = Modifier.focusHighlight()) { Text("+30 s") }
+                        OutlinedButton(onClick = { goLive() }, enabled = behindMs >= LIVE_THRESHOLD_MS, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_live)) }
+                        OutlinedButton(
+                            onClick = { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
+                            modifier = Modifier.focusHighlight(),
+                        ) { Text(stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record)) }
                     }
                     OutlinedButton(onClick = { tracksDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_tracks)) }
                     OutlinedButton(
@@ -379,6 +514,36 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
     if (listsDialog) item?.let { ListsDialog(vm, it) { listsDialog = false } }
+    if (recordDialog) {
+        RecordDialog(nowNext.first?.end?.times(1000), onDismiss = { recordDialog = false }) { stopAt ->
+            recordDialog = false
+            startRecording(stopAt)
+        }
+    }
+}
+
+@Composable
+private fun RecordDialog(programEnd: Long?, onDismiss: () -> Unit, onStart: (Long?) -> Unit) {
+    val now = System.currentTimeMillis()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.rec_record)) },
+        text = {
+            Column {
+                @Composable
+                fun option(label: String, stopAt: Long?) {
+                    TextButton(onClick = { onStart(stopAt) }, modifier = Modifier.fillMaxWidth().focusHighlight()) { Text(label, Modifier.fillMaxWidth()) }
+                }
+                if (programEnd != null && programEnd > now) option(stringResource(R.string.rec_until_program_end), programEnd + 60_000)
+                option(stringResource(R.string.rec_minutes, 30), now + 30 * 60_000L)
+                option(stringResource(R.string.rec_minutes, 60), now + 60 * 60_000L)
+                option(stringResource(R.string.rec_minutes, 120), now + 120 * 60_000L)
+                option(stringResource(R.string.rec_until_stopped), null)
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }
 
 @Composable

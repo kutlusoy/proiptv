@@ -208,3 +208,27 @@ interface ProgressDao {
     @Query("DELETE FROM progress WHERE accountId = :accountId")
     suspend fun deleteAccount(accountId: Long)
 }
+
+@Dao
+interface RecordingDao {
+    @Query("SELECT * FROM recordings ORDER BY startedAt DESC")
+    fun all(): Flow<List<Recording>>
+
+    @Insert
+    suspend fun insert(recording: Recording): Long
+
+    @Update
+    suspend fun update(recording: Recording)
+
+    @Query("SELECT * FROM recordings WHERE id = :id")
+    suspend fun get(id: Long): Recording?
+
+    @Query("DELETE FROM recordings WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("UPDATE recordings SET status = 2 WHERE status = 0")
+    suspend fun markInterrupted()
+
+    @Query("DELETE FROM recordings WHERE accountId = :accountId")
+    suspend fun deleteAccount(accountId: Long)
+}

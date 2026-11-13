@@ -90,4 +90,23 @@
     <string name="account_guide_never">Guide not loaded yet</string>
     <string name="account_sync_guide">Update guide</string>
     <string name="settings_guide_info">The guide updates itself in the background every few hours and when the app opens.</string>
+    <string name="nav_recordings">Recordings</string>
+    <string name="rec_empty">No recordings yet. Press Record while watching a channel.</string>
+    <string name="rec_record">Record</string>
+    <string name="rec_stop">Stop recording</string>
+    <string name="rec_until_stopped">Until I stop it</string>
+    <string name="rec_minutes">%1$d minutes</string>
+    <string name="rec_until_program_end">Until the current program ends</string>
+    <string name="rec_status_recording">Recording</string>
+    <string name="rec_status_interrupted">Interrupted</string>
+    <string name="rec_status_done">Finished</string>
+    <string name="rec_delete_confirm">Delete this recording?</string>
+    <string name="rec_play">Play</string>
+    <string name="rec_notification">Recording: %1$s</string>
+    <string name="player_no_connection">All %1$d connections of this account are in use (%2$s).</string>
+    <string name="player_no_space">Not enough free storage to record.</string>
+    <string name="player_live">Live</string>
+    <string name="settings_timeshift">Pause and rewind live TV</string>
+    <string name="settings_buffer">Buffer size on this device</string>
+    <string name="settings_buffer_hint">A larger buffer allows rewinding further but uses more storage.</string>
 </resources>

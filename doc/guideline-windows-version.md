@@ -1,10 +1,10 @@
 # ProIPTV: Windows version
 
-- **Version:** 0.1 (draft)
+- **Version:** 0.2 (draft)
 - **Date:** November 13, 2026
 - **Audience:** Maintainers who decide on and build a Windows release
 - **Reference implementation:** [`guideline-product-plan.md`](./guideline-product-plan.md) sections 5, 6 and 11, `.github/workflows/release.yml`
-- **See also:** [`guideline-release-signing.md`](./guideline-release-signing.md)
+- **See also:** [`guideline-release-signing.md`](./guideline-release-signing.md), [`guideline-windows-signing-azure.md`](./guideline-windows-signing-azure.md)
 
 Requirement levels follow common practice: **MUST** = mandatory, **SHOULD** = strongly recommended, **MAY** = optional.
 
@@ -49,7 +49,14 @@ Media3 is Android only. The desktop needs another engine behind the same `Playba
 | libmpv | LGPL when built that way (many builds are GPL) | very good quality and low latency, a suitable LGPL build MUST be verified. |
 | JavaFX Media | GPL with classpath exception | too few codecs, weak for transport streams and HLS. Not recommended. |
 
-The recommendation is libVLC or libmpv, bundled with the installer. The license of the chosen build MUST be checked before the first release, and the license notice added.
+**Decision: libVLC.** It is bundled with the installer, and the Windows player talks to it through a thin binding of our own (JNA calls to `libvlc`: create instance, open a location, play, pause, seek, audio and subtitle tracks, video output into a window handle).
+
+License rules for libVLC (they MUST be followed and checked again for every VLC version that is bundled):
+
+- `libvlc` and `libvlccore` are LGPL 2.1 or later, so they fit an MIT project when they are shipped as separate, unmodified DLL files that the user can replace. They MUST NOT be linked into the application executable.
+- The license text and a source offer or link of the VLC version used MUST be part of the installer and of the repository notices.
+- VLC's plugins have different licenses, a few are GPL. Only the plugins that are needed (demuxers for MPEG-TS, HLS and MP4, decoders, audio and video output) are shipped, and the license of each one is checked. GPL only plugins are left out.
+- The binding MUST NOT use `vlcj` (GPL 3).
 
 **One engine for both platforms.** The stream hub from the product plan (one provider connection per channel, ring buffer for time shift, recorder) is plain Kotlin and runs on Android and on the desktop. The hub serves each channel on a local address (`http://127.0.0.1:<port>/...`). The Windows player opens that address like any other stream, so time shift, recording and the connection budget work the same on both platforms without special code in the player.
 
@@ -68,18 +75,14 @@ The release workflow gets a second job on `windows-latest`:
 |---|---|---|
 | No signature | free | SmartScreen warning "unknown publisher", acceptable only for tests |
 | SignPath Foundation | free for open source projects, check eligibility | signing runs in the GitHub workflow |
-| Azure Trusted Signing | monthly fee, check availability and rules for individuals | no hardware token |
+| **Azure Artifact Signing (chosen)** | about 10 USD per month, needs a paid Azure subscription and a **registered organization** in a supported country (individuals only in the USA and Canada) | no hardware token, no key file. Step by step: [`guideline-windows-signing-azure.md`](./guideline-windows-signing-azure.md) |
 | Authenticode certificate (OV or EV) | yearly fee | EV removes the warning fastest |
 
-New repository secrets (names fixed now, values entered when the route is chosen):
+With Azure Artifact Signing GitHub signs through a short-lived token, so no certificate file is stored. The names of the secrets and variables to enter are listed in [`guideline-windows-signing-azure.md`](./guideline-windows-signing-azure.md) section 4. The secrets `PROIPTV_WIN_CERT_*` are only needed if a certificate file from another route is used instead.
 
-| Secret | Required | Content |
-|---|---|---|
-| `PROIPTV_WIN_CERT_BASE64` | only for a certificate file | the `.pfx` file as one line of Base64 text, created like the Android keystore in the signing guideline §3.1 |
-| `PROIPTV_WIN_CERT_PASSWORD` | with the certificate | password of the `.pfx` |
-| `PROIPTV_WIN_CERT_SHA256` | no, recommended | expected certificate fingerprint, the release fails on a mismatch |
+The Azure certificate changes with every signing run, so the release check compares the verified organization name of the signature, not a fixed fingerprint.
 
-The Windows key MUST NOT be the Android release key, and it MUST be backed up like the Android key.
+The Windows signing identity MUST NOT be mixed with the Android release key.
 
 **Updates.** The same method as the Android direct build: the app asks the GitHub API for the newest release, downloads the MSI, checks the SHA-256 against `SHA256SUMS.txt`, and starts the installer after a button press. Later channels: winget (a manifest that points to the GitHub release) and the Microsoft Store (needs its own packaging as MSIX and a store account).
 
@@ -118,15 +121,18 @@ The same desktop target also builds for Linux and macOS with little extra work (
 ## 8. Checklist
 
 - [ ] Android engine finished (0.0.7)
-- [ ] Player library chosen and its license checked
-- [ ] Signing route chosen, secrets `PROIPTV_WIN_*` set if a certificate file is used
+- [ ] libVLC version chosen, license of every bundled plugin checked, notices added
+- [ ] Azure Artifact Signing set up (see the Azure guide checklist)
 - [ ] Multiplatform refactor merged, Android release unchanged
 - [ ] Windows installer builds in the release workflow
 - [ ] First Windows pre-release tested on a clean Windows machine
 - [ ] In-app update tested from one Windows release to the next
 
-## 9. Open Questions
+## 9. Decisions and open questions
 
-1. Which player library for Windows: libVLC or libmpv?
-2. Which signing route for Windows?
-3. Should Linux and macOS be built from the same desktop target after Windows?
+Decided: the player library is libVLC, the signing route is Azure Artifact Signing.
+
+Open:
+
+1. Is the project published under a registered organization? Azure needs one in the EU, otherwise another route is needed (see the Azure guide section 1).
+2. Should Linux and macOS be built from the same desktop target after Windows?

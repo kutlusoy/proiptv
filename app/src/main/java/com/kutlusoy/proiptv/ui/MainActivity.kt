@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -41,6 +42,7 @@ private enum class Tab(val label: Int, val icon: ImageVector) {
     LIVE(R.string.nav_live, Icons.Filled.PlayArrow),
     MOVIES(R.string.nav_movies, Icons.Filled.AccountBox),
     SERIES(R.string.nav_series, Icons.Filled.Menu),
+    RECORDINGS(R.string.nav_recordings, Icons.Filled.DateRange),
     ACCOUNTS(R.string.nav_accounts, Icons.Filled.Person),
     SETTINGS(R.string.nav_settings, Icons.Filled.Settings),
 }
@@ -78,6 +80,7 @@ private fun AppRoot(vm: MainViewModel) {
             Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
             Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
             Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)
+            Tab.RECORDINGS -> RecordingsScreen(vm)
             Tab.ACCOUNTS -> AccountsScreen(vm)
             Tab.SETTINGS -> SettingsScreen(vm)
         }

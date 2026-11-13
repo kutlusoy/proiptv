@@ -89,4 +89,23 @@
     <string name="account_guide_never">Guida non ancora caricata</string>
     <string name="account_sync_guide">Aggiorna guida</string>
     <string name="settings_guide_info">La guida si aggiorna da sola ogni poche ore in background e all\'apertura dell\'app.</string>
+    <string name="nav_recordings">Registrazioni</string>
+    <string name="rec_empty">Nessuna registrazione. Premi Registra mentre guardi un canale.</string>
+    <string name="rec_record">Registra</string>
+    <string name="rec_stop">Ferma registrazione</string>
+    <string name="rec_until_stopped">Fino all\'arresto manuale</string>
+    <string name="rec_minutes">%1$d minuti</string>
+    <string name="rec_until_program_end">Fino alla fine del programma in corso</string>
+    <string name="rec_status_recording">In registrazione</string>
+    <string name="rec_status_interrupted">Interrotto</string>
+    <string name="rec_status_done">Completata</string>
+    <string name="rec_delete_confirm">Eliminare questa registrazione?</string>
+    <string name="rec_play">Riproduci</string>
+    <string name="rec_notification">Registrazione: %1$s</string>
+    <string name="player_no_connection">Tutte le %1$d connessioni di questo account sono in uso (%2$s).</string>
+    <string name="player_no_space">Spazio libero insufficiente per registrare.</string>
+    <string name="player_live">Diretta</string>
+    <string name="settings_timeshift">Pausa e riavvolgimento della TV in diretta</string>
+    <string name="settings_buffer">Dimensione del buffer su questo dispositivo</string>
+    <string name="settings_buffer_hint">Un buffer più grande permette di tornare più indietro ma usa più spazio.</string>
 </resources>
