@@ -196,3 +196,8 @@ ProIPTV is first published on GitHub only. When it goes to Google Play later, th
 - [ ] Same key enrolled in Play App Signing when Play is opened (§7)
 - [ ] First release run green, fingerprint in the notes matches
 - [ ] Update from the first release to the next one tested on a device
+
+
+## Test release without the real key
+
+The workflow `Test release` (GitHub, Actions, Test release, Run workflow) builds the debug app with the test key that is part of the repository and publishes it as a pre-release named `test-<number>`. It needs no secrets. The APK installs next to the real app because the application ID ends with `.debug`. The five newest test releases are kept, older ones are removed. Use the workflow `Release` with the real key for everything that goes to users or to the store.
