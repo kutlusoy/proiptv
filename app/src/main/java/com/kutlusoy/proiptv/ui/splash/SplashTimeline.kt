@@ -38,8 +38,8 @@ class CubicBezier(private val x1: Float, private val y1: Float, private val x2: 
 }
 
 object SplashTimeline {
-    const val DURATION_MS = 4500L
-    const val HOLD_MS = 500L
+    const val DURATION_MS = 5500L
+    const val HOLD_MS = 1000L
     const val PUSH_IN = 0.045f
 
     private const val BREATH_PERIOD_MS = 2400f

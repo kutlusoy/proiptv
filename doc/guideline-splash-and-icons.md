@@ -53,7 +53,7 @@ The social preview image can be uploaded in the repository settings under "Socia
 
 ## 4. The splash screen
 
-The start screen is a short intro of 4.5 seconds that is drawn by the app itself (`ui/splash/SplashScreen.kt`). The timeline is in `ui/splash/SplashTimeline.kt`:
+The start screen is a short intro of 5.5 seconds plus one second of hold that is drawn by the app itself (`ui/splash/SplashScreen.kt`). The timeline is in `ui/splash/SplashTimeline.kt`:
 
 - the mark fades in and settles (a small rise and zoom)
 - a wide and a near red glow rise behind it and breathe slowly
