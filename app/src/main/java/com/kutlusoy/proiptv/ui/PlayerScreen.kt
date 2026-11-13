@@ -131,6 +131,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var tracksDialog by remember { mutableStateOf(false) }
     var guideDialog by remember { mutableStateOf(false) }
     var listsDialog by remember { mutableStateOf(false) }
+    var guideTick by remember { mutableIntStateOf(0) }
     var position by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
     val favLists by vm.favLists.collectAsState()
@@ -196,6 +197,11 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         target = i?.let { vm.repo.target(it) }
         overlay = true
         touched++
+    }
+
+    LaunchedEffect(item?.id) {
+        val i = item ?: return@LaunchedEffect
+        if (vm.repo.nowAndNext(i.accountId, i.epgId).first == null && vm.repo.fetchShortEpg(i)) guideTick++
     }
 
     LaunchedEffect(active, reload, forceHls) {
@@ -303,7 +309,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             ) {
                 Text(active?.title ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (active?.live == true) {
-                    val pair by produceState<Pair<Program?, Program?>>(null to null, item, position / 60_000) {
+                    val pair by produceState<Pair<Program?, Program?>>(null to null, item, position / 60_000, guideTick) {
                         val i = item
                         value = if (i == null) null to null else vm.repo.nowAndNext(i.accountId, i.epgId)
                     }

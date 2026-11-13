@@ -43,13 +43,16 @@ class SyncIntegrationTest {
     private lateinit var db: AppDatabase
     private lateinit var repo: Repository
     private lateinit var server: MockWebServer
+    private var guideTitle = "Now Show"
+    private var guideEtag = "\"v1\""
+    private var guideStatus = 200
     private val fmt = SimpleDateFormat("yyyyMMddHHmmss Z", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
 
     private fun xmltv(): String {
         val now = System.currentTimeMillis()
         fun t(offsetMin: Int) = fmt.format(Date(now + offsetMin * 60_000L))
         return """<?xml version="1.0"?><tv>
-            <programme start="${t(-30)}" stop="${t(30)}" channel="One.DE"><title>Now Show</title></programme>
+            <programme start="${t(-30)}" stop="${t(30)}" channel="One.DE"><title>$guideTitle</title></programme>
             <programme start="${t(30)}" stop="${t(90)}" channel="One.DE"><title>Next Show</title></programme>
             <programme start="${t(-300)}" stop="${t(-240)}" channel="ghost"><title>Ignored</title></programme>
             </tv>"""
@@ -67,7 +70,16 @@ class SyncIntegrationTest {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 val path = request.path.orEmpty()
                 return when {
-                    path.startsWith("/xmltv.php") -> MockResponse().setBody(xmltv())
+                    path.startsWith("/xmltv.php") -> when {
+                        guideStatus != 200 -> MockResponse().setResponseCode(guideStatus)
+                        request.getHeader("If-None-Match") == guideEtag -> MockResponse().setResponseCode(304)
+                        else -> MockResponse().setHeader("ETag", guideEtag).setBody(xmltv())
+                    }
+                    "action=get_short_epg" in path -> {
+                        val now = System.currentTimeMillis() / 1000
+                        val title = java.util.Base64.getEncoder().encodeToString("Short Show".toByteArray())
+                        MockResponse().setBody("""{"epg_listings":[{"title":"$title","description":"","start_timestamp":"${now - 600}","stop_timestamp":"${now + 1800}"}]}""")
+                    }
                     path.startsWith("/playlist.m3u") -> MockResponse().setBody(
                         "#EXTM3U\n#EXTINF:-1 tvg-id=\"m1\" group-title=\"G\",M1\nhttp://s/live/1.ts\n" +
                             "#EXTINF:-1 group-title=\"Film\",F1\nhttp://s/movie/u/p/9.mkv\n",
@@ -199,5 +211,79 @@ class SyncIntegrationTest {
         assertEquals(0, db.items().count(Kind.LIVE, listOf(id), null, ""))
         assertNull(db.accounts().get(id))
         assertEquals(0, db.programs().range(id, "one.de", 0, Long.MAX_VALUE).size)
+    }
+
+    @Test
+    fun guideRefreshIsConditionalAndKeepsPrograms() = runBlocking {
+        val id = repo.saveAccount(Account(name = "Test", type = AccountType.XTREAM, url = base(), username = "bob"), "secret")
+        waitForSync(id)
+        val first = db.accounts().get(id)!!
+        assertEquals("\"v1\"", first.epgEtag)
+        assertTrue(first.epgSync > 0)
+        val before = db.programs().count(id)
+        assertTrue(before > 0)
+        repo.sync.refreshGuideNow(id)
+        val after = db.accounts().get(id)!!
+        assertEquals(before, db.programs().count(id))
+        assertTrue(after.epgSync >= first.epgSync)
+        assertEquals("\"v1\"", after.epgEtag)
+        assertEquals("Now Show", repo.nowAndNext(id, "one.de").first?.title)
+    }
+
+    @Test
+    fun changedGuideReplacesProgramsWithoutDuplicates() = runBlocking {
+        val id = repo.saveAccount(Account(name = "Test", type = AccountType.XTREAM, url = base(), username = "bob"), "secret")
+        waitForSync(id)
+        val before = db.programs().count(id)
+        guideTitle = "Changed Show"
+        guideEtag = "\"v2\""
+        repo.sync.refreshGuideNow(id)
+        assertEquals(before, db.programs().count(id))
+        assertEquals("Changed Show", repo.nowAndNext(id, "one.de").first?.title)
+        assertEquals("\"v2\"", db.accounts().get(id)!!.epgEtag)
+    }
+
+    @Test
+    fun failedGuideRefreshKeepsOldProgramsAndRecovers() = runBlocking {
+        val id = repo.saveAccount(Account(name = "Test", type = AccountType.XTREAM, url = base(), username = "bob"), "secret")
+        waitForSync(id)
+        val before = db.programs().count(id)
+        guideStatus = 500
+        repo.sync.refreshGuideNow(id)
+        assertEquals(before, db.programs().count(id))
+        assertTrue(db.accounts().get(id)!!.lastError!!.startsWith("Guide: "))
+        guideStatus = 200
+        guideEtag = "\"v3\""
+        repo.sync.refreshGuideNow(id)
+        assertNull(db.accounts().get(id)!!.lastError)
+        assertEquals(before, db.programs().count(id))
+    }
+
+    @Test
+    fun shortGuideFillsAChannelWithoutXmltvData() = runBlocking {
+        guideStatus = 500
+        val id = repo.saveAccount(Account(name = "Test", type = AccountType.XTREAM, url = base(), username = "bob"), "secret")
+        waitForSync(id)
+        val one = db.items().find(id, Kind.LIVE, "10")!!
+        assertNull(repo.nowAndNext(id, one.epgId).first)
+        assertTrue(repo.fetchShortEpg(one))
+        assertEquals("Short Show", repo.nowAndNext(id, one.epgId).first?.title)
+    }
+
+    @Test
+    fun migrationAddsGuideColumns() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val sqlite = android.database.sqlite.SQLiteDatabase.create(null)
+        sqlite.execSQL("CREATE TABLE accounts (id INTEGER PRIMARY KEY, name TEXT)")
+        sqlite.execSQL("INSERT INTO accounts (id, name) VALUES (1, 'old')")
+        for (sql in AppDatabase.MIGRATION_1_2_SQL) sqlite.execSQL(sql)
+        sqlite.execSQL("UPDATE accounts SET epgSync = 5, epgEtag = 'x', epgModified = 'y', autoEpgUrl = 'u' WHERE id = 1")
+        sqlite.rawQuery("SELECT epgSync, epgEtag, autoEpgUrl FROM accounts", null).use {
+            assertTrue(it.moveToFirst())
+            assertEquals(5, it.getInt(0))
+            assertEquals("u", it.getString(2))
+        }
+        sqlite.close()
+        assertNotNull(ctx)
     }
 }

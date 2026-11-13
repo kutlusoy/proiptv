@@ -85,4 +85,8 @@
     <string name="main_no_accounts_title">Noch kein Konto</string>
     <string name="splash_tagline">Deine Streams. Dein Anbieter. Sonst nichts.</string>
     <string name="main_version">Version %1$s</string>
+    <string name="account_guide_updated">Programm aktualisiert: %1$s</string>
+    <string name="account_guide_never">Programm noch nicht geladen</string>
+    <string name="account_sync_guide">Programm aktualisieren</string>
+    <string name="settings_guide_info">Der Programmführer aktualisiert sich selbst alle paar Stunden im Hintergrund und beim Öffnen der App.</string>
 </resources>

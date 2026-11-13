@@ -13,6 +13,7 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 
 - several **Xtream Codes** and **M3U** accounts, passwords encrypted with the Android Keystore, account status (state, expiry, connections)
 - streaming sync of channels, movies, series and the **XMLTV guide** (very large lists, no out of memory)
+- **Program guide that keeps itself current**: refresh when the app opens, while it is open and in the background (WorkManager), only downloads when the guide changed, keeps the old guide if an update fails, and asks the provider for single channels without data
 - **Live TV** with groups, search, now and next, zapping with the remote control, number keys, guide per channel and **catch-up**
 - **Movies and series** with seasons, episodes and resume
 - **Favorites** with several lists and **manual sorting**, kept after a provider refresh
@@ -86,6 +87,7 @@ To add a language: create `app/src/main/res/values-xx/strings.xml` with all keys
 | [guideline-product-plan.md](doc/guideline-product-plan.md) | product, architecture, engine, release plan, roadmap |
 | [guideline-feature-matrix.md](doc/guideline-feature-matrix.md) | content types and features per version, market comparison |
 | [guideline-user-guide.md](doc/guideline-user-guide.md) | install, add an account, remote control keys, favorites |
+| [guideline-windows-version.md](doc/guideline-windows-version.md) | plan for a Windows version from the same code |
 | [guideline-release-signing.md](doc/guideline-release-signing.md) | keystore, GitHub secrets, running a release |
 | [guideline-android-developer-verification.md](doc/guideline-android-developer-verification.md) | register package name and key with Google |
 | [guideline-google-play.md](doc/guideline-google-play.md) | application ID, same key for GitHub and Play, store listing |

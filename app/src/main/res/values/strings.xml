@@ -86,4 +86,8 @@
     <string name="main_no_accounts_title">No account yet</string>
     <string name="splash_tagline">Your streams. Your provider. Nothing else.</string>
     <string name="main_version">Version %1$s</string>
+    <string name="account_guide_updated">Guide updated: %1$s</string>
+    <string name="account_guide_never">Guide not loaded yet</string>
+    <string name="account_sync_guide">Update guide</string>
+    <string name="settings_guide_info">The guide updates itself in the background every few hours and when the app opens.</string>
 </resources>

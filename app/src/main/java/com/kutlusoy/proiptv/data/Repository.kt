@@ -137,6 +137,17 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         return current to next
     }
 
+    suspend fun fetchShortEpg(item: Item): Boolean = withContext(Dispatchers.IO) {
+        val account = db.accounts().get(item.accountId) ?: return@withContext false
+        val epgId = item.epgId?.lowercase()
+        if (account.type != AccountType.XTREAM || epgId.isNullOrBlank()) return@withContext false
+        val list = runCatching { api(account).shortEpg(item.remoteId) }.getOrDefault(emptyList())
+        if (list.isEmpty()) return@withContext false
+        db.programs().deleteRange(account.id, epgId, list.minOf { it.start }, list.maxOf { it.end })
+        db.programs().insertAll(list.map { Program(accountId = account.id, epgId = epgId, start = it.start, end = it.end, title = it.title, description = it.description, gen = account.epgGen) })
+        true
+    }
+
     suspend fun guide(accountId: Long, epgId: String, daysBack: Int, daysAhead: Int): List<Program> {
         val now = System.currentTimeMillis() / 1000
         return db.programs().range(accountId, epgId.lowercase(), now - daysBack * 86400L, now + daysAhead * 86400L)

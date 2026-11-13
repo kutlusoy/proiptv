@@ -15,6 +15,10 @@ if (!versionMatch.matches()) {
 def computedVersionCode = versionMatch.group(1).toInteger() * 1_000_000 +
         versionMatch.group(2).toInteger() * 1_000 + versionMatch.group(3).toInteger()
 
+ksp {
+    arg('room.schemaLocation', "$projectDir/schemas")
+}
+
 android {
     namespace = 'com.kutlusoy.proiptv'
     compileSdk rootProject.ext.compileSdkVersion
@@ -114,6 +118,7 @@ dependencies {
     implementation 'androidx.room:room-paging:2.7.2'
     ksp 'androidx.room:room-compiler:2.7.2'
     implementation 'androidx.paging:paging-compose:3.3.6'
+    implementation 'androidx.work:work-runtime-ktx:2.10.3'
 
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1'

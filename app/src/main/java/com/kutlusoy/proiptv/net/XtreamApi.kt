@@ -1,5 +1,6 @@
 package com.kutlusoy.proiptv.net
 
+import android.util.Base64
 import java.io.Closeable
 import java.io.InputStream
 import java.net.URLEncoder
@@ -25,6 +26,8 @@ data class XtreamInfo(
     val trial: Boolean,
     val outputFormats: List<String>,
 )
+
+data class ShortProgram(val start: Long, val end: Long, val title: String, val description: String?)
 
 data class XtreamEpisode(
     val id: String,
@@ -133,5 +136,28 @@ class XtreamApi(
         }
     }
 
-    fun xmltv(): Response = open(url("xmltv.php"))
+    @OptIn(ExperimentalSerializationApi::class)
+    fun shortEpg(streamId: String, limit: Int = 8): List<ShortProgram> {
+        open(url("player_api.php", "&action=get_short_epg&stream_id=${enc(streamId)}&limit=$limit")).use { response ->
+            val root = response.body!!.byteStream().use { json.decodeFromStream<JsonElement>(it) } as? JsonObject ?: return emptyList()
+            val listings = root["epg_listings"] as? JsonArray ?: return emptyList()
+            return listings.mapNotNull { e ->
+                val o = e as? JsonObject ?: return@mapNotNull null
+                val start = o.long("start_timestamp") ?: return@mapNotNull null
+                val end = o.long("stop_timestamp") ?: return@mapNotNull null
+                if (end <= start) return@mapNotNull null
+                ShortProgram(start, end, decode(o.str("title")).orEmpty(), decode(o.str("description")))
+            }
+        }
+    }
+
+    private fun decode(value: String?): String? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            val text = String(Base64.decode(value, Base64.DEFAULT), Charsets.UTF_8)
+            if (text.contains('\uFFFD')) value else text
+        } catch (e: IllegalArgumentException) {
+            value
+        }
+    }
 }

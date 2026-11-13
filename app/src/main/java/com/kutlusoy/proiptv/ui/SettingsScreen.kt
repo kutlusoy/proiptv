@@ -44,6 +44,7 @@ fun SettingsScreen(vm: MainViewModel) {
         item {
             OutlinedButton(onClick = { vm.refreshAll() }, modifier = Modifier.padding(top = 16.dp).focusHighlight()) { Text(stringResource(R.string.settings_refresh)) }
         }
+        item { Text(stringResource(R.string.settings_guide_info), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.padding(top = 8.dp)) }
         item { Text(stringResource(R.string.settings_about), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp)) }
         item { Text("ProIPTV ${stringResource(R.string.main_version, BuildConfig.VERSION_NAME)}") }
         item { Text(stringResource(R.string.settings_license), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)) }

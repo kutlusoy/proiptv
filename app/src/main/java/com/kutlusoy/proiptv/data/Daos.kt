@@ -104,8 +104,20 @@ interface ProgramDao {
     @Query("DELETE FROM programs WHERE accountId = :accountId AND gen <> :gen")
     suspend fun deleteStale(accountId: Long, gen: Int)
 
+    @Query("DELETE FROM programs WHERE accountId = :accountId AND gen = :gen")
+    suspend fun deleteGen(accountId: Long, gen: Int)
+
     @Query("DELETE FROM programs WHERE accountId = :accountId")
     suspend fun deleteAccount(accountId: Long)
+
+    @Query("SELECT MAX(`end`) FROM programs WHERE accountId = :accountId")
+    suspend fun maxEnd(accountId: Long): Long?
+
+    @Query("SELECT COUNT(*) FROM programs WHERE accountId = :accountId")
+    suspend fun count(accountId: Long): Int
+
+    @Query("DELETE FROM programs WHERE accountId = :accountId AND epgId = :epgId AND start < :to AND `end` > :from")
+    suspend fun deleteRange(accountId: Long, epgId: String, from: Long, to: Long)
 
     @Query("SELECT * FROM programs WHERE accountId = :accountId AND epgId = :epgId AND start <= :now AND `end` > :now LIMIT 1")
     suspend fun now(accountId: Long, epgId: String, now: Long): Program?

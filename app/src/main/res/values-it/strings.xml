@@ -85,4 +85,8 @@
     <string name="main_no_accounts_title">Nessun account</string>
     <string name="splash_tagline">I tuoi flussi. Il tuo provider. Nient\'altro.</string>
     <string name="main_version">Versione %1$s</string>
+    <string name="account_guide_updated">Guida aggiornata: %1$s</string>
+    <string name="account_guide_never">Guida non ancora caricata</string>
+    <string name="account_sync_guide">Aggiorna guida</string>
+    <string name="settings_guide_info">La guida si aggiorna da sola ogni poche ore in background e all\'apertura dell\'app.</string>
 </resources>

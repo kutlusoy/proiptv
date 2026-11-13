@@ -70,6 +70,17 @@ If **Error** is shown on the card: `Login failed` means user name, password or s
 
 Several accounts can exist side by side. The switch on the card turns an account on or off without deleting it.
 
+### Keeping the guide up to date
+
+The program guide refreshes itself, you do not have to do anything:
+
+- when the app opens, if the guide is older than 6 hours
+- every 30 minutes while the app is open, if the guide is older than 6 hours or covers less than the next 12 hours (then at most once per hour)
+- in the background about every 6 hours, even when the app is closed, as long as the device is online
+- when you open a channel that has no guide data, the app asks the provider for the next programs of that channel directly (Xtream accounts)
+
+The refresh only downloads again when the provider's guide has changed, and an update that fails never removes the guide you already have. The account card shows when the guide was last updated, and the button **Update guide** refreshes it at once.
+
 ## 4. Watch
 
 - **Live TV:** the chips above the list are the groups of the provider. `Favorites` shows your own lists, `All` shows everything. With more than one account an account selector appears. The search field filters by name.

@@ -21,6 +21,7 @@ import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.net.URI
+import java.net.URLEncoder
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.Response
 
 enum class Phase { CONNECTING, LIVE, MOVIES, SERIES, GUIDE }
 
@@ -69,6 +71,52 @@ class SyncManager(
         for (a in db.accounts().list()) {
             if (a.enabled && now - a.lastSync > maxAgeMs) sync(a.id)
         }
+    }
+
+    fun refreshGuide(accountId: Long) {
+        if (isRunning(accountId)) return
+        jobs[accountId] = scope.launch(Dispatchers.IO) {
+            try {
+                refreshGuideNow(accountId)
+            } finally {
+                jobs.remove(accountId)
+            }
+        }
+    }
+
+    suspend fun refreshGuideNow(accountId: Long) {
+        val account = db.accounts().get(accountId) ?: return
+        val url = guideUrl(account) ?: return
+        try {
+            loadGuide(account, url, conditional = true)
+        } finally {
+            _state.value = _state.value - accountId
+        }
+    }
+
+    private suspend fun dueGuides(): List<Long> {
+        val now = System.currentTimeMillis() / 1000
+        return db.accounts().list().filter { a ->
+            a.enabled && guideUrl(a) != null &&
+                GuidePolicy.isDue(now, a.epgSync, db.programs().maxEnd(a.id))
+        }.map { it.id }
+    }
+
+    fun syncStaleGuides() {
+        scope.launch(Dispatchers.IO) {
+            for (id in dueGuides()) refreshGuide(id)
+        }
+    }
+
+    suspend fun refreshDueGuidesNow() {
+        for (id in dueGuides()) if (!isRunning(id)) refreshGuideNow(id)
+    }
+
+    private fun guideUrl(a: Account): String? = when {
+        !a.epgUrl.isNullOrBlank() -> a.epgUrl
+        a.type == AccountType.XTREAM ->
+            "${a.url}/xmltv.php?username=${URLEncoder.encode(a.username, "UTF-8")}&password=${URLEncoder.encode(secrets.decrypt(a.password), "UTF-8")}"
+        else -> a.autoEpgUrl
     }
 
     private fun set(id: Long, phase: Phase, count: Int = 0) {
@@ -128,7 +176,7 @@ class SyncManager(
         else clearKind(account.id, Kind.MOVIE)
         if (account.useSeries) loadXtreamKind(api, account, Kind.SERIES, "get_series_categories", "get_series", gen, Phase.SERIES)
         else clearKind(account.id, Kind.SERIES)
-        loadGuide(account) { if (account.epgUrl.isNullOrBlank()) api.xmltv().body!!.byteStream() else open(account.epgUrl, account.userAgent) }
+        db.accounts().get(account.id)?.let { fresh -> guideUrl(fresh)?.let { loadGuide(fresh, it, conditional = false) } }
     }
 
     private suspend fun clearKind(accountId: Long, kind: Int) {
@@ -202,21 +250,53 @@ class SyncManager(
             db.items().replaceCategories(account.id, kind, map.map { (name, i) -> Category(accountId = account.id, kind = kind, remoteId = name, name = name, ord = i) })
         }
         db.items().deleteStale(account.id, Kind.SERIES, gen)
-        val epg = account.epgUrl?.takeIf { it.isNotBlank() } ?: epgFromHeader?.split(',')?.firstOrNull()?.trim()
-        if (epg != null) loadGuide(account) { open(epg, account.userAgent) }
+        val header = epgFromHeader?.split(',')?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
+        db.accounts().get(account.id)?.let { fresh ->
+            val updated = fresh.copy(autoEpgUrl = header)
+            db.accounts().update(updated)
+            guideUrl(updated)?.let { loadGuide(updated, it, conditional = false) }
+        }
     }
 
-    private suspend fun loadGuide(account: Account, source: suspend () -> InputStream) {
+    private suspend fun loadGuide(account: Account, url: String, conditional: Boolean) {
+        var gen = 0
         try {
             val ids = db.items().epgIds(account.id).toHashSet()
             if (ids.isEmpty()) return
             set(account.id, Phase.GUIDE)
-            val gen = nextGen(account.id, true)
+            val useValidators = conditional && db.programs().count(account.id) > 0
+            var etag: String? = null
+            var modified: String? = null
+            val raw: InputStream = if (url.startsWith("file:")) {
+                File(URI(url)).inputStream()
+            } else {
+                val request = Http.request(url, account.userAgent).newBuilder().apply {
+                    if (useValidators) {
+                        account.epgEtag?.let { header("If-None-Match", it) }
+                        account.epgModified?.let { header("If-Modified-Since", it) }
+                    }
+                }.build()
+                val response: Response = withContext(Dispatchers.IO) { Http.client.newCall(request).execute() }
+                if (response.code == 304) {
+                    response.close()
+                    markGuide(account.id, null, null, keepValidators = true)
+                    return
+                }
+                if (!response.isSuccessful) {
+                    val code = response.code
+                    response.close()
+                    throw HttpException(code, "HTTP $code")
+                }
+                etag = response.header("ETag")
+                modified = response.header("Last-Modified")
+                response.body!!.byteStream()
+            }
+            gen = nextGen(account.id, true)
             val now = System.currentTimeMillis() / 1000
             val batch = ArrayList<Program>(BATCH)
             var count = 0
-            source().use { raw ->
-                val programs = XmltvParser.parse(raw.maybeGunzip(), { it.lowercase() in ids }, now - 2 * 86400, now + 4 * 86400)
+            raw.use {
+                val programs = XmltvParser.parse(it.maybeGunzip(), { id -> id.lowercase() in ids }, now - 2 * 86400, now + 4 * 86400)
                 for (p in programs) {
                     batch += Program(accountId = account.id, epgId = p.channel.lowercase(), start = p.start, end = p.end, title = p.title, description = p.description, gen = gen)
                     count++
@@ -229,11 +309,25 @@ class SyncManager(
             }
             if (batch.isNotEmpty()) db.programs().insertAll(batch.toList())
             db.programs().deleteStale(account.id, gen)
+            markGuide(account.id, etag, modified, keepValidators = false)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            if (gen != 0) db.programs().deleteGen(account.id, gen)
             db.accounts().get(account.id)?.let { db.accounts().update(it.copy(lastError = "Guide: " + (e.message ?: e.javaClass.simpleName))) }
         }
+    }
+
+    private suspend fun markGuide(accountId: Long, etag: String?, modified: String?, keepValidators: Boolean) {
+        val account = db.accounts().get(accountId) ?: return
+        db.accounts().update(
+            account.copy(
+                epgSync = System.currentTimeMillis() / 1000,
+                epgEtag = if (keepValidators) account.epgEtag else etag,
+                epgModified = if (keepValidators) account.epgModified else modified,
+                lastError = account.lastError?.takeUnless { it.startsWith("Guide: ") },
+            ),
+        )
     }
 
     private suspend fun open(url: String, userAgent: String?): InputStream = withContext(Dispatchers.IO) {

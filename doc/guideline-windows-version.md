@@ -1,0 +1,132 @@
+# ProIPTV: Windows version
+
+- **Version:** 0.1 (draft)
+- **Date:** November 13, 2026
+- **Audience:** Maintainers who decide on and build a Windows release
+- **Reference implementation:** [`guideline-product-plan.md`](./guideline-product-plan.md) sections 5, 6 and 11, `.github/workflows/release.yml`
+- **See also:** [`guideline-release-signing.md`](./guideline-release-signing.md)
+
+Requirement levels follow common practice: **MUST** = mandatory, **SHOULD** = strongly recommended, **MAY** = optional.
+
+---
+
+## 1. Short answer
+
+Yes, a Windows version from the same code base is possible, with limits:
+
+- The **Android APK does not run on Windows**. Microsoft ended the Windows Subsystem for Android in March 2025, so there is no way to ship the same binary.
+- What can be shared is the **Kotlin source code**: data model, database, Xtream and M3U clients, parsers, guide sync, accounts, favorites, and most of the user interface, through Kotlin Multiplatform and Compose Multiplatform for Desktop.
+- What differs per platform is the **video engine**, the secret storage, background work and the installer. Media3 (the Android player) does not exist on Windows.
+- One tag (`v0.3.0`) can build **both** the Android files and the Windows installer in the same GitHub release, with one version number from `app/version.txt`.
+
+It is a real project, not a switch. It SHOULD start after the Android engine (stream hub, time shift, recording) is stable, because the engine is designed to be shared.
+
+## 2. What is shared and what is not
+
+| Part | Shared | Windows solution |
+|---|---|---|
+| Data classes, favorites logic, sort keys, guide policy | yes | none needed |
+| Database (Room) | yes, Room supports desktop with a bundled SQLite driver | add the driver |
+| Network (OkHttp), JSON (kotlinx.serialization) | yes, both run on the JVM | none |
+| M3U parser | yes | none |
+| XMLTV parser | mostly | Android's XML parser does not exist on the desktop JVM, use an included one (kxml2 or xmlutil) |
+| Sync, accounts, guide freshness | yes | replace WorkManager by an in-process timer, optional tray icon |
+| Passwords | no | Android Keystore is replaced by Windows DPAPI or Credential Manager through JNA |
+| Screens (Compose) | mostly | adapt for mouse and keyboard, window resizing, keyboard shortcuts |
+| Texts in 11 languages | yes | move `strings.xml` to Compose Multiplatform resources |
+| Image loading (Coil 3), paging | yes, both are multiplatform | none |
+| Player | no | see section 3 |
+| Per-app language | no | own locale handling in the desktop app |
+| Installer and updater | no | see section 4 |
+
+## 3. Player on Windows
+
+Media3 is Android only. The desktop needs another engine behind the same `PlaybackEngine` interface.
+
+| Option | License note | Remarks |
+|---|---|---|
+| libVLC | LGPL 2.1 or later | many formats, good with IPTV. The popular Java binding `vlcj` is GPL 3, which does **not** fit an MIT project. A thin own binding (JNA) to libVLC is needed. |
+| libmpv | LGPL when built that way (many builds are GPL) | very good quality and low latency, a suitable LGPL build MUST be verified. |
+| JavaFX Media | GPL with classpath exception | too few codecs, weak for transport streams and HLS. Not recommended. |
+
+The recommendation is libVLC or libmpv, bundled with the installer. The license of the chosen build MUST be checked before the first release, and the license notice added.
+
+**One engine for both platforms.** The stream hub from the product plan (one provider connection per channel, ring buffer for time shift, recorder) is plain Kotlin and runs on Android and on the desktop. The hub serves each channel on a local address (`http://127.0.0.1:<port>/...`). The Windows player opens that address like any other stream, so time shift, recording and the connection budget work the same on both platforms without special code in the player.
+
+## 4. Build, signing and release on GitHub
+
+The release workflow gets a second job on `windows-latest`:
+
+1. Build the desktop app with the Gradle task of Compose Multiplatform (`packageMsi`, which uses `jpackage`) with a bundled runtime, so users need no Java.
+2. Name the file `ProIPTV-<version>-windows-x64.msi` and add it to the same `SHA256SUMS.txt`.
+3. Sign the installer and the executable.
+4. Publish both Android and Windows files in the same GitHub release. The release page lists the certificate fingerprint of the Windows signature next to the Android one.
+
+**Code signing.** Without a signature Windows SmartScreen warns every user. Options, from cheapest:
+
+| Route | Cost | Remark |
+|---|---|---|
+| No signature | free | SmartScreen warning "unknown publisher", acceptable only for tests |
+| SignPath Foundation | free for open source projects, check eligibility | signing runs in the GitHub workflow |
+| Azure Trusted Signing | monthly fee, check availability and rules for individuals | no hardware token |
+| Authenticode certificate (OV or EV) | yearly fee | EV removes the warning fastest |
+
+New repository secrets (names fixed now, values entered when the route is chosen):
+
+| Secret | Required | Content |
+|---|---|---|
+| `PROIPTV_WIN_CERT_BASE64` | only for a certificate file | the `.pfx` file as one line of Base64 text, created like the Android keystore in the signing guideline §3.1 |
+| `PROIPTV_WIN_CERT_PASSWORD` | with the certificate | password of the `.pfx` |
+| `PROIPTV_WIN_CERT_SHA256` | no, recommended | expected certificate fingerprint, the release fails on a mismatch |
+
+The Windows key MUST NOT be the Android release key, and it MUST be backed up like the Android key.
+
+**Updates.** The same method as the Android direct build: the app asks the GitHub API for the newest release, downloads the MSI, checks the SHA-256 against `SHA256SUMS.txt`, and starts the installer after a button press. Later channels: winget (a manifest that points to the GitHub release) and the Microsoft Store (needs its own packaging as MSIX and a store account).
+
+## 5. Changes needed in the code
+
+1. Split the Gradle project into `shared` (Kotlin Multiplatform with an Android and a desktop target), `androidApp` and `desktopApp`. The Android app MUST behave exactly as before.
+2. Move Room to the multiplatform setup with the bundled SQLite driver. The migrations stay.
+3. Remove Android classes from shared code: `android.util.Base64` in the guide parser, `SecretBox`, `DateUtils`, `AppCompatDelegate`. Each gets an interface with an Android and a desktop implementation.
+4. Introduce `PlaybackEngine` and `SecretStore` interfaces. Today the player screen talks to Media3 directly, this moves behind the interface.
+5. Move strings to Compose Multiplatform resources. The unit test for placeholders keeps working on the new location.
+6. Add keyboard and mouse handling (arrow keys, Enter, Escape, Page Up and Down, number keys, mouse wheel, double click for full screen).
+7. Tests: shared logic runs as plain JVM tests (faster than Robolectric), the Android specific tests stay.
+
+## 6. Effort and order
+
+| Step | Content | Result |
+|---|---|---|
+| 1 | Finish the Android engine (0.0.5 to 0.0.7) | stable hub, time shift, recording |
+| 2 | Multiplatform refactor (steps 1 to 5 of section 5), Android unchanged | same Android release, shared module |
+| 3 | Desktop shell, player behind the interface, keyboard and mouse | runnable Windows app from the IDE |
+| 4 | Installer, signing, release job, updater | first Windows pre-release (tag with `-beta1`) |
+| 5 | Polish, winget, optional Store | Windows part of 1.0 |
+
+The same desktop target also builds for Linux and macOS with little extra work (`.deb`, `.dmg`), they MAY be added after Windows is stable. ARM64 for Windows is possible once the player library offers it.
+
+## 7. Risks
+
+| Risk | Mitigation |
+|---|---|
+| License conflict through a GPL binding | own LGPL based binding, license check before the first release |
+| Large installer (runtime and player library) | accept about 100 to 200 MB, or ship only the needed libraries |
+| SmartScreen warnings without signature | signing route chosen before the first public beta |
+| Two platforms double the test effort | shared logic tested once on the JVM, small manual test list per release |
+| Refactor breaks the Android app | step 2 changes no behavior, all existing tests MUST stay green |
+
+## 8. Checklist
+
+- [ ] Android engine finished (0.0.7)
+- [ ] Player library chosen and its license checked
+- [ ] Signing route chosen, secrets `PROIPTV_WIN_*` set if a certificate file is used
+- [ ] Multiplatform refactor merged, Android release unchanged
+- [ ] Windows installer builds in the release workflow
+- [ ] First Windows pre-release tested on a clean Windows machine
+- [ ] In-app update tested from one Windows release to the next
+
+## 9. Open Questions
+
+1. Which player library for Windows: libVLC or libmpv?
+2. Which signing route for Windows?
+3. Should Linux and macOS be built from the same desktop target after Windows?

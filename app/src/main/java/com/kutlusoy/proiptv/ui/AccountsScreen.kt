@@ -130,9 +130,16 @@ private fun AccountCard(account: Account, state: SyncState?, vm: MainViewModel, 
             } else {
                 Text(stringResource(R.string.account_never_synced), color = dim)
             }
+            if (account.epgSync > 0) {
+                val ago = DateUtils.getRelativeTimeSpanString(account.epgSync * 1000, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+                Text(stringResource(R.string.account_guide_updated, ago), color = dim)
+            } else if (counts.first > 0) {
+                Text(stringResource(R.string.account_guide_never), color = dim)
+            }
             account.lastError?.let { Text(stringResource(R.string.account_error, it), color = Color(0xFFFF8A80)) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
                 OutlinedButton(onClick = { vm.repo.sync.sync(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync)) }
+                OutlinedButton(onClick = { vm.repo.sync.refreshGuide(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync_guide)) }
                 OutlinedButton(onClick = onEdit, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_edit)) }
                 OutlinedButton(onClick = onDelete, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
             }

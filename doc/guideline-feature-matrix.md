@@ -39,6 +39,7 @@ Notes:
 | Channel list with groups, search, hide, reorder | 0.0.3 |
 | Number zapping, last channel, up and down zapping | 0.0.3 |
 | Channel overlay while playing, now and next | 0.0.3 |
+| Guide that stays current: refresh on app start, while open and in the background, conditional download, keeps old data on failure, per channel fallback | 0.0.1 |
 | Full EPG grid (day and week), program details | 0.0.4 |
 | Program reminders from the guide | 1.x |
 | Record from the guide, one tap | 0.0.6 |

@@ -85,4 +85,8 @@
     <string name="main_no_accounts_title">Aucun compte pour l\'instant</string>
     <string name="splash_tagline">Vos flux. Votre fournisseur. Rien d\'autre.</string>
     <string name="main_version">Version %1$s</string>
+    <string name="account_guide_updated">Guide mis à jour : %1$s</string>
+    <string name="account_guide_never">Guide pas encore chargé</string>
+    <string name="account_sync_guide">Mettre à jour le guide</string>
+    <string name="settings_guide_info">Le guide se met à jour automatiquement toutes les quelques heures en arrière-plan et à l\'ouverture de l\'application.</string>
 </resources>

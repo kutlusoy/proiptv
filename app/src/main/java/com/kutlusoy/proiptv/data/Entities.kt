@@ -41,6 +41,10 @@ data class Account(
     val lastError: String? = null,
     val syncGen: Int = 0,
     val epgGen: Int = 0,
+    val epgSync: Long = 0,
+    val epgEtag: String? = null,
+    val epgModified: String? = null,
+    val autoEpgUrl: String? = null,
 )
 
 @Entity(tableName = "categories", indices = [Index("accountId", "kind")])

@@ -48,6 +48,11 @@ private enum class Tab(val label: Int, val icon: ImageVector) {
 class MainActivity : AppCompatActivity() {
     private val vm: MainViewModel by viewModels()
 
+    override fun onStart() {
+        super.onStart()
+        vm.repo.sync.syncStaleGuides()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val tv = isTelevision(this)
