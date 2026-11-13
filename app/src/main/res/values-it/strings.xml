@@ -108,4 +108,25 @@
     <string name="settings_timeshift">Pausa e riavvolgimento della TV in diretta</string>
     <string name="settings_buffer">Dimensione del buffer su questo dispositivo</string>
     <string name="settings_buffer_hint">Un buffer più grande permette di tornare più indietro ma usa più spazio.</string>
+    <string name="rec_confirm">Registrare %1$s (da %2$s a %3$s)?</string>
+    <string name="rec_scheduled">Registrazione programmata.</string>
+    <string name="rec_conflict">Attenzione: un\'altra registrazione nello stesso momento potrebbe richiedere la stessa connessione.</string>
+    <string name="rec_status_scheduled">Programmata</string>
+    <string name="rec_status_missed">Mancata</string>
+    <string name="rec_note_budget">Nessuna connessione libera all\'orario di inizio.</string>
+    <string name="rec_note_space">Spazio libero insufficiente.</string>
+    <string name="rec_note_channel">Il canale non è più disponibile.</string>
+    <string name="rec_note_ended">Il programma era già terminato.</string>
+    <string name="rec_missed_notification">Registrazione mancata: %1$s</string>
+    <string name="player_record_hint">Scegli un programma in corso o futuro per registrarlo.</string>
+    <string name="player_switched">Passato a %1$s</string>
+    <string name="settings_backup">Backup</string>
+    <string name="backup_create">Crea backup</string>
+    <string name="backup_restore">Ripristina backup</string>
+    <string name="backup_password">Password (facoltativa, salva anche le password degli account)</string>
+    <string name="backup_hint">Senza password il backup non contiene le password degli account.</string>
+    <string name="backup_done">Backup salvato.</string>
+    <string name="backup_restored">Ripristinati: %1$d account, %2$d preferiti.</string>
+    <string name="backup_wrong_password">Password errata.</string>
+    <string name="backup_invalid">Questo file non è un backup di ProIPTV.</string>
 </resources>

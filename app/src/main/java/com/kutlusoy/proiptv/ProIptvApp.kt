@@ -2,6 +2,7 @@ package com.kutlusoy.proiptv
 
 import android.app.Application
 import com.kutlusoy.proiptv.data.AppDatabase
+import com.kutlusoy.proiptv.data.BackupManager
 import com.kutlusoy.proiptv.data.Repository
 import com.kutlusoy.proiptv.data.SecretBox
 import com.kutlusoy.proiptv.sync.SyncManager
@@ -31,6 +32,8 @@ class ProIptvApp : Application() {
         private set
     lateinit var recordings: RecordingManager
         private set
+    lateinit var backup: BackupManager
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -43,8 +46,12 @@ class ProIptvApp : Application() {
             val wanted = prefs.bufferMb * 1024L * 1024L
             minOf(wanted, hubDir.usableSpace / 3).coerceAtLeast(64L * 1024 * 1024)
         })
-        recordings = RecordingManager(this, db, engine, scope)
-        scope.launch { recordings.recoverInterrupted() }
+        recordings = RecordingManager(this, db, engine, scope, resolve = { repo.target(it) }, maxConnections = { repo.maxConnections(it) })
+        backup = BackupManager(repo, { prefs.timeshift to prefs.bufferMb }, { on, mb -> prefs.timeshift = on; prefs.bufferMb = mb }, { secrets.decrypt(it.password) })
+        scope.launch {
+            recordings.recoverInterrupted()
+            recordings.rescheduleAll()
+        }
         scope.launch {
             repo.sync.syncStale(STALE_MS)
             while (true) {

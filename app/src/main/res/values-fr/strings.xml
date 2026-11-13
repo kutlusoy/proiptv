@@ -108,4 +108,25 @@
     <string name="settings_timeshift">Mettre en pause et revenir en arrière en direct</string>
     <string name="settings_buffer">Taille du tampon sur cet appareil</string>
     <string name="settings_buffer_hint">Un tampon plus grand permet de revenir plus loin mais utilise plus d\'espace.</string>
+    <string name="rec_confirm">Enregistrer %1$s (%2$s à %3$s) ?</string>
+    <string name="rec_scheduled">Enregistrement programmé.</string>
+    <string name="rec_conflict">Attention : un autre enregistrement à la même heure peut avoir besoin de la même connexion.</string>
+    <string name="rec_status_scheduled">Programmé</string>
+    <string name="rec_status_missed">Manqué</string>
+    <string name="rec_note_budget">Aucune connexion libre à l\'heure de début.</string>
+    <string name="rec_note_space">Pas assez d\'espace libre.</string>
+    <string name="rec_note_channel">La chaîne n\'est plus disponible.</string>
+    <string name="rec_note_ended">L\'émission était déjà terminée.</string>
+    <string name="rec_missed_notification">Enregistrement manqué : %1$s</string>
+    <string name="player_record_hint">Choisissez une émission en cours ou à venir pour l\'enregistrer.</string>
+    <string name="player_switched">Passage à %1$s</string>
+    <string name="settings_backup">Sauvegarde</string>
+    <string name="backup_create">Créer une sauvegarde</string>
+    <string name="backup_restore">Restaurer une sauvegarde</string>
+    <string name="backup_password">Mot de passe (facultatif, enregistre aussi les mots de passe des comptes)</string>
+    <string name="backup_hint">Sans mot de passe, la sauvegarde ne contient pas les mots de passe des comptes.</string>
+    <string name="backup_done">Sauvegarde enregistrée.</string>
+    <string name="backup_restored">Restauré : %1$d comptes, %2$d favoris.</string>
+    <string name="backup_wrong_password">Mot de passe incorrect.</string>
+    <string name="backup_invalid">Ce fichier n\'est pas une sauvegarde ProIPTV.</string>
 </resources>

@@ -52,10 +52,11 @@ Notes:
 | Parallel streams, multiview | 0.0.7 |
 | Time shift (pause, rewind, jump to live), TS streams | 0.0.1 (built) |
 | Recording to internal storage, started by hand, with notification and recordings list | 0.0.1 (built) |
-| Scheduled recording for a later time, external storage | 0.0.6 |
+| Scheduled recording for a later time from the guide, with alarm, reboot safety and conflict warning | 0.0.1 (built) |
+| Recording to external storage (SAF folder) | later |
 | One provider connection per channel for watch, time shift and recording | 0.0.1 (built) |
 | Connection budget per account | 0.0.1 (built) |
-| Failover to an equal channel, stall detection | 0.0.7 |
+| Failover to an equal channel (same guide id or name, enabled accounts), stall detection | 0.0.1 (built) |
 | Picture in picture | 0.1.x |
 
 ## 4. Accounts and organization
@@ -65,7 +66,7 @@ Notes:
 | Several accounts (Xtream and M3U), each with its own credentials | 0.0.2 |
 | Account status: expiry, connection limit, active connections | 0.0.2 |
 | Active account switch or merged list | 0.0.3 |
-| Backup and restore of accounts and settings to a file | 0.0.8 |
+| Backup and restore of accounts, favorites and settings to a file, optional password for account passwords | 0.0.1 (built) |
 | Parental PIN, locked groups | 0.0.8 |
 | Phone setup with QR code | 1.x |
 

@@ -3,6 +3,7 @@ package com.kutlusoy.proiptv.ui
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,6 +52,7 @@ fun SettingsScreen(vm: MainViewModel) {
         item {
             OutlinedButton(onClick = { vm.refreshAll() }, modifier = Modifier.padding(top = 16.dp).focusHighlight()) { Text(stringResource(R.string.settings_refresh)) }
         }
+        item { Box(Modifier.padding(top = 16.dp)) { BackupSettings() } }
         item { Text(stringResource(R.string.settings_guide_info), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.padding(top = 8.dp)) }
         item { Text(stringResource(R.string.settings_about), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp)) }
         item { Text("ProIPTV ${stringResource(R.string.main_version, BuildConfig.VERSION_NAME)}") }

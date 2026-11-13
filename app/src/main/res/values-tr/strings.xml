@@ -108,4 +108,25 @@
     <string name="settings_timeshift">Canlı TV\'yi duraklat ve geri sar</string>
     <string name="settings_buffer">Bu cihazdaki arabellek boyutu</string>
     <string name="settings_buffer_hint">Daha büyük arabellek daha fazla geri sarmaya izin verir ama daha çok alan kullanır.</string>
+    <string name="rec_confirm">%1$s kaydedilsin mi (%2$s - %3$s)?</string>
+    <string name="rec_scheduled">Kayıt planlandı.</string>
+    <string name="rec_conflict">Uyarı: Aynı saatteki başka bir kayıt aynı bağlantıya ihtiyaç duyabilir.</string>
+    <string name="rec_status_scheduled">Planlandı</string>
+    <string name="rec_status_missed">Kaçırıldı</string>
+    <string name="rec_note_budget">Başlangıç saatinde boş bağlantı yoktu.</string>
+    <string name="rec_note_space">Yeterli boş alan yoktu.</string>
+    <string name="rec_note_channel">Kanal artık kullanılamıyor.</string>
+    <string name="rec_note_ended">Program çoktan bitmişti.</string>
+    <string name="rec_missed_notification">Kayıt kaçırıldı: %1$s</string>
+    <string name="player_record_hint">Kaydetmek için devam eden veya gelecek bir program seç.</string>
+    <string name="player_switched">%1$s kanalına geçildi</string>
+    <string name="settings_backup">Yedekleme</string>
+    <string name="backup_create">Yedek oluştur</string>
+    <string name="backup_restore">Yedeği geri yükle</string>
+    <string name="backup_password">Şifre (isteğe bağlı, hesap şifrelerini de kaydeder)</string>
+    <string name="backup_hint">Şifre olmadan yedek hesap şifrelerini içermez.</string>
+    <string name="backup_done">Yedek kaydedildi.</string>
+    <string name="backup_restored">Geri yüklendi: %1$d hesap, %2$d favori.</string>
+    <string name="backup_wrong_password">Yanlış şifre.</string>
+    <string name="backup_invalid">Bu dosya bir ProIPTV yedeği değil.</string>
 </resources>

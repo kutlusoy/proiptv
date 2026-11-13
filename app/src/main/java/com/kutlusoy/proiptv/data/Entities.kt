@@ -145,6 +145,8 @@ object RecStatus {
     const val RECORDING = 0
     const val DONE = 1
     const val INTERRUPTED = 2
+    const val SCHEDULED = 3
+    const val MISSED = 4
 }
 
 @Entity(tableName = "recordings")
@@ -158,4 +160,7 @@ data class Recording(
     val path: String,
     val bytes: Long = 0,
     val status: Int = RecStatus.RECORDING,
+    val plannedStart: Long? = null,
+    val channelRemoteId: String = "",
+    val note: String? = null,
 )

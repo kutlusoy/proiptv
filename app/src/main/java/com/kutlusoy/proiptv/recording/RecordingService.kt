@@ -1,7 +1,6 @@
 package com.kutlusoy.proiptv.recording
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
@@ -27,9 +26,7 @@ class RecordingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val app = application as ProIptvApp
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= 26) {
-            manager.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.nav_recordings), NotificationManager.IMPORTANCE_LOW))
-        }
+        RecordingNotifications.ensureChannel(this)
         ServiceCompat.startForeground(
             this, NOTIFICATION_ID, notification(app.recordings.active.value.firstOrNull()?.title.orEmpty()),
             if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0,
@@ -65,7 +62,7 @@ class RecordingService : Service() {
     }
 
     companion object {
-        private const val CHANNEL = "recording"
+        private const val CHANNEL = RecordingNotifications.CHANNEL
         private const val NOTIFICATION_ID = 1
 
         fun start(context: Context) {

@@ -9,6 +9,7 @@ import com.kutlusoy.proiptv.data.AppDatabase
 import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.Repository
 import com.kutlusoy.proiptv.data.SecretBox
+import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.Source
 import com.kutlusoy.proiptv.sync.SyncManager
 import java.text.SimpleDateFormat
@@ -42,6 +43,7 @@ import org.robolectric.annotation.Config
 class SyncIntegrationTest {
     private lateinit var db: AppDatabase
     private lateinit var repo: Repository
+    private lateinit var secrets: SecretBox
     private lateinit var server: MockWebServer
     private var guideTitle = "Now Show"
     private var guideEtag = "\"v1\""
@@ -62,7 +64,7 @@ class SyncIntegrationTest {
     fun setUp() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(ctx, AppDatabase::class.java).allowMainThreadQueries().build()
-        val secrets = SecretBox()
+        secrets = SecretBox()
         val sync = SyncManager(db, secrets, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         repo = Repository(db, secrets, sync)
         server = MockWebServer()
@@ -288,7 +290,56 @@ class SyncIntegrationTest {
     }
 
     @Test
-    fun migrationToVersion3CreatesTheSameRecordingsTableAsRoom() {
+    fun backupRestoresAccountsFavoritesAndPasswords() = runBlocking {
+        val id = repo.saveAccount(Account(name = "Home", type = AccountType.XTREAM, url = base(), username = "bob"), "secret")
+        waitForSync(id)
+        val list = repo.createList("Sport")
+        repo.setFavorite(list, id, Kind.LIVE, "10", "One", true)
+        repo.setFavorite(list, id, Kind.LIVE, "12", "Three", true)
+        val manager = com.kutlusoy.proiptv.data.BackupManager(repo, { true to 512 }, { _, _ -> }, { secrets.decrypt(it.password) })
+        val protectedText = manager.export("pw")
+        val plainText = manager.export(null)
+        assertTrue(!plainText.contains("secret"))
+        repo.deleteAccount(id)
+        repo.deleteList(list)
+        val result = manager.restore(protectedText, "pw")
+        assertEquals(1, result.accounts)
+        assertEquals(2, result.favorites)
+        val restored = db.accounts().list().single()
+        waitForSync(restored.id)
+        assertEquals("bob", restored.username)
+        assertEquals("secret", secrets.decrypt(restored.password))
+        val lists = db.favorites().lists().first()
+        assertEquals(listOf("Sport"), lists.map { it.name })
+        assertEquals(listOf("10", "12"), db.favorites().entries(lists[0].id).map { it.remoteId })
+        val again = manager.restore(protectedText, "pw")
+        assertEquals(0, again.accounts)
+        assertEquals(0, again.favorites)
+        assertEquals(1, db.accounts().list().size)
+    }
+
+    @Test
+    fun alternativesFindTheSameChannelInOtherEnabledAccounts() = runBlocking {
+        val a1 = db.accounts().insert(Account(name = "A", type = AccountType.M3U, url = "u1"))
+        val a2 = db.accounts().insert(Account(name = "B", type = AccountType.M3U, url = "u2"))
+        val a3 = db.accounts().insert(Account(name = "C", type = AccountType.M3U, url = "u3", enabled = false))
+        db.items().upsert(
+            listOf(
+                Item(accountId = a1, kind = Kind.LIVE, remoteId = "1", name = "One", epgId = "one.de"),
+                Item(accountId = a2, kind = Kind.LIVE, remoteId = "1", name = "Eins HD", epgId = "one.de"),
+                Item(accountId = a1, kind = Kind.LIVE, remoteId = "2", name = "ONE"),
+                Item(accountId = a3, kind = Kind.LIVE, remoteId = "1", name = "One", epgId = "one.de"),
+                Item(accountId = a2, kind = Kind.LIVE, remoteId = "9", name = "Unrelated", epgId = "other"),
+            ),
+        )
+        val original = db.items().find(a1, Kind.LIVE, "1")!!
+        val alternatives = repo.alternatives(original)
+        assertEquals(listOf("2", "1"), alternatives.map { it.remoteId })
+        assertEquals(listOf(a1, a2), alternatives.map { it.accountId })
+    }
+
+    @Test
+    fun migrationToVersion4CreatesTheSameColumnsAsRoom() {
         fun describe(c: android.database.Cursor): List<String> = c.use {
             val rows = mutableListOf<String>()
             while (it.moveToNext()) rows += "${it.getString(1)}|${it.getString(2)}|${it.getInt(3)}|${it.getInt(5)}"
@@ -297,9 +348,15 @@ class SyncIntegrationTest {
         val fromRoom = describe(db.openHelper.writableDatabase.query("PRAGMA table_info(recordings)"))
         val migrated = android.database.sqlite.SQLiteDatabase.create(null)
         for (sql in AppDatabase.MIGRATION_2_3_SQL) migrated.execSQL(sql)
+        migrated.execSQL("INSERT INTO recordings (accountId, title, startedAt, path, bytes, status) VALUES (1, 't', 1, 'p', 0, 1)")
+        for (sql in AppDatabase.MIGRATION_3_4_SQL) migrated.execSQL(sql)
         val fromMigration = describe(migrated.rawQuery("PRAGMA table_info(recordings)", null))
+        migrated.rawQuery("SELECT channelRemoteId, plannedStart, note FROM recordings", null).use {
+            assertTrue(it.moveToFirst())
+            assertEquals("", it.getString(0))
+            assertTrue(it.isNull(1))
+        }
         migrated.close()
-        assertTrue(fromRoom.isNotEmpty())
-        assertEquals(fromRoom, fromMigration)
+        assertEquals(fromRoom.sorted(), fromMigration.sorted())
     }
 }

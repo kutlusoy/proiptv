@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Account::class, Category::class, Item::class, Program::class, FavoriteList::class, Favorite::class, Progress::class, Recording::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +33,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                for (sql in MIGRATION_3_4_SQL) db.execSQL(sql)
+            }
+        }
+
+        val MIGRATION_3_4_SQL = listOf(
+            "ALTER TABLE recordings ADD COLUMN plannedStart INTEGER",
+            "ALTER TABLE recordings ADD COLUMN channelRemoteId TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE recordings ADD COLUMN note TEXT",
+        )
+
         val MIGRATION_2_3_SQL = listOf(
             "CREATE TABLE IF NOT EXISTS `recordings` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `accountId` INTEGER NOT NULL, `title` TEXT NOT NULL, `startedAt` INTEGER NOT NULL, `endedAt` INTEGER, `plannedEnd` INTEGER, `path` TEXT NOT NULL, `bytes` INTEGER NOT NULL, `status` INTEGER NOT NULL)",
         )
@@ -45,6 +57,6 @@ abstract class AppDatabase : RoomDatabase() {
         )
 
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
     }
 }

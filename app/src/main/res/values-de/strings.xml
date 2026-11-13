@@ -108,4 +108,25 @@
     <string name="settings_timeshift">Live-TV pausieren und zurückspulen</string>
     <string name="settings_buffer">Puffergröße auf diesem Gerät</string>
     <string name="settings_buffer_hint">Ein größerer Puffer erlaubt weiteres Zurückspulen, braucht aber mehr Speicher.</string>
+    <string name="rec_confirm">%1$s aufnehmen (%2$s bis %3$s)?</string>
+    <string name="rec_scheduled">Aufnahme geplant.</string>
+    <string name="rec_conflict">Achtung: Eine andere Aufnahme zur gleichen Zeit braucht eventuell dieselbe Verbindung.</string>
+    <string name="rec_status_scheduled">Geplant</string>
+    <string name="rec_status_missed">Verpasst</string>
+    <string name="rec_note_budget">Zur Startzeit war keine Verbindung frei.</string>
+    <string name="rec_note_space">Nicht genug freier Speicher.</string>
+    <string name="rec_note_channel">Der Sender ist nicht mehr verfügbar.</string>
+    <string name="rec_note_ended">Die Sendung war schon zu Ende.</string>
+    <string name="rec_missed_notification">Aufnahme verpasst: %1$s</string>
+    <string name="player_record_hint">Wähle eine laufende oder künftige Sendung, um sie aufzunehmen.</string>
+    <string name="player_switched">Gewechselt zu %1$s</string>
+    <string name="settings_backup">Sicherung</string>
+    <string name="backup_create">Sicherung erstellen</string>
+    <string name="backup_restore">Sicherung wiederherstellen</string>
+    <string name="backup_password">Passwort (optional, speichert auch die Konto-Passwörter)</string>
+    <string name="backup_hint">Ohne Passwort enthält die Sicherung keine Konto-Passwörter.</string>
+    <string name="backup_done">Sicherung gespeichert.</string>
+    <string name="backup_restored">Wiederhergestellt: %1$d Konten, %2$d Favoriten.</string>
+    <string name="backup_wrong_password">Falsches Passwort.</string>
+    <string name="backup_invalid">Diese Datei ist keine ProIPTV-Sicherung.</string>
 </resources>

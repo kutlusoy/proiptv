@@ -108,4 +108,25 @@
     <string name="settings_timeshift">Pausar y retroceder la TV en directo</string>
     <string name="settings_buffer">Tamaño del búfer en este dispositivo</string>
     <string name="settings_buffer_hint">Un búfer mayor permite retroceder más pero usa más espacio.</string>
+    <string name="rec_confirm">¿Grabar %1$s (de %2$s a %3$s)?</string>
+    <string name="rec_scheduled">Grabación programada.</string>
+    <string name="rec_conflict">Aviso: otra grabación a la misma hora puede necesitar la misma conexión.</string>
+    <string name="rec_status_scheduled">Programada</string>
+    <string name="rec_status_missed">Perdida</string>
+    <string name="rec_note_budget">No había conexión libre a la hora de inicio.</string>
+    <string name="rec_note_space">No había suficiente espacio libre.</string>
+    <string name="rec_note_channel">El canal ya no está disponible.</string>
+    <string name="rec_note_ended">El programa ya había terminado.</string>
+    <string name="rec_missed_notification">Grabación perdida: %1$s</string>
+    <string name="player_record_hint">Elige un programa actual o futuro para grabarlo.</string>
+    <string name="player_switched">Cambiado a %1$s</string>
+    <string name="settings_backup">Copia de seguridad</string>
+    <string name="backup_create">Crear copia</string>
+    <string name="backup_restore">Restaurar copia</string>
+    <string name="backup_password">Contraseña (opcional, guarda también las contraseñas de las cuentas)</string>
+    <string name="backup_hint">Sin contraseña la copia no contiene las contraseñas de las cuentas.</string>
+    <string name="backup_done">Copia guardada.</string>
+    <string name="backup_restored">Restaurado: %1$d cuentas, %2$d favoritos.</string>
+    <string name="backup_wrong_password">Contraseña incorrecta.</string>
+    <string name="backup_invalid">Este archivo no es una copia de ProIPTV.</string>
 </resources>

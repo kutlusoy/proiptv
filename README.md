@@ -18,10 +18,12 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 - **Movies and series** with seasons, episodes and resume
 - **Favorites** with several lists and **manual sorting**, kept after a provider refresh
 - **stream hub**: one provider connection per channel for watching, **pause and rewind live TV** (disk ring buffer) and **recording** (foreground service, recordings list), connection limit of the account respected
+- **scheduled recordings** from the guide (alarm, restart safe, conflict warning) and **failover** to an equal channel when a stream fails
+- **backup and restore** of accounts, favorites and settings (optional password also saves account passwords)
 - player on Media3 with audio and subtitle choice, picture size, automatic retry
 - eleven languages (six complete, five partly translated, see Languages)
 
-Not yet: scheduled recording for a later time, multiview, Stalker portal, HDHomeRun, Enigma2, TVHeadend, Jellyfin and the other sources. See the roadmap in [doc/guideline-product-plan.md](doc/guideline-product-plan.md) and the scope in [doc/guideline-feature-matrix.md](doc/guideline-feature-matrix.md). How to install and use it: [doc/guideline-user-guide.md](doc/guideline-user-guide.md).
+Not yet: multiview, parental PIN, Stalker portal, HDHomeRun, Enigma2, TVHeadend, Jellyfin and the other sources. See the roadmap in [doc/guideline-product-plan.md](doc/guideline-product-plan.md) and the scope in [doc/guideline-feature-matrix.md](doc/guideline-feature-matrix.md). How to install and use it: [doc/guideline-user-guide.md](doc/guideline-user-guide.md).
 
 ## Build
 

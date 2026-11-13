@@ -64,6 +64,9 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         db.accounts().delete(id)
     }
 
+    suspend fun alternatives(item: Item): List<Item> =
+        db.items().alternatives(item.id, item.accountId, item.epgId.orEmpty(), item.name.trim().lowercase())
+
     suspend fun maxConnections(accountId: Long): Int? = db.accounts().get(accountId)?.maxConnections
 
     suspend fun enabledIds(): List<Long> = db.accounts().enabledIds()

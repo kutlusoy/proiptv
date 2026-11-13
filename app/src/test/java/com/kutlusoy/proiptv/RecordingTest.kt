@@ -8,6 +8,7 @@ import androidx.media3.datasource.DataSpec
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.kutlusoy.proiptv.data.AppDatabase
+import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.PlayTarget
 import com.kutlusoy.proiptv.data.RecStatus
@@ -16,6 +17,7 @@ import com.kutlusoy.proiptv.engine.EngineManager
 import com.kutlusoy.proiptv.engine.RingBuffer
 import com.kutlusoy.proiptv.engine.StreamHub
 import com.kutlusoy.proiptv.player.HubDataSource
+import com.kutlusoy.proiptv.recording.RecNote
 import com.kutlusoy.proiptv.recording.RecordingManager
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -40,6 +42,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -52,6 +55,7 @@ class RecordingTest {
     private lateinit var server: MockWebServer
     private lateinit var manager: RecordingManager
     private lateinit var engine: EngineManager
+    private var limit: Int? = null
     private val app: Application get() = ApplicationProvider.getApplicationContext()
 
     @Before
@@ -59,8 +63,12 @@ class RecordingTest {
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         db = Room.inMemoryDatabaseBuilder(app, AppDatabase::class.java).allowMainThreadQueries().build()
         engine = EngineManager(tmp.newFolder("hubs"), scope, { 1L shl 20 }, graceMs = 100)
-        manager = RecordingManager(app, db, engine, scope)
         server = MockWebServer().also { it.start() }
+        manager = RecordingManager(
+            app, db, engine, scope,
+            resolve = { PlayTarget(server.url("/live/${it.remoteId}.ts").toString(), "Test", it.name, true, it.accountId, Kind.LIVE, it.remoteId) },
+            maxConnections = { limit },
+        )
     }
 
     @After
@@ -152,5 +160,89 @@ class RecordingTest {
         closed.open(DataSpec(Uri.parse("hub://a:1")))
         assertEquals(C.RESULT_END_OF_INPUT, closed.read(ByteArray(10), 0, 10))
         closed.close()
+    }
+
+    private fun live(remote: String = "10", name: String = "One") = Item(accountId = 1, kind = Kind.LIVE, remoteId = remote, name = name)
+
+    private val alarms get() = shadowOf(app.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager)
+
+    @Test
+    fun scheduledRecordingGetsAnAlarmStartsAndFinishes() = runBlocking {
+        repeat(5) { server.enqueue(MockResponse().setBodyDelay(100, TimeUnit.MILLISECONDS).setBody(Buffer().write(ByteArray(100_000) { 5 }))) }
+        db.items().upsert(listOf(live()))
+        val now = System.currentTimeMillis()
+        val id = manager.schedule(live(), "One: Show", now + 3_600_000, now + 3_700_000)
+        assertEquals(RecStatus.SCHEDULED, db.recordings().get(id)!!.status)
+        assertEquals(1, alarms.scheduledAlarms.size)
+        db.recordings().update(db.recordings().get(id)!!.copy(plannedEnd = now + 1_500))
+        manager.startScheduled(id)
+        assertEquals(1, manager.active.value.size)
+        withTimeout(10_000) { while (manager.active.value.isNotEmpty()) delay(50) }
+        val row = db.recordings().get(id)!!
+        assertEquals(RecStatus.DONE, row.status)
+        assertEquals("One: Show", row.title)
+        assertTrue(row.bytes > 0)
+        assertTrue(File(row.path).exists())
+    }
+
+    @Test
+    fun scheduledRecordingIsMissedWithAReason() = runBlocking {
+        val now = System.currentTimeMillis()
+        db.items().upsert(listOf(live("10"), live("11", "Eleven")))
+        limit = 1
+        server.enqueue(MockResponse().setBody(Buffer().write(ByteArray(10_000))))
+        val running = manager.start(PlayTarget(server.url("/live/11.ts").toString(), null, "Eleven", true, 1, Kind.LIVE, "11"), 1, null)
+        val busy = manager.schedule(live("10"), "x", now, now + 600_000)
+        manager.startScheduled(busy)
+        assertEquals(RecStatus.MISSED, db.recordings().get(busy)!!.status)
+        assertEquals(RecNote.BUDGET, db.recordings().get(busy)!!.note)
+        manager.stop(running)
+        withTimeout(10_000) { while (manager.active.value.isNotEmpty()) delay(50) }
+
+        val ended = manager.schedule(live("10"), "y", now - 7_200_000, now - 3_600_000)
+        manager.startScheduled(ended)
+        assertEquals(RecNote.ENDED, db.recordings().get(ended)!!.note)
+
+        val gone = manager.schedule(live("99", "Gone"), "z", now, now + 600_000)
+        manager.startScheduled(gone)
+        assertEquals(RecNote.CHANNEL, db.recordings().get(gone)!!.note)
+    }
+
+    @Test
+    fun deletingAScheduledRecordingCancelsItsAlarm() = runBlocking {
+        val now = System.currentTimeMillis()
+        val id = manager.schedule(live(), "x", now + 3_600_000, now + 7_200_000)
+        assertEquals(1, alarms.scheduledAlarms.size)
+        manager.delete(id)
+        assertEquals(0, alarms.scheduledAlarms.size)
+        assertEquals(null, db.recordings().get(id))
+    }
+
+    @Test
+    fun restartReschedulesFutureAndStartsRunningPrograms() = runBlocking {
+        repeat(3) { server.enqueue(MockResponse().setBody(Buffer().write(ByteArray(20_000)))) }
+        db.items().upsert(listOf(live("10"), live("11", "Eleven")))
+        val now = System.currentTimeMillis()
+        val future = manager.schedule(live("11", "Eleven"), "later", now + 3_600_000, now + 7_200_000)
+        val due = manager.schedule(live("10"), "now", now - 60_000, now + 1_500)
+        alarms.scheduledAlarms.clear()
+        manager.rescheduleAll()
+        assertEquals(1, alarms.scheduledAlarms.size)
+        assertEquals(RecStatus.SCHEDULED, db.recordings().get(future)!!.status)
+        withTimeout(10_000) { while (db.recordings().get(due)!!.status != RecStatus.DONE) delay(50) }
+    }
+
+    @Test
+    fun conflictsConsiderTheConnectionLimitAndOtherChannels() = runBlocking {
+        val now = System.currentTimeMillis()
+        manager.schedule(live("10"), "a", now + 1_000, now + 3_600_000)
+        limit = 1
+        assertTrue(manager.conflicts(live("11", "Eleven"), now + 10_000, now + 20_000))
+        assertTrue(!manager.conflicts(live("10"), now + 10_000, now + 20_000))
+        assertTrue(!manager.conflicts(live("11", "Eleven"), now + 4_000_000, now + 5_000_000))
+        limit = 2
+        assertTrue(!manager.conflicts(live("11", "Eleven"), now + 10_000, now + 20_000))
+        limit = null
+        assertTrue(!manager.conflicts(live("11", "Eleven"), now + 10_000, now + 20_000))
     }
 }

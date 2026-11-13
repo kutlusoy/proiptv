@@ -131,7 +131,22 @@ While you watch, the app keeps the last minutes of the channel on the device. Th
 
 The files are normal transport stream files (`.ts`) in the app's Movies folder (`Android/data/com.kutlusoy.proiptv/files/Movies`, for the debug app `...proiptv.debug...`). You can copy them with a file manager or over USB and play them with VLC or similar players. Deleting a recording in the app deletes the file.
 
+### Record a program from the guide
+
+1. While watching a channel open the information bar, button **Guide**.
+2. Choose a program that is running now or comes later, confirm with **Record**.
+3. A program that is running starts to record at once. A later program is **scheduled**: it starts 1 minute before and ends 5 minutes after the announced times, so the start and the end are not cut off.
+4. Scheduled recordings appear in the tab **Recordings** with the status **Scheduled**. **Cancel** removes one. They survive a restart of the device.
+5. If another scheduled recording at the same time may need the same connection of an account with a connection limit, the app warns you when you schedule.
+6. If a recording cannot start (no free connection, little storage, channel removed, program already over), it is marked **Missed** with the reason and you get a notification.
+
+Scheduled recordings use an alarm of the system. They do **not** work if you forced the app to stop in the Android settings (the system then runs nothing of the app until you open it once), and some TV boxes with aggressive power saving may delay alarms. After a restart of the device the app is started by the system and registers the alarms again.
+
 If the app is closed by the system or the stream stays down for a long time, the recording is marked **Interrupted**, the part that was recorded is kept. For long recordings turn off battery optimization for the app (see the continuous operation notes of your device vendor). A recording does not start if less than 200 MB of storage is free.
+
+### If a channel does not play
+
+The app retries three times. If the channel still fails, it looks for the same channel (same guide ID or same name) in your enabled accounts, first in the same account, and switches to it with a short message "Switched to ...". This only happens while you zap in a list, not for movies, episodes or recordings.
 
 ## 6. Favorites and manual order
 
@@ -144,13 +159,20 @@ With more than one list the star opens a dialog where you tick the lists of the 
 
 Zapping with up and down while playing follows the order of the list you started from.
 
-## 7. Language
+## 7. Backup and restore
+
+Settings, section **Backup**.
+
+- **Create backup:** choose a password or leave the field empty, then choose where to save the file (for example a USB stick). The file holds your accounts (server, user name, options), favorite lists with their order and the time shift settings. **Without a password the file contains no account passwords.** With a password the whole file is encrypted and the account passwords are included. The password cannot be recovered, keep it safe.
+- **Restore backup:** choose the file, enter the password if the file is protected. Restoring **adds** what is missing, it never deletes. Accounts that already exist (same type, address and user name) are kept as they are, favorite lists with the same name are merged. Restored accounts start to load their channels at once. An account from a backup without password shows `Login failed` until you open **Edit** on the card and enter the password.
+
+## 8. Language
 
 Tab **Settings**, **Language**. `Automatic` follows the device. The change applies at once.
 
-## 8. Limits of this version
+## 9. Limits of this version
 
-- No multiview yet, and no recording planned from the guide for a later time (recording starts at the moment you press Record). Planned for the next versions, see the roadmap.
+- No multiview yet and no parental PIN yet. Planned for the next versions, see the roadmap.
 - Pause, rewind and recording need TS streams, not HLS.
 - Stalker portal, HDHomeRun, Enigma2 and TVHeadend sources are not implemented yet.
 - Series in M3U playlists are listed as single movies.
@@ -158,13 +180,14 @@ Tab **Settings**, **Language**. `Automatic` follows the device. The change appli
 - The translations of Portuguese, Dutch, Polish, Russian and Arabic cover only the first screens, the rest shows English.
 - The splash screen and icons are placeholders until the logo is delivered.
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 | Observation | What to check |
 |---|---|
 | `Login failed` on the card | Server address with port, user name, password. Open the address `<server>/player_api.php?username=..&password=..` in a browser, it must show account data. |
 | Account loads but a channel does not play | Try another live format in the account (`TS` or `HLS`). Check that the provider allows another connection (card shows allowed and active connections). |
 | Guide is empty | The channel has no guide id in the playlist, or the provider offers no XMLTV. Enter a guide URL in the account. |
+| A scheduled recording was missed | The status line names the reason. Typical causes: no free provider connection at that time, the app was force stopped, or the device was off. |
 | Recording does not start | Free storage under 200 MB, or all provider connections are in use (the message names them). |
 | Very large lists load slowly | The first load of a big account takes a minute or more on weak devices. It runs in the background, the app stays usable. |
 | Text in another language than expected | Settings, Language. |

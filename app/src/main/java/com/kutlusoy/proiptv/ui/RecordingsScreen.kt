@@ -30,6 +30,7 @@ import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.PlayTarget
 import com.kutlusoy.proiptv.data.RecStatus
 import com.kutlusoy.proiptv.data.Recording
+import com.kutlusoy.proiptv.recording.RecNote
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -57,19 +58,31 @@ fun RecordingsScreen(vm: MainViewModel) {
             val minutes = (((r.endedAt ?: System.currentTimeMillis()) - r.startedAt) / 60_000).coerceAtLeast(0)
             val status = when {
                 running -> R.string.rec_status_recording
+                r.status == RecStatus.SCHEDULED -> R.string.rec_status_scheduled
+                r.status == RecStatus.MISSED -> R.string.rec_status_missed
                 r.status == RecStatus.DONE -> R.string.rec_status_done
                 else -> R.string.rec_status_interrupted
             }
+            val note = when (r.note) {
+                RecNote.BUDGET -> R.string.rec_note_budget
+                RecNote.SPACE -> R.string.rec_note_space
+                RecNote.CHANNEL -> R.string.rec_note_channel
+                RecNote.ENDED -> R.string.rec_note_ended
+                else -> null
+            }
+            val scheduled = r.status == RecStatus.SCHEDULED
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(r.title, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "${format.format(Date(r.startedAt))}, ${minutes / 60}:${"%02d".format(minutes % 60)}, ${Formatter.formatShortFileSize(ctx, size)}, ${stringResource(status)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    )
+                    val details = if (scheduled) {
+                        "${format.format(Date(r.plannedStart ?: r.startedAt))} - ${format.format(Date(r.plannedEnd ?: r.startedAt))}, ${stringResource(status)}"
+                    } else {
+                        "${format.format(Date(r.startedAt))}, ${minutes / 60}:${"%02d".format(minutes % 60)}, ${Formatter.formatShortFileSize(ctx, size)}, ${stringResource(status)}"
+                    }
+                    Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                    note?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                        if (size > 0) {
+                        if (size > 0 && !scheduled) {
                             OutlinedButton(
                                 onClick = {
                                     vm.player.value = PlayRequest.Single(
@@ -82,7 +95,9 @@ fun RecordingsScreen(vm: MainViewModel) {
                         if (running) {
                             OutlinedButton(onClick = { vm.stopRecording(r.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.rec_stop)) }
                         }
-                        OutlinedButton(onClick = { deleting = r }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
+                        OutlinedButton(onClick = { if (scheduled) vm.deleteRecording(r.id) else deleting = r }, modifier = Modifier.focusHighlight()) {
+                            Text(stringResource(if (scheduled) R.string.action_cancel else R.string.action_delete))
+                        }
                     }
                 }
             }

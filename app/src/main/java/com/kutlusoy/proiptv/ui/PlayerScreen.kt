@@ -136,6 +136,8 @@ private class LeaseHolder {
 }
 
 private const val LIVE_LAG_MS = 1500L
+private const val START_PAD_MS = 60_000L
+private const val END_PAD_MS = 5 * 60_000L
 private const val LIVE_THRESHOLD_MS = 3000L
 private const val SHIFT_STEP_MS = 10_000L
 
@@ -180,6 +182,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var shiftRequest by remember { mutableIntStateOf(0) }
     var notice by remember { mutableStateOf<String?>(null) }
     var recordDialog by remember { mutableStateOf(false) }
+    var info by remember { mutableStateOf<String?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    val tried = remember { mutableSetOf<Long>() }
     val activeRecs by app.recordings.active.collectAsState()
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val favLists by vm.favLists.collectAsState()
@@ -209,6 +214,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     }
                 } else {
                     message = R.string.player_failed
+                    failed = true
                 }
             }
 
@@ -255,9 +261,33 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         message = null
         notice = null
         shiftTime = null
+        failed = false
+        tried.clear()
         target = i?.let { vm.repo.target(it) }
         overlay = true
         touched++
+    }
+
+    LaunchedEffect(failed) {
+        if (!failed || request !is PlayRequest.Zap || catchup != null) return@LaunchedEffect
+        val current = item ?: return@LaunchedEffect
+        tried += current.id
+        val alternative = vm.repo.alternatives(current).firstOrNull { it.id !in tried } ?: return@LaunchedEffect
+        val next = vm.repo.target(alternative) ?: return@LaunchedEffect
+        failed = false
+        retry = 0
+        forceHls = false
+        message = null
+        item = alternative
+        target = next
+        info = ctx.getString(R.string.player_switched, alternative.name)
+    }
+
+    LaunchedEffect(info) {
+        if (info != null) {
+            delay(4_000)
+            info = null
+        }
     }
 
     LaunchedEffect(item?.id) {
@@ -356,8 +386,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         shiftRequest++
     }
 
-    fun startRecording(stopAt: Long?) {
-        val t = active ?: return
+    fun startRecording(stopAt: Long?, title: String? = null) {
+        val base = active ?: return
+        val t = if (title != null) base.copy(title = title) else base
         scope.launch {
             try {
                 if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -420,6 +451,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             update = { it.resizeMode = resize },
         )
         (notice ?: message?.let { stringResource(it) })?.let { Text(it, Modifier.align(Alignment.Center).background(Color(0xAA000000)).padding(12.dp), color = Color.White, textAlign = TextAlign.Center) }
+        info?.let { Text(it, Modifier.align(Alignment.TopCenter).padding(24.dp).background(Color(0xAA000000)).padding(10.dp), color = Color.White, textAlign = TextAlign.Center) }
         if (recordingHere != null) {
             Text("\u25CF REC", Modifier.align(Alignment.TopStart).padding(24.dp).background(Color(0xAA000000)).padding(8.dp), color = Color(0xFFFF5252))
         }
@@ -510,6 +542,21 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     guideDialog = false
                     overlay = false
                 }
+            }, onRecord = { p ->
+                guideDialog = false
+                scope.launch {
+                    val now = System.currentTimeMillis()
+                    val title = "${i.name}: ${p.title}"
+                    val endMs = p.end * 1000 + END_PAD_MS
+                    if (p.start * 1000 <= now) {
+                        startRecording(endMs, title)
+                    } else {
+                        val startMs = p.start * 1000 - START_PAD_MS
+                        val conflict = app.recordings.conflicts(i, startMs, endMs)
+                        app.recordings.schedule(i, title, startMs, endMs)
+                        info = ctx.getString(R.string.rec_scheduled) + if (conflict) " " + ctx.getString(R.string.rec_conflict) else ""
+                    }
+                }
             }, onDismiss = { guideDialog = false })
         }
     }
@@ -592,7 +639,8 @@ private fun TracksDialog(exo: ExoPlayer, tracks: Tracks, onDismiss: () -> Unit) 
 }
 
 @Composable
-private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit, onDismiss: () -> Unit) {
+private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit, onRecord: (Program) -> Unit, onDismiss: () -> Unit) {
+    var confirm by remember { mutableStateOf<Program?>(null) }
     val programs by produceState<List<Program>?>(null, item.id) {
         value = item.epgId?.let { vm.repo.guide(item.accountId, it, if (item.archiveDays > 0) 3 else 0, 2) } ?: emptyList()
     }
@@ -606,6 +654,7 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
             val list = programs
             Column {
                 if (item.archiveDays > 0) Text(stringResource(R.string.player_catchup_hint), style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.player_record_hint), style = MaterialTheme.typography.bodySmall)
                 when {
                     list == null -> Text(stringResource(R.string.series_loading))
                     list.isEmpty() -> Text(stringResource(R.string.epg_none))
@@ -614,7 +663,7 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
                             val past = p.end < now && item.archiveDays > 0
                             val current = p.start <= now && p.end > now
                             Column(
-                                Modifier.fillMaxWidth().focusHighlight().clickable(enabled = past || current) { if (past) onPlay(p) else onDismiss() }.padding(vertical = 6.dp, horizontal = 4.dp),
+                                Modifier.fillMaxWidth().focusHighlight().clickable { if (past) onPlay(p) else confirm = p }.padding(vertical = 6.dp, horizontal = 4.dp),
                             ) {
                                 Text(
                                     "${day.format(Date(p.start * 1000))} ${time.format(Date(p.start * 1000))} - ${time.format(Date(p.end * 1000))}",
@@ -630,4 +679,12 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
     )
+    confirm?.let { p ->
+        AlertDialog(
+            onDismissRequest = { confirm = null },
+            text = { Text(stringResource(R.string.rec_confirm, p.title, time.format(Date(p.start * 1000)), time.format(Date(p.end * 1000)))) },
+            confirmButton = { TextButton(onClick = { confirm = null; onRecord(p) }) { Text(stringResource(R.string.rec_record)) } },
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
 }

@@ -68,6 +68,13 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE id = :id")
     suspend fun get(id: Long): Item?
 
+    @Query(
+        "SELECT * FROM items WHERE kind = 0 AND id <> :id AND accountId IN (SELECT id FROM accounts WHERE enabled = 1) " +
+            "AND ((:epg <> '' AND epgId = :epg) OR (:name <> '' AND lower(name) = :name)) " +
+            "ORDER BY (accountId = :accountId) DESC, ord LIMIT 8",
+    )
+    suspend fun alternatives(id: Long, accountId: Long, epg: String, name: String): List<Item>
+
     @Query("SELECT * FROM items WHERE accountId = :accountId AND kind = :kind AND remoteId = :remoteId")
     suspend fun find(accountId: Long, kind: Int, remoteId: String): Item?
 
@@ -225,6 +232,12 @@ interface RecordingDao {
 
     @Query("DELETE FROM recordings WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM recordings WHERE status = 3")
+    suspend fun scheduled(): List<Recording>
+
+    @Query("SELECT * FROM recordings WHERE accountId = :accountId AND status IN (0, 3) AND COALESCE(plannedStart, startedAt) < :to AND plannedEnd > :from")
+    suspend fun overlapping(accountId: Long, from: Long, to: Long): List<Recording>
 
     @Query("UPDATE recordings SET status = 2 WHERE status = 0")
     suspend fun markInterrupted()
