@@ -82,6 +82,8 @@ data class Item(
     val plot: String? = null,
     val ord: Int = 0,
     val gen: Int = 0,
+    val country: String = "",
+    val year: Int = 0,
 )
 
 @Entity(tableName = "programs", indices = [Index("accountId", "epgId", "start")])

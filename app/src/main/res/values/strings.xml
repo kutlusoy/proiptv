@@ -150,4 +150,6 @@
     <string name="detail_watched">Watched</string>
     <string name="detail_season_watched">Mark season as watched</string>
     <string name="detail_season_unwatched">Mark season as unwatched</string>
+    <string name="filter_all_countries">All countries</string>
+    <string name="filter_all_years">All years</string>
 </resources>

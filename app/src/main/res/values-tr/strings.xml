@@ -149,4 +149,6 @@
     <string name="detail_watched">İzlendi</string>
     <string name="detail_season_watched">Sezonu izlendi olarak işaretle</string>
     <string name="detail_season_unwatched">Sezonu izlenmedi olarak işaretle</string>
+    <string name="filter_all_countries">Tüm ülkeler</string>
+    <string name="filter_all_years">Tüm yıllar</string>
 </resources>

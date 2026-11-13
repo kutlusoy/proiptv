@@ -130,11 +130,11 @@ class SyncIntegrationTest {
         assertEquals("Active", account.status)
         assertEquals(1, account.maxConnections)
         assertTrue(account.lastSync > 0)
-        assertEquals(3, db.items().count(Kind.LIVE, listOf(id), null, ""))
-        assertEquals(1, db.items().count(Kind.MOVIE, listOf(id), null, ""))
-        assertEquals(1, db.items().count(Kind.SERIES, listOf(id), null, ""))
-        assertEquals(2, db.items().count(Kind.LIVE, listOf(id), "2", ""))
-        assertEquals(1, db.items().count(Kind.LIVE, listOf(id), null, "tWo"))
+        assertEquals(3, db.items().count(Kind.LIVE, listOf(id), null, "", null, null))
+        assertEquals(1, db.items().count(Kind.MOVIE, listOf(id), null, "", null, null))
+        assertEquals(1, db.items().count(Kind.SERIES, listOf(id), null, "", null, null))
+        assertEquals(2, db.items().count(Kind.LIVE, listOf(id), "2", "", null, null))
+        assertEquals(1, db.items().count(Kind.LIVE, listOf(id), null, "tWo", null, null))
         assertEquals(listOf("News", "Sport"), db.items().categories(id, Kind.LIVE).first().map { it.name })
 
         val one = db.items().find(id, Kind.LIVE, "10")!!
@@ -183,7 +183,7 @@ class SyncIntegrationTest {
         }
         repo.sync.sync(id)
         waitForSync(id)
-        assertEquals(2, db.items().count(Kind.LIVE, listOf(id), null, ""))
+        assertEquals(2, db.items().count(Kind.LIVE, listOf(id), null, "", null, null))
         val rows = db.favorites().rows(list, Kind.LIVE).first()
         assertEquals(listOf("10", "12", "11"), rows.map { it.remoteId })
         assertNotNull(rows[0].itemId)
@@ -197,8 +197,8 @@ class SyncIntegrationTest {
         val id = repo.saveAccount(Account(name = "M", type = AccountType.M3U, url = base() + "/playlist.m3u"), "")
         waitForSync(id)
         assertNull(db.accounts().get(id)!!.lastError)
-        assertEquals(1, db.items().count(Kind.LIVE, listOf(id), null, ""))
-        assertEquals(1, db.items().count(Kind.MOVIE, listOf(id), null, ""))
+        assertEquals(1, db.items().count(Kind.LIVE, listOf(id), null, "", null, null))
+        assertEquals(1, db.items().count(Kind.MOVIE, listOf(id), null, "", null, null))
         val live = repo.at(Source.Browse(Kind.LIVE, listOf(id), null, ""), 0)!!
         assertEquals("http://s/live/1.ts", repo.target(live)!!.url)
         assertEquals("m1", live.epgId)
@@ -210,7 +210,7 @@ class SyncIntegrationTest {
         val id = repo.saveAccount(Account(name = "Test", type = AccountType.XTREAM, url = base(), username = "bob"), "secret")
         waitForSync(id)
         repo.deleteAccount(id)
-        assertEquals(0, db.items().count(Kind.LIVE, listOf(id), null, ""))
+        assertEquals(0, db.items().count(Kind.LIVE, listOf(id), null, "", null, null))
         assertNull(db.accounts().get(id))
         assertEquals(0, db.programs().range(id, "one.de", 0, Long.MAX_VALUE).size)
     }

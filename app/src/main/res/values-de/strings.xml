@@ -149,4 +149,6 @@
     <string name="detail_watched">Gesehen</string>
     <string name="detail_season_watched">Staffel als gesehen markieren</string>
     <string name="detail_season_unwatched">Staffel als ungesehen markieren</string>
+    <string name="filter_all_countries">Alle Länder</string>
+    <string name="filter_all_years">Alle Jahre</string>
 </resources>

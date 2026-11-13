@@ -79,6 +79,7 @@ import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.Program
 import com.kutlusoy.proiptv.data.Source
 import com.kutlusoy.proiptv.net.XtreamEpisode
+import com.kutlusoy.proiptv.parse.TitleParser
 import kotlinx.coroutines.delay
 
 private val StarOn = Color(0xFFFFC107)
@@ -97,6 +98,8 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val effective = selected ?: enabled.singleOrNull()?.id
     var category by rememberSaveable(kind, effective) { mutableStateOf<String?>(null) }
     var query by rememberSaveable(kind) { mutableStateOf("") }
+    var country by rememberSaveable(kind) { mutableStateOf<String?>(null) }
+    var year by rememberSaveable(kind) { mutableStateOf<Int?>(null) }
     var favMode by rememberSaveable(kind) { mutableStateOf(false) }
     var favList by rememberSaveable { mutableStateOf<Long?>(null) }
     var series by remember { mutableStateOf<Item?>(null) }
@@ -188,7 +191,32 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             }
         }
 
-        val useRows = kind != Kind.LIVE && !favMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
+        if (!favMode) {
+            val countries by vm.countries(kind, ids).collectAsState(initial = emptyList())
+            val years by vm.years(kind, ids).collectAsState(initial = emptyList())
+            if (countries.isNotEmpty() || years.isNotEmpty()) {
+                Row(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (countries.isNotEmpty()) {
+                        DropdownField<String?>(
+                            selected = country?.let { countryLabel(it) } ?: stringResource(R.string.filter_all_countries),
+                            options = listOf<Pair<String?, String>>(null to stringResource(R.string.filter_all_countries)) + countries.map { it to countryLabel(it) },
+                            onSelect = { country = it },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    if (years.isNotEmpty() && kind != Kind.LIVE) {
+                        DropdownField<Int?>(
+                            selected = year?.toString() ?: stringResource(R.string.filter_all_years),
+                            options = listOf<Pair<Int?, String>>(null to stringResource(R.string.filter_all_years)) + years.map { it to it.toString() },
+                            onSelect = { year = it },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+
+        val useRows = kind != Kind.LIVE && !favMode && category == null && query.isBlank() && country == null && year == null && effective != null && categories.isNotEmpty()
         if (favMode) {
             FavoritesPane(vm, kind, favList, onSelect = { favList = it }, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it })
         } else if (useRows) {
@@ -199,9 +227,9 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             }
         } else {
             val cat = if (effective != null) category else null
-            val flow = remember(kind, ids, cat, query) { vm.pager(kind, ids, cat, query) }
+            val flow = remember(kind, ids, cat, query, country, year) { vm.pager(kind, ids, cat, query, country, year) }
             val paged = flow.collectAsLazyPagingItems()
-            val source = Source.Browse(kind, ids, cat, query)
+            val source = Source.Browse(kind, ids, cat, query, country, year)
             if (paged.itemCount == 0) {
                 Text(stringResource(R.string.live_no_results), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
             }
@@ -245,6 +273,7 @@ fun ChannelRow(
     tall: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
+    val info = remember(name) { TitleParser.parse(name) }
     Row(
         Modifier.fillMaxWidth().focusHighlight().clickable(enabled = available, onClick = onClick).padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -252,7 +281,11 @@ fun ChannelRow(
     ) {
         if (tall) Logo(logo, Modifier.size(width = 48.dp, height = 70.dp), ContentScale.Crop) else Logo(logo, Modifier.size(width = 64.dp, height = 40.dp))
         Column(Modifier.weight(1f)) {
-            Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (available) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (info.country.isNotEmpty()) Badge(info.country)
+                Text(info.title, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (available) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                if (info.year > 0) Badge(info.year.toString())
+            }
             if (!available) {
                 Text(stringResource(R.string.fav_unavailable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
             } else {
@@ -301,8 +334,24 @@ private fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Bool
                 Icon(Icons.Filled.Star, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = StarOn)
             }
         }
-        Text(item.name, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp))
+        val info = remember(item.name) { TitleParser.parse(item.name) }
+        Text(info.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp))
+        val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "").filter { it.isNotEmpty() }.joinToString("  ")
+        if (tags.isNotEmpty()) Text(tags, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f), modifier = Modifier.padding(start = 2.dp))
     }
+}
+
+@Composable
+private fun Badge(text: String) {
+    Text(
+        text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+        modifier = Modifier.background(Palette.Wine.copy(alpha = 0.35f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp),
+    )
+}
+
+private fun countryLabel(code: String): String {
+    val name = if (code.length == 2) java.util.Locale("", code).displayCountry else ""
+    return if (name.isBlank() || name == code) code else "$code  $name"
 }
 
 @Composable

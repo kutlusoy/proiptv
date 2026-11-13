@@ -149,4 +149,6 @@
     <string name="detail_watched">Visto</string>
     <string name="detail_season_watched">Segna la stagione come vista</string>
     <string name="detail_season_unwatched">Segna la stagione come non vista</string>
+    <string name="filter_all_countries">Tutti i paesi</string>
+    <string name="filter_all_years">Tutti gli anni</string>
 </resources>

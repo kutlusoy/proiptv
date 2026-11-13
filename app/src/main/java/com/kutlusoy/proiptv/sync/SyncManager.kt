@@ -15,6 +15,7 @@ import com.kutlusoy.proiptv.net.int
 import com.kutlusoy.proiptv.net.maybeGunzip
 import com.kutlusoy.proiptv.net.str
 import com.kutlusoy.proiptv.parse.M3uParser
+import com.kutlusoy.proiptv.parse.TitleParser
 import com.kutlusoy.proiptv.parse.XmltvParser
 import java.io.BufferedReader
 import java.io.File
@@ -193,12 +194,15 @@ class SyncManager(
         db.items().replaceCategories(account.id, kind, cats)
         var ord = 0
         val batch = ArrayList<Item>(BATCH)
+        val groupNames = cats.associate { it.remoteId to it.name }
         api.stream(streamAction).use { s ->
             for (o in s.items) {
                 val remote = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
+                val name = o.str("name").orEmpty()
+                val info = TitleParser.parse(name, groupNames[o.str("category_id").orEmpty()].orEmpty())
                 batch += Item(
                     accountId = account.id, kind = kind, remoteId = remote,
-                    name = o.str("name").orEmpty(),
+                    name = name, country = info.country, year = info.year,
                     categoryRemoteId = o.str("category_id").orEmpty(),
                     logo = (o.str("stream_icon") ?: o.str("cover"))?.takeIf { it.isNotBlank() },
                     epgId = o.str("epg_channel_id")?.takeIf { it.isNotBlank() }?.lowercase(),
@@ -232,8 +236,10 @@ class SyncManager(
                 val map = groups.getValue(kind)
                 map.getOrPut(e.group) { map.size }
                 val ord = if (kind == Kind.LIVE) counters[0]++ else counters[1]++
+                val info = TitleParser.parse(e.name, e.group)
                 batch += Item(
                     accountId = account.id, kind = kind, remoteId = hash(e.url), name = e.name,
+                    country = info.country, year = info.year,
                     categoryRemoteId = e.group, logo = e.logo, epgId = e.tvgId?.lowercase(), url = e.url,
                     archiveDays = e.catchupDays, catchupSource = e.catchupSource, ord = ord, gen = gen,
                 )

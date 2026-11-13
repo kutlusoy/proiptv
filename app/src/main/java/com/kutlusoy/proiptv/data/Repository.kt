@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 sealed interface Source {
-    data class Browse(val kind: Int, val accountIds: List<Long>, val category: String?, val query: String) : Source
+    data class Browse(val kind: Int, val accountIds: List<Long>, val category: String?, val query: String, val country: String? = null, val year: Int? = null) : Source
     data class Favs(val listId: Long) : Source
 }
 
@@ -74,12 +74,12 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
     suspend fun enabledIds(): List<Long> = db.accounts().enabledIds()
 
     suspend fun count(src: Source): Int = when (src) {
-        is Source.Browse -> db.items().count(src.kind, src.accountIds, src.category, src.query)
+        is Source.Browse -> db.items().count(src.kind, src.accountIds, src.category, src.query, src.country, src.year)
         is Source.Favs -> db.favorites().presentCount(src.listId)
     }
 
     suspend fun at(src: Source, index: Int): Item? = when (src) {
-        is Source.Browse -> db.items().at(src.kind, src.accountIds, src.category, src.query, index)
+        is Source.Browse -> db.items().at(src.kind, src.accountIds, src.category, src.query, src.country, src.year, index)
         is Source.Favs -> db.favorites().itemAt(src.listId, index)
     }
 

@@ -49,21 +49,30 @@ interface ItemDao {
 
     @Query(
         "SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
+            "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
             "AND name LIKE '%' || :q || '%' ORDER BY accountId, ord",
     )
-    fun paging(kind: Int, ids: List<Long>, cat: String?, q: String): PagingSource<Int, Item>
+    fun paging(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?): PagingSource<Int, Item>
 
     @Query(
         "SELECT COUNT(*) FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
+            "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
             "AND name LIKE '%' || :q || '%'",
     )
-    suspend fun count(kind: Int, ids: List<Long>, cat: String?, q: String): Int
+    suspend fun count(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?): Int
 
     @Query(
         "SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
+            "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
             "AND name LIKE '%' || :q || '%' ORDER BY accountId, ord LIMIT 1 OFFSET :offset",
     )
-    suspend fun at(kind: Int, ids: List<Long>, cat: String?, q: String, offset: Int): Item?
+    suspend fun at(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, offset: Int): Item?
+
+    @Query("SELECT DISTINCT country FROM items WHERE kind = :kind AND accountId IN (:ids) AND country <> '' ORDER BY country")
+    fun countries(kind: Int, ids: List<Long>): Flow<List<String>>
+
+    @Query("SELECT DISTINCT year FROM items WHERE kind = :kind AND accountId IN (:ids) AND year > 0 ORDER BY year DESC")
+    fun years(kind: Int, ids: List<Long>): Flow<List<Int>>
 
     @Query("SELECT * FROM items WHERE kind = :kind AND accountId = :accountId AND categoryRemoteId = :cat ORDER BY ord LIMIT :limit")
     suspend fun first(kind: Int, accountId: Long, cat: String, limit: Int): List<Item>

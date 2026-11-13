@@ -17,6 +17,7 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 - **Live TV** with groups, search, now and next, zapping with the remote control, number keys, guide per channel and **catch-up**
 - **Favorites for movies and series** as well as channels, and **watched marks** (by hand and per season)
 - **Movies and series** with category rows, a film-style **info page** (picture, story, cast, resume) before playing, seasons as a dropdown and episode lists with progress
+- **Country and year** read from titles and group names, shown as badges and usable as filters
 - **Favorites** with several lists and **manual sorting**, kept after a provider refresh
 - **stream hub**: one provider connection per channel for watching, **pause and rewind live TV** (disk ring buffer) and **recording** (foreground service, recordings list), connection limit of the account respected
 - **scheduled recordings** from the guide (alarm, restart safe, conflict warning) and **failover** to an equal channel when a stream fails
