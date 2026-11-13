@@ -145,4 +145,9 @@
     <string name="detail_see_all">Tümünü gör</string>
     <string name="nav_menu">Menü</string>
     <string name="action_more">Diğer seçenekler</string>
+    <string name="detail_mark_watched">İzlendi olarak işaretle</string>
+    <string name="detail_mark_unwatched">İzlenmedi olarak işaretle</string>
+    <string name="detail_watched">İzlendi</string>
+    <string name="detail_season_watched">Sezonu izlendi olarak işaretle</string>
+    <string name="detail_season_unwatched">Sezonu izlenmedi olarak işaretle</string>
 </resources>

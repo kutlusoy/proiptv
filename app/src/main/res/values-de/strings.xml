@@ -145,4 +145,9 @@
     <string name="detail_see_all">Alle anzeigen</string>
     <string name="nav_menu">Menü</string>
     <string name="action_more">Weitere Optionen</string>
+    <string name="detail_mark_watched">Als gesehen markieren</string>
+    <string name="detail_mark_unwatched">Als ungesehen markieren</string>
+    <string name="detail_watched">Gesehen</string>
+    <string name="detail_season_watched">Staffel als gesehen markieren</string>
+    <string name="detail_season_unwatched">Staffel als ungesehen markieren</string>
 </resources>

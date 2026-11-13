@@ -146,4 +146,9 @@
     <string name="detail_see_all">See all</string>
     <string name="nav_menu">Menu</string>
     <string name="action_more">More options</string>
+    <string name="detail_mark_watched">Mark as watched</string>
+    <string name="detail_mark_unwatched">Mark as unwatched</string>
+    <string name="detail_watched">Watched</string>
+    <string name="detail_season_watched">Mark season as watched</string>
+    <string name="detail_season_unwatched">Mark season as unwatched</string>
 </resources>

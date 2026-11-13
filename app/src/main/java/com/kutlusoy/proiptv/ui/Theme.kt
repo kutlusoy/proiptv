@@ -15,9 +15,9 @@ object Palette {
     val Velvet = Color(0xFF0B0709)
     val Surface = Color(0xFF151013)
     val SurfaceHigh = Color(0xFF211619)
-    val Wine = Color(0xFFB3213A)
-    val WineDeep = Color(0xFF7A1226)
-    val WineSoft = Color(0xFFE05A70)
+    val Wine = Color(0xFFC40035)
+    val WineDeep = Color(0xFF7D0F25)
+    val WineSoft = Color(0xFFF2506F)
     val Text = Color(0xFFF3EBED)
     val Outline = Color(0xFF4A3A3F)
 }
