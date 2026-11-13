@@ -152,4 +152,8 @@
     <string name="detail_season_unwatched">Mark season as unwatched</string>
     <string name="filter_all_countries">All countries</string>
     <string name="filter_all_years">All years</string>
+    <string name="settings_interface">Interface</string>
+    <string name="interface_tv">TV (large, remote control)</string>
+    <string name="interface_touch">Touch (phone, tablet)</string>
+    <string name="settings_interface_hint">Automatic uses the TV layout on Android TV and TV boxes: menu on the left, larger texts and posters, remote control friendly. Change it only if your device is detected wrongly.</string>
 </resources>

@@ -162,6 +162,10 @@ If the app is closed by the system or the stream stays down for a long time, the
 
 The app retries three times. If the channel still fails, it looks for the same channel (same guide ID or same name) in your enabled accounts, first in the same account, and switches to it with a short message "Switched to ...". This only happens while you zap in a list, not for movies, episodes or recordings.
 
+## Android TV and TV boxes
+
+When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
+
 ## 6. Favorites and manual order
 
 1. Live TV, in the dropdown choose **Favorites**.

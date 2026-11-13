@@ -6,7 +6,10 @@ import android.content.res.Configuration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -57,7 +60,34 @@ fun isTelevision(context: Context): Boolean {
         !context.packageManager.hasSystemFeature("android.hardware.touchscreen")
 }
 
+val LocalTv = staticCompositionLocalOf { false }
+
+const val UI_AUTO = 0
+const val UI_TV = 1
+const val UI_TOUCH = 2
+
+fun useTvLayout(mode: Int, system: Boolean): Boolean = when (mode) {
+    UI_TV -> true
+    UI_TOUCH -> false
+    else -> system
+}
+
+private fun tvTypography(): Typography {
+    val t = Typography()
+    return t.copy(
+        bodySmall = t.bodySmall.copy(fontSize = 15.sp, lineHeight = 20.sp),
+        bodyMedium = t.bodyMedium.copy(fontSize = 18.sp, lineHeight = 24.sp),
+        bodyLarge = t.bodyLarge.copy(fontSize = 20.sp, lineHeight = 28.sp),
+        labelSmall = t.labelSmall.copy(fontSize = 14.sp),
+        labelLarge = t.labelLarge.copy(fontSize = 17.sp),
+        titleMedium = t.titleMedium.copy(fontSize = 22.sp, lineHeight = 28.sp),
+        titleLarge = t.titleLarge.copy(fontSize = 26.sp),
+    )
+}
+
 @Composable
-fun ProIptvTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = Colors, shapes = AppShapes, content = content)
+fun ProIptvTheme(tv: Boolean = false, content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = Colors, shapes = AppShapes, typography = if (tv) tvTypography() else Typography()) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalTv provides tv, content = content)
+    }
 }

@@ -12,4 +12,8 @@ class Prefs(context: Context) {
     var bufferMb: Int
         get() = sp.getInt("buffer_mb", 1024)
         set(value) = sp.edit().putInt("buffer_mb", value).apply()
+
+    var uiMode: Int
+        get() = sp.getInt("ui_mode", 0)
+        set(value) = sp.edit().putInt("ui_mode", value).apply()
 }

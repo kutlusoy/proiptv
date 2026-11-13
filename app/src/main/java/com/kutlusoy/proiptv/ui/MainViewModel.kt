@@ -32,6 +32,13 @@ sealed interface PlayRequest {
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     val repo = (app as ProIptvApp).repo
     private val db = repo.db
+    private val prefs = (app as ProIptvApp).prefs
+    val uiMode = kotlinx.coroutines.flow.MutableStateFlow(prefs.uiMode)
+
+    fun setUiMode(mode: Int) {
+        prefs.uiMode = mode
+        uiMode.value = mode
+    }
 
     val accounts = repo.accounts().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList<Account>())
     val syncState = repo.sync.state

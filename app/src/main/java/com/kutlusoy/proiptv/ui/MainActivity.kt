@@ -6,7 +6,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -79,8 +86,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enterImmersive()
+        val systemTv = isTelevision(this)
         setContent {
-            ProIptvTheme { AppRoot(vm) }
+            val mode by vm.uiMode.collectAsState()
+            ProIptvTheme(useTvLayout(mode, systemTv)) { AppRoot(vm) }
         }
     }
 }
@@ -100,6 +109,28 @@ private fun AppRoot(vm: MainViewModel) {
     }
 
     BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
+
+    val tv = LocalTv.current
+    val content: @Composable () -> Unit = {
+        when (tab) {
+            Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
+            Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
+            Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)
+            Tab.RECORDINGS -> RecordingsScreen(vm)
+            Tab.ACCOUNTS -> AccountsScreen(vm)
+            Tab.SETTINGS -> SettingsScreen(vm)
+        }
+    }
+
+    if (tv) {
+        CompositionLocalProvider(LocalChromeHidden provides chromeHidden) {
+            Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                if (!chromeHidden.value) TvRail(tab) { tab = it }
+                Box(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 36.dp, vertical = 24.dp)) { content() }
+            }
+        }
+        return
+    }
 
     CompositionLocalProvider(LocalChromeHidden provides chromeHidden) {
         ModalNavigationDrawer(
@@ -152,16 +183,34 @@ private fun AppRoot(vm: MainViewModel) {
                     }
                 },
             ) { padding ->
-                Box(Modifier.padding(padding).fillMaxSize()) {
-                    when (tab) {
-                        Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
-                        Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
-                        Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)
-                        Tab.RECORDINGS -> RecordingsScreen(vm)
-                        Tab.ACCOUNTS -> AccountsScreen(vm)
-                        Tab.SETTINGS -> SettingsScreen(vm)
-                    }
-                }
+                Box(Modifier.padding(padding).fillMaxSize()) { content() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TvRail(selected: Tab, onSelect: (Tab) -> Unit) {
+    val first = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+    Column(Modifier.width(250.dp).fillMaxHeight().background(Palette.Surface).padding(horizontal = 14.dp, vertical = 24.dp)) {
+        Text("ProIPTV", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Palette.WineSoft, modifier = Modifier.padding(start = 10.dp))
+        Text(stringResource(R.string.main_version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(start = 10.dp, bottom = 18.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Tab.values().forEach { t ->
+                NavigationDrawerItem(
+                    label = { Text(stringResource(t.label), style = MaterialTheme.typography.bodyLarge) },
+                    icon = { Icon(t.icon, null) },
+                    selected = selected == t,
+                    onClick = { onSelect(t) },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = Palette.WineDeep,
+                        selectedIconColor = Color.White,
+                        selectedTextColor = Color.White,
+                        unselectedContainerColor = Color.Transparent,
+                    ),
+                    modifier = Modifier.then(if (selected == t) Modifier.focusRequester(first) else Modifier).focusHighlight(),
+                )
             }
         }
     }

@@ -14,6 +14,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -66,6 +67,16 @@ fun SettingsScreen(vm: MainViewModel) {
                         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(it))
                     },
                 )
+            }
+            Section(stringResource(R.string.settings_interface)) {
+                val mode by vm.uiMode.collectAsState()
+                val labels = listOf(UI_AUTO to auto, UI_TV to stringResource(R.string.interface_tv), UI_TOUCH to stringResource(R.string.interface_touch))
+                DropdownField(
+                    selected = labels.first { it.first == mode }.second,
+                    options = labels,
+                    onSelect = { vm.setUiMode(it) },
+                )
+                Text(stringResource(R.string.settings_interface_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f))
             }
             Section(stringResource(R.string.settings_timeshift)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

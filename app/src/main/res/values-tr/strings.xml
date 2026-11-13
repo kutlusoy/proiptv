@@ -151,4 +151,8 @@
     <string name="detail_season_unwatched">Sezonu izlenmedi olarak işaretle</string>
     <string name="filter_all_countries">Tüm ülkeler</string>
     <string name="filter_all_years">Tüm yıllar</string>
+    <string name="settings_interface">Arayüz</string>
+    <string name="interface_tv">TV (büyük, kumanda)</string>
+    <string name="interface_touch">Dokunmatik (telefon, tablet)</string>
+    <string name="settings_interface_hint">Otomatik, Android TV ve TV kutularında TV görünümünü kullanır: solda menü, daha büyük yazılar ve afişler, kumanda dostu. Yalnızca cihazınız yanlış algılanırsa değiştirin.</string>
 </resources>

@@ -246,7 +246,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                     }
                 }
             } else {
-                LazyVerticalGrid(GridCells.Adaptive(130.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LazyVerticalGrid(GridCells.Adaptive(if (LocalTv.current) 175.dp else 130.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(paged.itemCount, key = paged.itemKey { it.id }) { i ->
                         val item = paged[i] ?: return@items
                         PosterCard(item, favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { toggleFavorite(item) }) { if (item.kind == Kind.SERIES) series = item else movie = item }
@@ -371,7 +371,7 @@ private fun CategoryRow(
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)) {
             items(items, key = { it.id }) { item ->
-                PosterCard(item, Modifier.width(118.dp), favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { onToggleFavorite(item) }) { onOpen(item) }
+                PosterCard(item, Modifier.width(if (LocalTv.current) 156.dp else 118.dp), favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { onToggleFavorite(item) }) { onOpen(item) }
             }
         }
     }

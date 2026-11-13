@@ -151,4 +151,8 @@
     <string name="detail_season_unwatched">Marquer la saison comme non vue</string>
     <string name="filter_all_countries">Tous les pays</string>
     <string name="filter_all_years">Toutes les années</string>
+    <string name="settings_interface">Interface</string>
+    <string name="interface_tv">TV (grand, télécommande)</string>
+    <string name="interface_touch">Tactile (téléphone, tablette)</string>
+    <string name="settings_interface_hint">Automatique utilise la vue TV sur Android TV et les box TV : menu à gauche, textes et affiches plus grands, adapté à la télécommande. Ne changez que si votre appareil est mal détecté.</string>
 </resources>

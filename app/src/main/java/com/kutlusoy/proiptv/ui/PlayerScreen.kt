@@ -558,7 +558,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         ) { Text(stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record)) }
                     }
                     OutlinedButton(onClick = { tracksDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_tracks)) }
-                    OutlinedButton(onClick = { landscape = !landscape }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_rotate)) }
+                    if (!LocalTv.current) OutlinedButton(onClick = { landscape = !landscape }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_rotate)) }
                     OutlinedButton(
                         onClick = {
                             resize = when (resize) {
