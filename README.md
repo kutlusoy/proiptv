@@ -20,7 +20,7 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 - **Favorites for movies and series** as well as channels, and **watched marks** (by hand and per season)
 - **Movies and series** with category rows, a film-style **info page** (picture, story, cast, resume) before playing, seasons as a dropdown and episode lists with progress
 - **TV layout** that is switched on automatically on Android TV: menu column on the left, large texts and posters, remote control navigation
-- **Country and year** read from titles and group names, shown as badges and usable as filters
+- **Country and year** read from titles and shown as badges next to the clean title
 - **Favorites** with several lists and **manual sorting**, kept after a provider refresh
 - **stream hub**: one provider connection per channel for watching, **pause and rewind live TV** (disk ring buffer) and **recording** (foreground service, recordings list), connection limit of the account respected
 - **scheduled recordings** from the guide (alarm, restart safe, conflict warning) and **failover** to an equal channel when a stream fails

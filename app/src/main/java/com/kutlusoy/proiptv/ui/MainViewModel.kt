@@ -65,14 +65,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         db.items().countFlow(accountId, Kind.SERIES),
     ) { a, b, c -> Triple(a, b, c) }
 
-    fun pager(kind: Int, ids: List<Long>, category: String?, query: String, country: String?, year: Int?) =
+    fun pager(kind: Int, ids: List<Long>, category: String?, query: String) =
         Pager(PagingConfig(pageSize = 60, enablePlaceholders = false)) {
-            db.items().paging(kind, ids, category, query, country, year)
+            db.items().paging(kind, ids, category, query, null, null)
         }.flow
 
-    fun countries(kind: Int, ids: List<Long>) = db.items().countries(kind, ids)
-
-    fun years(kind: Int, ids: List<Long>) = db.items().years(kind, ids)
 
     fun favoriteRows(listId: Long, kind: Int) = db.favorites().rows(listId, kind)
 

@@ -149,10 +149,11 @@
     <string name="detail_watched">Visto</string>
     <string name="detail_season_watched">Segna la stagione come vista</string>
     <string name="detail_season_unwatched">Segna la stagione come non vista</string>
-    <string name="filter_all_countries">Tutti i paesi</string>
-    <string name="filter_all_years">Tutti gli anni</string>
     <string name="settings_interface">Interfaccia</string>
     <string name="interface_tv">TV (grande, telecomando)</string>
     <string name="interface_touch">Touch (telefono, tablet)</string>
     <string name="settings_interface_hint">Automatica usa la vista TV su Android TV e TV box: menu a sinistra, testi e locandine più grandi, adatta al telecomando. Cambia solo se il dispositivo viene riconosciuto male.</string>
+    <string name="player_stop">Ferma</string>
+    <string name="nav_exit">Esci</string>
+    <string name="account_until">Attivo fino al %1$s</string>
 </resources>

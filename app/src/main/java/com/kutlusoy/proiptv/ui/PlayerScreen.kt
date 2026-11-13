@@ -528,6 +528,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val i = item
+                    OutlinedButton(onClick = onClose, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_stop)) }
                     if (zapping && i != null) {
                         val fav = Triple(i.accountId, i.kind, i.remoteId) in favKeys
                         OutlinedButton(

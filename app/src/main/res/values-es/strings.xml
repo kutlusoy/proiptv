@@ -149,10 +149,11 @@
     <string name="detail_watched">Visto</string>
     <string name="detail_season_watched">Marcar la temporada como vista</string>
     <string name="detail_season_unwatched">Marcar la temporada como no vista</string>
-    <string name="filter_all_countries">Todos los países</string>
-    <string name="filter_all_years">Todos los años</string>
     <string name="settings_interface">Interfaz</string>
     <string name="interface_tv">TV (grande, mando)</string>
     <string name="interface_touch">Táctil (móvil, tableta)</string>
     <string name="settings_interface_hint">Automática usa la vista de TV en Android TV y TV box: menú a la izquierda, textos y carteles más grandes, apta para el mando. Cámbiala solo si tu dispositivo se detecta mal.</string>
+    <string name="player_stop">Detener</string>
+    <string name="nav_exit">Salir</string>
+    <string name="account_until">Activo hasta el %1$s</string>
 </resources>
