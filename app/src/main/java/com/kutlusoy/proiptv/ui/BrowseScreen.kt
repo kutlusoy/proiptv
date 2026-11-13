@@ -53,6 +53,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -82,6 +83,24 @@ import com.kutlusoy.proiptv.net.XtreamEpisode
 import com.kutlusoy.proiptv.parse.TitleParser
 import kotlinx.coroutines.delay
 
+private val ItemSaver = Saver<Item?, Any>(
+    save = { item ->
+        item?.let { i ->
+            arrayListOf<Any?>(i.id, i.accountId, i.kind, i.remoteId, i.name, i.categoryRemoteId, i.logo, i.epgId, i.url, i.ext, i.archiveDays, i.catchupSource, i.rating, i.plot, i.ord, i.gen, i.country, i.year)
+        } ?: arrayListOf<Any?>()
+    },
+    restore = { raw ->
+        @Suppress("UNCHECKED_CAST")
+        val v = raw as List<Any?>
+        if (v.isEmpty()) null else Item(
+                id = v[0] as Long, accountId = v[1] as Long, kind = v[2] as Int, remoteId = v[3] as String, name = v[4] as String,
+                categoryRemoteId = v[5] as String, logo = v[6] as String?, epgId = v[7] as String?, url = v[8] as String?, ext = v[9] as String?,
+                archiveDays = v[10] as Int, catchupSource = v[11] as String?, rating = v[12] as String?, plot = v[13] as String?,
+                ord = v[14] as Int, gen = v[15] as Int, country = v[16] as String, year = v[17] as Int,
+        )
+    },
+)
+
 private val StarOn = Color(0xFFFFC107)
 private const val FAV_KEY = "__fav"
 private const val ALL_KEY = "__all"
@@ -100,8 +119,8 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     var query by rememberSaveable(kind) { mutableStateOf("") }
     var favMode by rememberSaveable(kind) { mutableStateOf(false) }
     var favList by rememberSaveable { mutableStateOf<Long?>(null) }
-    var series by remember { mutableStateOf<Item?>(null) }
-    var movie by remember { mutableStateOf<Item?>(null) }
+    var series by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
+    var movie by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
     var favDialog by remember { mutableStateOf<Item?>(null) }
     val toggleFavorite: (Item) -> Unit = { item ->
         val fav = Triple(item.accountId, item.kind, item.remoteId) in favKeys

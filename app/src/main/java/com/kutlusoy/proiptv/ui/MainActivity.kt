@@ -103,6 +103,7 @@ private fun AppRoot(vm: MainViewModel) {
     val request by vm.player.collectAsState()
     var tab by rememberSaveable { mutableStateOf(Tab.LIVE) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
+    val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
     val chromeHidden = remember { mutableStateOf(false) }
 
@@ -117,13 +118,15 @@ private fun AppRoot(vm: MainViewModel) {
     val exit: () -> Unit = { (ctx as? android.app.Activity)?.finishAffinity() }
     val tv = LocalTv.current
     val content: @Composable () -> Unit = {
-        when (tab) {
-            Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
-            Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
-            Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)
-            Tab.RECORDINGS -> RecordingsScreen(vm)
-            Tab.ACCOUNTS -> AccountsScreen(vm)
-            Tab.SETTINGS -> SettingsScreen(vm)
+        holder.SaveableStateProvider(tab.name) {
+            when (tab) {
+                Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
+                Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
+                Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)
+                Tab.RECORDINGS -> RecordingsScreen(vm)
+                Tab.ACCOUNTS -> AccountsScreen(vm)
+                Tab.SETTINGS -> SettingsScreen(vm)
+            }
         }
     }
 
