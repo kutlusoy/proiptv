@@ -61,7 +61,7 @@ class BackupCodecTest {
     @Test
     fun tamperedOrForeignFilesAreInvalid() {
         val text = BackupCodec.encode(data, "right")
-        val tampered = text.replace(Regex("\"cipher\": \"([0-9a-f])"), "\"cipher\": \"0")
+        val tampered = Regex("\"cipher\": \"([0-9a-f])").replace(text) { m -> "\"cipher\": \"" + (if (m.groupValues[1] == "0") "1" else "0") }
         try {
             BackupCodec.decode(tampered, "right")
             throw AssertionError("tampered file accepted")
