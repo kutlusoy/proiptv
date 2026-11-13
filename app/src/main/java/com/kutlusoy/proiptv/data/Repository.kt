@@ -142,6 +142,17 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         PlayTarget(url, account.userAgent, title, false, series.accountId, Kind.EPISODE, episode.id)
     }
 
+    suspend fun downloadSource(d: Download): Pair<String, String?>? = withContext(Dispatchers.IO) {
+        val account = db.accounts().get(d.accountId) ?: return@withContext null
+        val url = when {
+            d.kind == Kind.EPISODE && account.type == AccountType.XTREAM ->
+                StreamUrls.episode(account.url, account.username, secrets.decrypt(account.password), d.remoteId, d.ext)
+            d.kind == Kind.MOVIE -> db.items().find(d.accountId, Kind.MOVIE, d.remoteId)?.let { target(it)?.url }
+            else -> null
+        } ?: return@withContext null
+        url to account.userAgent
+    }
+
     suspend fun progress(t: PlayTarget): Progress? = db.progress().get(t.accountId, t.kind, t.remoteId)
 
     suspend fun saveProgress(t: PlayTarget, positionMs: Long, durationMs: Long) {

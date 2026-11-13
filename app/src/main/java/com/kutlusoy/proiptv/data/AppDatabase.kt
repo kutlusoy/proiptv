@@ -9,8 +9,8 @@ import com.kutlusoy.proiptv.parse.TitleParser
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Account::class, Category::class, Item::class, Program::class, FavoriteList::class, Favorite::class, Progress::class, Recording::class],
-    version = 6,
+    entities = [Account::class, Category::class, Item::class, Program::class, FavoriteList::class, Favorite::class, Progress::class, Recording::class, Download::class],
+    version = 7,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,6 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun favorites(): FavoriteDao
     abstract fun progress(): ProgressDao
     abstract fun recordings(): RecordingDao
+    abstract fun downloads(): DownloadDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -53,6 +54,17 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
         }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                for (sql in MIGRATION_6_7_SQL) db.execSQL(sql)
+            }
+        }
+
+        val MIGRATION_6_7_SQL = listOf(
+            "CREATE TABLE IF NOT EXISTS `downloads` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `accountId` INTEGER NOT NULL, `kind` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, `title` TEXT NOT NULL, `logo` TEXT, `ext` TEXT NOT NULL, `seriesRemoteId` TEXT NOT NULL, `seriesName` TEXT NOT NULL, `season` INTEGER NOT NULL, `episode` INTEGER NOT NULL, `bytes` INTEGER NOT NULL, `total` INTEGER NOT NULL, `status` INTEGER NOT NULL, `error` TEXT, `createdAt` INTEGER NOT NULL)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_downloads_accountId_kind_remoteId` ON `downloads` (`accountId`, `kind`, `remoteId`)",
+        )
 
         val MIGRATION_5_6_SQL = listOf(
             "ALTER TABLE items ADD COLUMN country TEXT NOT NULL DEFAULT ''",
@@ -93,6 +105,6 @@ abstract class AppDatabase : RoomDatabase() {
         )
 
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
     }
 }

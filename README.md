@@ -19,6 +19,7 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 - **Live TV** with groups, search, now and next, zapping with the remote control, number keys, guide per channel and **catch-up**
 - **Favorites for movies and series** as well as channels, and **watched marks** (by hand and per season)
 - **Movies and series** with category rows, a film-style **info page** (picture, story, cast, resume) before playing, seasons as a dropdown and episode lists with progress
+- **Downloads for offline use** of movies and series (with seasons and episodes), played from the device
 - **TV layout** that is switched on automatically on Android TV: menu column on the left, large texts and posters, remote control navigation
 - **Country and year** read from titles and shown as badges next to the clean title
 - **Favorites** with several lists and **manual sorting**, kept after a provider refresh

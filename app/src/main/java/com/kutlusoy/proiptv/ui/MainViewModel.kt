@@ -9,6 +9,8 @@ import androidx.paging.PagingConfig
 import com.kutlusoy.proiptv.ProIptvApp
 import com.kutlusoy.proiptv.R
 import com.kutlusoy.proiptv.data.Account
+import com.kutlusoy.proiptv.data.DlStatus
+import com.kutlusoy.proiptv.data.Download
 import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.PlayTarget
@@ -47,6 +49,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     val player = MutableStateFlow<PlayRequest?>(null)
     val activeRecordings = (app as ProIptvApp).recordings.active
+    val downloads = db.downloads().all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val downloadManager get() = (getApplication<Application>() as ProIptvApp).downloads
+
+    fun download(list: List<Download>) = downloadManager.enqueue(list)
+
+    fun retryDownload(id: Long) = downloadManager.retry(id)
+
+    fun deleteDownload(id: Long) = downloadManager.delete(id)
+
+    fun localTarget(d: Download): PlayTarget? {
+        if (d.status != DlStatus.DONE) return null
+        val file = downloadManager.fileOf(d)
+        if (!file.exists()) return null
+        val title = if (d.kind == Kind.EPISODE) "${d.seriesName} S${d.season}E${d.episode}" else d.title
+        return PlayTarget(Uri.fromFile(file).toString(), null, title, false, d.accountId, d.kind, d.remoteId)
+    }
+
+    fun playDownload(d: Download) {
+        localTarget(d)?.let { player.value = PlayRequest.Single(it) }
+    }
+
     val recordings = db.recordings().all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {

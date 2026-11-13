@@ -254,3 +254,33 @@ interface RecordingDao {
     @Query("DELETE FROM recordings WHERE accountId = :accountId")
     suspend fun deleteAccount(accountId: Long)
 }
+
+@Dao
+interface DownloadDao {
+    @Query("SELECT * FROM downloads ORDER BY seriesName, season, episode, createdAt")
+    fun all(): Flow<List<Download>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(download: Download): Long
+
+    @Query("SELECT * FROM downloads WHERE id = :id")
+    suspend fun get(id: Long): Download?
+
+    @Query("SELECT * FROM downloads WHERE status = 0 ORDER BY id LIMIT 1")
+    suspend fun nextQueued(): Download?
+
+    @Query("SELECT COUNT(*) FROM downloads WHERE status IN (0, 1)")
+    suspend fun pending(): Int
+
+    @Query("UPDATE downloads SET status = :status, error = :error WHERE id = :id")
+    suspend fun setStatus(id: Long, status: Int, error: String?)
+
+    @Query("UPDATE downloads SET bytes = :bytes, total = :total WHERE id = :id")
+    suspend fun setProgress(id: Long, bytes: Long, total: Long)
+
+    @Query("UPDATE downloads SET status = 0 WHERE status = 1")
+    suspend fun resetRunning()
+
+    @Query("DELETE FROM downloads WHERE id = :id")
+    suspend fun delete(id: Long)
+}

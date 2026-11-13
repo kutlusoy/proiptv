@@ -159,4 +159,19 @@
     <string name="player_more">Altro</string>
     <string name="player_pause">Pausa</string>
     <string name="player_play">Riproduci</string>
+    <string name="nav_downloads">Download</string>
+    <string name="dl_download">Scarica</string>
+    <string name="dl_downloaded">Scaricato</string>
+    <string name="dl_queued">In attesa</string>
+    <string name="dl_running">Download in corso</string>
+    <string name="dl_failed">Non riuscito</string>
+    <string name="dl_retry">Riprova</string>
+    <string name="dl_empty">Ancora nulla scaricato. Usa il pulsante Scarica su un film o su un episodio.</string>
+    <string name="dl_notification">Download per l’uso offline</string>
+    <string name="dl_season">Scarica la stagione</string>
+    <string name="dl_delete_confirm">Eliminare questo download dal dispositivo?</string>
+    <string name="dl_err_space">spazio insufficiente</string>
+    <string name="dl_err_source">fonte non disponibile</string>
+    <string name="dl_err_network">errore di rete</string>
+    <string name="dl_episodes">%1$d episodi, %2$d stagioni</string>
 </resources>
