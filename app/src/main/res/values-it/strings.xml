@@ -83,7 +83,6 @@
     <string name="settings_license">Open source, licenza MIT</string>
     <string name="main_no_accounts_text">Apri Account e aggiungine uno per iniziare.</string>
     <string name="main_no_accounts_title">Nessun account</string>
-    <string name="splash_tagline">I tuoi flussi. Il tuo provider. Nient\'altro.</string>
     <string name="main_version">Versione %1$s</string>
     <string name="account_guide_updated">Guida aggiornata: %1$s</string>
     <string name="account_guide_never">Guida non ancora caricata</string>

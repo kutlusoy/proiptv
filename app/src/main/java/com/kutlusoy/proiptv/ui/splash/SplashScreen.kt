@@ -25,15 +25,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.sp
 import com.kutlusoy.proiptv.R
 import com.kutlusoy.proiptv.ui.Palette
 import kotlin.math.max
@@ -78,8 +71,6 @@ fun SplashScreen(onDone: () -> Unit) {
     val glowWide = ImageBitmap.imageResource(R.drawable.splash_glow_wide)
     val glowNear = ImageBitmap.imageResource(R.drawable.splash_glow_near)
     val spark = ImageBitmap.imageResource(R.drawable.splash_spark)
-    val measurer = rememberTextMeasurer()
-    val tagline = stringResource(R.string.splash_tagline)
     val particles = remember { SplashParticles.create(46, 11) }
     val frame = SplashTimeline.frame(progress, extraMs)
     val elapsedSeconds = (progress * SplashTimeline.DURATION_MS + extraMs) / 1000f
@@ -97,7 +88,7 @@ fun SplashScreen(onDone: () -> Unit) {
         val center = Offset(size.width / 2, size.height / 2)
         withTransform({ scale(1f + SplashTimeline.PUSH_IN * progress, 1f + SplashTimeline.PUSH_IN * progress, pivot = center) }) {
             drawParticles(particles, elapsedSeconds, frame, size)
-            drawLockup(frame, unit, mark, title, glowWide, glowNear, spark, measurer, tagline)
+            drawLockup(frame, unit, mark, title, glowWide, glowNear, spark)
         }
     }
 }
@@ -105,15 +96,13 @@ fun SplashScreen(onDone: () -> Unit) {
 private fun DrawScope.drawLockup(
     frame: SplashFrame, unit: Float,
     mark: ImageBitmap, title: ImageBitmap, glowWide: ImageBitmap, glowNear: ImageBitmap, spark: ImageBitmap,
-    measurer: TextMeasurer, tagline: String,
 ) {
     val markH = MARK_HEIGHT * unit
     val markW = markH * mark.width / mark.height
     val titleW = TITLE_WIDTH * unit
     val titleH = titleW * title.height / title.width
     val gap = 40f * unit
-    val subtitleH = 36f * unit
-    val total = markH + gap + titleH + 26f * unit + subtitleH
+    val total = markH + gap + titleH
     val top = size.height / 2 - total / 2
     val markLeft = size.width / 2 - markW / 2
     val markTop = top + frame.markOffsetY * unit
@@ -155,12 +144,6 @@ private fun DrawScope.drawLockup(
 
     val titleTop = top + markH + gap + frame.titleOffsetY * unit
     image(title, size.width / 2, titleTop + titleH / 2, titleW, titleH, frame.titleAlpha)
-
-    if (frame.subtitleAlpha > 0.01f) {
-        val style = TextStyle(color = Color.White.copy(alpha = 0.62f * frame.subtitleAlpha), fontSize = (30f * unit / (density * fontScale)).sp, fontWeight = FontWeight.Normal)
-        val layout = measurer.measure(tagline, style)
-        drawText(layout, topLeft = Offset(size.width / 2 - layout.size.width / 2, titleTop + titleH + 26f * unit + frame.subtitleOffsetY * unit))
-    }
 }
 
 private fun DrawScope.drawParticles(particles: List<Particle>, elapsedSeconds: Float, frame: SplashFrame, size: Size) {

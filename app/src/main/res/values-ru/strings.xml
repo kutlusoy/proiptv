@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="splash_tagline">Ваши потоки. Ваш провайдер. Ничего лишнего.</string>
     <string name="main_no_accounts_title">Аккаунта пока нет</string>
     <string name="main_no_accounts_text">Откройте «Аккаунты» и добавьте один, чтобы начать.</string>
     <string name="main_version">Версия %1$s</string>

@@ -12,11 +12,9 @@ class SplashTimelineTest {
         val start = SplashTimeline.frame(0f)
         assertEquals(0f, start.markAlpha, 0f)
         assertEquals(0f, start.titleAlpha, 0f)
-        assertEquals(0f, start.subtitleAlpha, 0f)
         val end = SplashTimeline.frame(1f)
         assertEquals(1f, end.markAlpha, 0f)
         assertEquals(1f, end.titleAlpha, 0f)
-        assertEquals(1f, end.subtitleAlpha, 0f)
         assertEquals(0f, end.sheenAlpha, 0f)
         assertEquals(1f, end.markScale, 0f)
         assertEquals(0f, end.markOffsetY, 0f)
@@ -26,19 +24,15 @@ class SplashTimelineTest {
     fun elementsAppearInOrderAndNeverFlicker() {
         var markAlpha = 0f
         var titleAlpha = 0f
-        var subtitleAlpha = 0f
         for (i in 0..200) {
             val f = SplashTimeline.frame(i / 200f)
             assertTrue(f.markAlpha >= markAlpha - 1e-4f)
             assertTrue(f.titleAlpha >= titleAlpha - 1e-4f)
-            assertTrue(f.subtitleAlpha >= subtitleAlpha - 1e-4f)
             markAlpha = f.markAlpha
             titleAlpha = f.titleAlpha
-            subtitleAlpha = f.subtitleAlpha
         }
         val mid = SplashTimeline.frame(0.4f)
         assertTrue(mid.markAlpha > mid.titleAlpha)
-        assertTrue(mid.titleAlpha >= mid.subtitleAlpha)
     }
 
     @Test

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="splash_tagline">Jouw streams. Jouw aanbieder. Verder niets.</string>
     <string name="main_no_accounts_title">Nog geen account</string>
     <string name="main_no_accounts_text">Open Accounts en voeg er een toe om te beginnen.</string>
     <string name="main_version">Versie %1$s</string>

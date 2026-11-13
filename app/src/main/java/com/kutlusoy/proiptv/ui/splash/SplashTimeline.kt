@@ -14,8 +14,6 @@ data class SplashFrame(
     val sheenOffsetX: Float,
     val titleAlpha: Float,
     val titleOffsetY: Float,
-    val subtitleAlpha: Float,
-    val subtitleOffsetY: Float,
     val sparkAlpha: Float,
     val sparkScale: Float,
 )
@@ -71,8 +69,6 @@ object SplashTimeline {
     private val sheenOffset = Track(easeInOut, 0f to -260f, 0.19f to -260f, 0.57f to 260f, 1f to 260f)
     private val titleAlpha = Track(ease, 0f to 0f, 0.34f to 0f, 0.57f to 1f, 1f to 1f)
     private val titleOffset = Track(ease, 0f to 20f, 0.34f to 20f, 0.57f to 0f, 1f to 0f)
-    private val subtitleAlpha = Track(ease, 0f to 0f, 0.45f to 0f, 0.66f to 1f, 1f to 1f)
-    private val subtitleOffset = Track(ease, 0f to 13f, 0.45f to 13f, 0.66f to 0f, 1f to 0f)
     private val sparkAlpha = Track(ease, 0f to 0f, 0.36f to 0f, 0.45f to 0.95f, 0.60f to 0f, 1f to 0f)
     private val sparkScale = Track(ease, 0f to 0.6f, 0.36f to 0.6f, 0.45f to 1.1f, 0.60f to 0.8f, 1f to 0.8f)
 
@@ -94,8 +90,6 @@ object SplashTimeline {
             sheenOffsetX = sheenOffset.at(p),
             titleAlpha = titleAlpha.at(p),
             titleOffsetY = titleOffset.at(p),
-            subtitleAlpha = subtitleAlpha.at(p),
-            subtitleOffsetY = subtitleOffset.at(p),
             sparkAlpha = sparkAlpha.at(p),
             sparkScale = sparkScale.at(p),
         )

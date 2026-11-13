@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="splash_tagline">بثوثك. مزودك. لا شيء آخر.</string>
     <string name="main_no_accounts_title">لا يوجد حساب بعد</string>
     <string name="main_no_accounts_text">افتح الحسابات وأضف حسابًا للبدء.</string>
     <string name="main_version">الإصدار %1$s</string>

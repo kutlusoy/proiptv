@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="splash_tagline">Twoje strumienie. Twój dostawca. Nic więcej.</string>
     <string name="main_no_accounts_title">Brak konta</string>
     <string name="main_no_accounts_text">Otwórz Konta i dodaj jedno, aby zacząć.</string>
     <string name="main_version">Wersja %1$s</string>

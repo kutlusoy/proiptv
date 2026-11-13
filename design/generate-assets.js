@@ -71,18 +71,17 @@ const page = (w, h, body, background = 'transparent') =>
   const glow = (blur, widthFactor, heightFactor, file) =>
     shot(`${res}/drawable-nodpi/${file}`, Math.ceil(360 * MARK_RATIO * widthFactor), Math.ceil(360 * heightFactor),
       `<div style="filter:blur(${blur}px) saturate(1.7) brightness(1.6)">${mark(360)}</div>`);
-  await glow(55, 2.1, 1.6, 'splash_glow_wide.png');
-  await glow(18, 1.5, 1.2, 'splash_glow_near.png');
+  await glow(30, 2.1, 1.6, 'splash_glow_wide.png');
+  await glow(9, 1.5, 1.2, 'splash_glow_near.png');
   await shot(`${res}/drawable-nodpi/splash_spark.png`, 256, 256,
     `<svg width="256" height="256" viewBox="-128 -128 256 256"><defs><radialGradient id="g"><stop offset="0" stop-color="#fff"/>` +
     `<stop offset=".16" stop-color="#ffd9e2" stop-opacity=".9"/><stop offset="1" stop-color="#e60041" stop-opacity="0"/></radialGradient></defs>` +
-    `<circle r="128" fill="url(#g)" opacity=".6"/><path d="M0-122L8-8L122 0L8 8L0 122L-8 8L-122 0L-8-8Z" fill="#fff" opacity=".92"/></svg>`);
+    `<circle r="120" fill="url(#g)" opacity=".6"/><path d="M0-122L8-8L122 0L8 8L0 122L-8 8L-122 0L-8-8Z" fill="#fff" opacity=".92"/></svg>`);
 
   // Repository graphics
   await shot('doc/logo.png', 1254, 1254, `<img src="${logoUri}" style="display:block;width:1254px;height:1254px">`, BLACK);
   await shot('doc/social-preview.png', 1280, 640,
-    `<div style="display:flex;align-items:center;gap:70px">${mark(430)}<div>${word(560)}` +
-    `<div style="margin-top:26px;font-size:36px;font-weight:400;color:#d8c9cd">IPTV player for Android TV, tablets and phones</div></div></div>`, BLACK);
+    `<div style="display:flex;align-items:center;gap:70px">${mark(430)}${word(560)}</div>`, BLACK);
 
   // Debug build: amber background and a DEBUG label, so it is not mixed up with the release app
   const debugRes = path.join(root, 'app/src/debug/res');

@@ -59,13 +59,13 @@ The start screen is a short intro of 4.5 seconds that is drawn by the app itself
 - a wide and a near red glow rise behind it and breathe slowly
 - a light sweep runs over the mark (it is clipped to the shape of the mark)
 - a spark flashes at the upper right highlight
-- the lettering and the tagline slide in one after the other
+- the lettering slides in after the mark
 - dust motes drift upwards in three depths (`SplashParticles.kt`)
 - the whole scene pushes in slowly
 
 The glow layers are prepared as pictures, so the app only moves and fades finished layers, which keeps it smooth on weak TV boxes. Any key or touch skips the intro. When the system animations are off (animator duration scale 0) the finished picture is shown for about a second.
 
-The tagline under the lettering is the text `splash_tagline` of the language files. The timing values (durations, when each layer appears) are the numbers in `SplashTimeline.kt`, a unit test checks that layers appear in order and never flicker.
+The timing values (durations, when each layer appears) are the numbers in `SplashTimeline.kt`, a unit test checks that layers appear in order and never flicker.
 
 ## 5. Checklist
 

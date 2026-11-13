@@ -83,7 +83,6 @@
     <string name="settings_license">Açık kaynak, MIT lisansı</string>
     <string name="main_no_accounts_text">Başlamak için Hesaplar\'ı açıp bir hesap ekle.</string>
     <string name="main_no_accounts_title">Henüz hesap yok</string>
-    <string name="splash_tagline">Senin yayınların. Senin sağlayıcın. Başka hiçbir şey.</string>
     <string name="main_version">Sürüm %1$s</string>
     <string name="account_guide_updated">Rehber güncellendi: %1$s</string>
     <string name="account_guide_never">Rehber henüz yüklenmedi</string>

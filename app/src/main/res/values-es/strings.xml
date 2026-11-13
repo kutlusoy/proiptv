@@ -83,7 +83,6 @@
     <string name="settings_license">Código abierto, licencia MIT</string>
     <string name="main_no_accounts_text">Abre Cuentas y añade una para empezar.</string>
     <string name="main_no_accounts_title">Aún no hay cuenta</string>
-    <string name="splash_tagline">Tus emisiones. Tu proveedor. Nada más.</string>
     <string name="main_version">Versión %1$s</string>
     <string name="account_guide_updated">Guía actualizada: %1$s</string>
     <string name="account_guide_never">Guía aún sin cargar</string>
