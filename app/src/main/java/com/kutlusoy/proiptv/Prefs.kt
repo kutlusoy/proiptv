@@ -26,6 +26,13 @@ class Prefs(context: Context) {
     fun browseCategory(kind: Int, account: Long?): String? =
         sp.getString("cat_$kind", null)?.takeIf { sp.getLong("cat_acc_$kind", -1L) == (account ?: -1L) }
 
+    /** The category that was open last in an area, with its account: for the rows of the start page. */
+    fun lastCategory(kind: Int): Pair<Long, String>? {
+        val account = sp.getLong("cat_acc_$kind", -1L).takeIf { it >= 0 } ?: return null
+        val category = sp.getString("cat_$kind", null)?.takeIf { it.isNotEmpty() } ?: return null
+        return account to category
+    }
+
     fun browseFav(kind: Int): Boolean = sp.getBoolean("fav_$kind", false)
 
     fun browseFavList(kind: Int): Long? = sp.getLong("favlist_$kind", -1L).takeIf { it >= 0 }

@@ -73,7 +73,10 @@ fun BrowseScreen(state: AppState, kind: Int) {
     state.series?.takeIf { kind == Kind.SERIES }?.let { SeriesDetail(state, it); return }
     state.movie?.takeIf { kind == Kind.MOVIE }?.let { MovieDetail(state, it); return }
 
-    var category by remember(kind) { mutableStateOf(ALL_KEY) }
+    var category by remember(kind) { mutableStateOf(state.store.config.lastCategory[kind.toString()] ?: ALL_KEY) }
+    androidx.compose.runtime.LaunchedEffect(category) {
+        if (state.store.config.lastCategory[kind.toString()] != category) state.store.update { c -> c.copy(lastCategory = c.lastCategory + (kind.toString() to category)) }
+    }
     var query by remember(kind) { mutableStateOf("") }
     val categories = data.categories(kind)
     val all = data.entries(kind)
