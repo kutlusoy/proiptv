@@ -1,6 +1,10 @@
 package com.kutlusoy.proiptv.desktop
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -41,7 +45,8 @@ fun main() = application {
     val state = remember { AppState(store, scope) }
     val updater = remember { Updater() }
     val update = remember { UpdateState(updater, scope, store) }
-    val windowState = rememberWindowState(size = DpSize(1280.dp, 800.dp))
+    val screen = remember { java.awt.Toolkit.getDefaultToolkit().screenSize }
+    val windowState = rememberWindowState(size = DpSize(minOf(1280, (screen.width * 0.9).toInt()).dp, minOf(800, (screen.height * 0.88).toInt()).dp))
 
     LaunchedEffect(Unit) {
         state.reload()
@@ -74,7 +79,7 @@ fun main() = application {
             }
         },
     ) {
-        window.minimumSize = java.awt.Dimension(900, 600)
+        window.minimumSize = java.awt.Dimension(640, 420)
         ProIptvTheme {
             Surface(Modifier.fillMaxSize()) {
                 App(state, updater, update)
@@ -91,9 +96,10 @@ private fun App(state: AppState, updater: Updater, update: UpdateState) {
         PlayerScreen(state, controller)
     } else {
         Row(Modifier.fillMaxSize()) {
-            NavigationRail {
+            NavigationRail(Modifier.width(112.dp), containerColor = Palette.Surface, header = { Spacer(Modifier.height(16.dp)) }) {
                 Tab.values().forEach { tab ->
                     NavigationRailItem(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         selected = state.tab == tab,
                         onClick = { state.tab = tab; state.series = null; state.movie = null },
                         icon = { Icon(icon(tab), null) },
@@ -101,7 +107,7 @@ private fun App(state: AppState, updater: Updater, update: UpdateState) {
                     )
                 }
             }
-            Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().padding(start = 12.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) {
                 when (state.tab) {
                     Tab.LIVE -> BrowseScreen(state, Kind.LIVE)
                     Tab.MOVIES -> BrowseScreen(state, Kind.MOVIE)

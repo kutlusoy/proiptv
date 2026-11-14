@@ -107,7 +107,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             delay(500)
         }
     }
-    DisposableEffect(controller) { onDispose { engine.stop() } }
+    DisposableEffect(controller) { onDispose { engine.stop(); engine.detach() } }
     val fullscreen = state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen
 
     Column(Modifier.fillMaxSize().background(Color.Black)) {
@@ -123,7 +123,12 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
                 SwingPanel(
                     modifier = Modifier.fillMaxSize(),
                     factory = {
-                        Canvas().apply {
+                        object : Canvas() {
+                            override fun addNotify() {
+                                super.addNotify()
+                                engine.attach(this)
+                            }
+                        }.apply {
                             background = java.awt.Color.BLACK
                             isFocusable = false
                             addMouseListener(object : MouseAdapter() {
