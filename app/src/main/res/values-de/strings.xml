@@ -175,7 +175,7 @@
     <string name="dl_err_network">Netzwerkfehler</string>
     <string name="dl_episodes">%1$d Folgen, %2$d Staffeln</string>
     <string name="fav_hint_touch">Favorit gedrückt halten und an eine andere Stelle ziehen.</string>
-    <string name="fav_moving">Verschieben: Pfeil hoch/runter bewegt, OK legt ihn hier ab.</string>
+    <string name="fav_moving">Verschieben: an die neue Stelle ziehen und loslassen (Fernbedienung: hoch/runter, dann OK).</string>
     <string name="fav_hint_tv">OK auf einem Favoriten lange drücken, dann mit hoch/runter verschieben. Nochmal OK legt ihn ab.</string>
     <string name="fav_remove_confirm">„%1$s“ aus den Favoriten entfernen?</string>
     <string name="nav_epg">EPG</string>

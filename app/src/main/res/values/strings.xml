@@ -176,7 +176,7 @@
     <string name="dl_err_network">network error</string>
     <string name="dl_episodes">%1$d episodes, %2$d seasons</string>
     <string name="fav_hint_touch">Hold a favorite, then drag it to a new place.</string>
-    <string name="fav_moving">Moving: up/down to move, OK to drop it here.</string>
+    <string name="fav_moving">Moving: drag to the new place and let go (remote: up/down, then OK).</string>
     <string name="fav_hint_tv">Hold OK on a favorite, then move it with up/down. Press OK again to drop it.</string>
     <string name="fav_remove_confirm">Remove \"%1$s\" from your favorites?</string>
     <string name="nav_epg">EPG</string>

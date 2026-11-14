@@ -175,7 +175,7 @@
     <string name="dl_err_network">errore di rete</string>
     <string name="dl_episodes">%1$d episodi, %2$d stagioni</string>
     <string name="fav_hint_touch">Tieni premuto un preferito e trascinalo in un altro punto.</string>
-    <string name="fav_moving">Spostamento: su/giù per spostare, OK per rilasciarlo qui.</string>
+    <string name="fav_moving">Spostamento: trascina nel nuovo punto e rilascia (telecomando: su/giù, poi OK).</string>
     <string name="fav_hint_tv">Premi a lungo OK su un preferito, poi spostalo con su/giù. Premi di nuovo OK per rilasciarlo.</string>
     <string name="fav_remove_confirm">Rimuovere “%1$s” dai preferiti?</string>
     <string name="nav_epg">EPG</string>

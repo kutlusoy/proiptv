@@ -437,6 +437,7 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
             var origin by remember { mutableIntStateOf(-1) }
             var rowHeight by remember { mutableFloatStateOf(160f) }
             var removing by remember { mutableStateOf<FavoriteRow?>(null) }
+            val swallowUp = remember { booleanArrayOf(false) }
             fun keyOf(r: FavoriteRow) = "${r.accountId}-${r.kind}-${r.remoteId}"
             fun pick(key: String) {
                 if (picked != null) return
@@ -491,6 +492,19 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
                         .focusRequester(focus)
                         .onSizeChanged { rowHeight = it.height.toFloat() }
                         .onPreviewKeyEvent { e ->
+                            val ok = e.key == Key.DirectionCenter || e.key == Key.Enter
+                            if (ok && e.type == KeyEventType.KeyUp && swallowUp[0]) {
+                                swallowUp[0] = false
+                                return@onPreviewKeyEvent true
+                            }
+                            if (picked == null) {
+                                if (ok && e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount > 0) {
+                                    pick(key)
+                                    swallowUp[0] = true
+                                    return@onPreviewKeyEvent true
+                                }
+                                return@onPreviewKeyEvent false
+                            }
                             if (picked != key || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                             when (e.key) {
                                 Key.DirectionUp -> { moveLocal(-1); true }
@@ -518,7 +532,6 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
                         tall = kind != Kind.LIVE,
                         rowModifier = pickedKeys,
                         selected = isPicked,
-                        onLongClick = { pick(key) },
                         onClick = {
                             if (picked != null) {
                                 if (isPicked) drop()
