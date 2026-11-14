@@ -58,6 +58,7 @@ data class ConfigDto(
     val bufferMb: Int = 512,
     val lastCategory: Map<String, String> = emptyMap(),
     val tmdbKey: String = "",
+    val lastAccount: Map<String, String> = emptyMap(),
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */

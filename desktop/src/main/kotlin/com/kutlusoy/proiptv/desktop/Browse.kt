@@ -84,7 +84,11 @@ fun BrowseScreen(state: AppState, kind: Int) {
         if (state.store.config.lastCategory[kind.toString()] != category) state.store.update { c -> c.copy(lastCategory = c.lastCategory + (kind.toString() to category)) }
     }
     var query by remember(kind) { mutableStateOf("") }
-    var accountFilter by remember(kind) { mutableStateOf<String?>(null) }
+    var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
+    androidx.compose.runtime.LaunchedEffect(accountFilter) {
+        // the chosen account is kept, so the list is the same after the player was closed
+        if (state.store.config.lastAccount[kind.toString()] != accountFilter) state.store.update { c -> c.copy(lastAccount = if (accountFilter == null) c.lastAccount - kind.toString() else c.lastAccount + (kind.toString() to accountFilter!!)) }
+    }
     val activeAccount = accountFilter?.takeIf { id -> enabled.any { it.id == id } }
     val categories = data.categories(kind).filter { activeAccount == null || it.accountId == activeAccount }
     val all = data.entries(kind).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
