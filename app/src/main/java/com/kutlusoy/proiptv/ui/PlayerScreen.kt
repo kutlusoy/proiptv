@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -550,19 +551,30 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             )
         }
         AnimatedVisibility(overlay, Modifier.align(Alignment.Center).offset(y = 28.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 val canSeek = active?.live == false || hubActive
-                if (canSeek) {
-                    OutlinedButton(onClick = { shiftBy(-30_000) }, modifier = Modifier.focusHighlight()) { Text("-30 s") }
+                Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.then(if (!canSeek) Modifier.focusRequester(first) else Modifier))
+                    if (canSeek) {
+                        RoundControl(
+                            if (playing) PlayerGlyph.PAUSE else PlayerGlyph.PLAY, stringResource(if (playing) R.string.player_pause else R.string.player_play),
+                            { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, Modifier.focusRequester(first),
+                        )
+                    }
                 }
-                RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.then(if (!canSeek) Modifier.focusRequester(first) else Modifier))
-                if (canSeek) {
-                    RoundControl(
-                        if (playing) PlayerGlyph.PAUSE else PlayerGlyph.PLAY, stringResource(if (playing) R.string.player_pause else R.string.player_play),
-                        { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, Modifier.focusRequester(first),
+                if (active?.live == false && duration > 0) {
+                    Slider(
+                        value = (position.toFloat() / duration).coerceIn(0f, 1f),
+                        onValueChange = { exo.seekTo((it * duration).toLong()); position = exo.currentPosition; touched++ },
+                        modifier = Modifier.fillMaxWidth(0.7f).focusHighlight(),
                     )
-                    OutlinedButton(onClick = { shiftBy(30_000) }, modifier = Modifier.focusHighlight()) { Text("+30 s") }
+                    Text("${clock(position)} / ${clock(duration)}", color = Color.White)
                 }
+            }
+        }
+        AnimatedVisibility(overlay, Modifier.align(Alignment.TopEnd)) {
+            OutlinedButton(onClick = { moreDialog = true }, modifier = Modifier.statusBarsPadding().padding(16.dp).background(Color(0x99000000), CircleShape).focusHighlight()) {
+                Text(stringResource(R.string.player_more), color = Color.White)
             }
         }
         AnimatedVisibility(overlay, Modifier.align(Alignment.BottomCenter)) {
@@ -579,13 +591,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         LinearProgressIndicator(progress = { done }, Modifier.fillMaxWidth())
                     }
                     nowNext.second?.let { Text("${stringResource(R.string.player_next)}: ${it.title}", color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                } else if (duration > 0) {
-                    Slider(
-                        value = (position.toFloat() / duration).coerceIn(0f, 1f),
-                        onValueChange = { exo.seekTo((it * duration).toLong()); position = exo.currentPosition; touched++ },
-                        modifier = Modifier.focusHighlight(),
-                    )
-                    Text("${clock(position)} / ${clock(duration)}", color = Color.White)
                 }
                 if (hubActive) {
                     Text(
@@ -619,8 +624,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                             modifier = Modifier.focusHighlight(),
                         ) { Text(stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record)) }
                     }
-                    Spacer(Modifier.weight(1f))
-                    OutlinedButton(onClick = { moreDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_more)) }
                 }
             }
         }
