@@ -217,4 +217,11 @@
     <string name="update_err_storage">Not enough storage.</string>
     <string name="update_err_install">Installation failed: %1$s</string>
     <string name="player_channel_list">Channel list</string>
+    <string name="accounts_phone">Set up with your phone (QR code)</string>
+    <string name="remote_title">Set up with your phone</string>
+    <string name="remote_hint">Scan the code with the camera of your phone. Phone and TV must be in the same Wi-Fi. The page runs only while this window is open.</string>
+    <string name="remote_no_network">No network address found. Connect the device to your Wi-Fi or network cable.</string>
+    <string name="remote_failed">The setup page could not be started.</string>
+    <string name="remote_added">Account added: %1$s</string>
+    <string name="exit_confirm">Close ProIPTV?</string>
 </resources>

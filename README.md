@@ -23,6 +23,7 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 - **Update check** in the settings (manual and once a day in the background with one notification per day), verified by checksum before the Android installer is called
 - **EPG screen** to search and filter the guide of all channels, jump to the channel, and a live search that also finds running shows
 - **Downloads for offline use** of movies and series (with seasons and episodes), played from the device
+- **Set up accounts with the phone** by QR code (small local setup page, one-time code, only while the dialog is open)
 - **TV layout** that is switched on automatically on Android TV: menu column on the left, large texts and posters, remote control navigation
 - **Country and year** read from titles and shown as badges next to the clean title
 - **Favorites** with several lists and **manual sorting**, kept after a provider refresh
@@ -121,6 +122,12 @@ To add a language: create `app/src/main/res/values-xx/strings.xml` with all keys
 | [guideline-android-developer-verification.md](doc/guideline-android-developer-verification.md) | register package name and key with Google |
 | [guideline-google-play.md](doc/guideline-google-play.md) | application ID, same key for GitHub and Play, store listing |
 | [guideline-splash-and-icons.md](doc/guideline-splash-and-icons.md) | logo, splash and icons |
+
+## Third party components
+
+- ZXing core (QR code generation), Apache License 2.0, https://github.com/zxing/zxing
+- libVLC (Windows player), LGPL 2.1 or later, bundled as separate unmodified libraries
+- The other libraries (Compose, Room, Media3, OkHttp, Coil, kotlinx) are Apache License 2.0 or compatible.
 
 ## License
 

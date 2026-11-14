@@ -199,9 +199,17 @@ Add your accounts under **Accounts** (the help texts are the same as on Android)
 
 The Windows version does not have guide (EPG), recording, time shift, downloads and the track menu yet, see `doc/guideline-windows-version.md`.
 
+## Set up an account with your phone (QR code)
+
+Typing a long server address with a remote control is tedious. Under **Accounts** choose **Set up with your phone (QR code)**: the TV shows a QR code. Scan it with the camera of your phone (phone and TV in the same Wi-Fi), a page opens in the browser of the phone in your language. Enter the account there (Xtream Codes or M3U, name, address, user name, password) and send it. For Xtream accounts the TV logs in once first, so a wrong password is shown on the phone right away. The account appears on the TV and the first sync starts.
+
+Safety: the page is served by the TV itself, only while the window with the QR code is open (closes by itself after 10 minutes), and every call needs the one-time code that is part of the QR code. Nothing goes over the internet, but inside your home network the data (also the password) travels unencrypted, as with any simple local web page. Do not use it in a network that you do not trust.
+
+On a TV the dialog **Add account** also has its **Save** and **Cancel** buttons at the end of the form (down arrow after the last field), so the remote control reaches them.
+
 ## Android TV and TV boxes
 
-When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has **Stop** and **Play/Pause** in the middle of the bottom row (Stop ends playback and returns to the list), a **menu button** with the channel list in the upper left corner, and a **star** (favorite) and a **More** button in the upper right corner for audio and subtitles, screen rotation and picture size. The menu button opens a list of the channels of the list you started from at the left edge, the channel keeps playing, a tap on another channel switches to it and closes the list. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
+When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has **Stop** and **Play/Pause** in the middle of the bottom row (Stop ends playback and returns to the list), a **menu button** with the channel list in the upper left corner, and a **star** (favorite) and a **More** button in the upper right corner for audio and subtitles, screen rotation and picture size. The menu button opens a list of the channels of the list you started from at the left edge, the channel keeps playing, a tap on another channel switches to it and closes the list. The menu column scrolls, so all entries down to **Settings** and **Exit** can be reached with the down arrow. The Back key on the first level asks whether to close the app. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
 
 ## 6. Favorites and manual order
 

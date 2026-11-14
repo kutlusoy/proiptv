@@ -7,6 +7,8 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -110,12 +112,23 @@ private fun AppRoot(vm: MainViewModel) {
     val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
     val chromeHidden = remember { mutableStateOf(false) }
+    var confirmExit by remember { mutableStateOf(false) }
+    if (confirmExit) {
+        val activity = androidx.activity.compose.LocalActivity.current
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmExit = false },
+            text = { Text(stringResource(R.string.exit_confirm)) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { activity?.finishAffinity() }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.nav_exit)) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmExit = false }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
 
     request?.let { r ->
         key(r) { PlayerScreen(vm, r) { vm.player.value = null } }
         return
     }
 
+    BackHandler { confirmExit = true }
     BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
 
     val ctx = LocalContext.current
@@ -216,10 +229,10 @@ private fun AppRoot(vm: MainViewModel) {
 private fun TvRail(selected: Tab, exit: () -> Unit, onSelect: (Tab) -> Unit) {
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
-    Column(Modifier.width(250.dp).fillMaxHeight().background(Palette.Surface).padding(horizontal = 14.dp, vertical = 24.dp)) {
+    Column(Modifier.width(250.dp).fillMaxHeight().background(Palette.Surface).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 14.dp, vertical = 16.dp)) {
         Text("ProIPTV", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Palette.WineSoft, modifier = Modifier.padding(start = 10.dp))
-        Text(stringResource(R.string.main_version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(start = 10.dp, bottom = 18.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(stringResource(R.string.main_version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(start = 10.dp, bottom = 10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Tab.values().forEach { t ->
                 NavigationDrawerItem(
                     label = { Text(stringResource(t.label), style = MaterialTheme.typography.bodyLarge) },
@@ -232,18 +245,18 @@ private fun TvRail(selected: Tab, exit: () -> Unit, onSelect: (Tab) -> Unit) {
                         selectedTextColor = Color.White,
                         unselectedContainerColor = Color.Transparent,
                     ),
-                    modifier = Modifier.then(if (selected == t) Modifier.focusRequester(first) else Modifier).focusHighlight(),
+                    modifier = Modifier.height(50.dp).then(if (selected == t) Modifier.focusRequester(first) else Modifier).focusHighlight(),
                 )
             }
         }
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(10.dp))
         NavigationDrawerItem(
             label = { Text(stringResource(R.string.nav_exit), style = MaterialTheme.typography.bodyLarge) },
             icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) },
             selected = false,
             onClick = exit,
             colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
-            modifier = Modifier.focusHighlight(),
+            modifier = Modifier.height(50.dp).focusHighlight(),
         )
     }
 }

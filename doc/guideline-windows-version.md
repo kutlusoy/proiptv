@@ -9,7 +9,7 @@ What the app can do on Windows today:
 - several Xtream Codes and M3U accounts (passwords protected with Windows DPAPI, config in `%APPDATA%\ProIPTV\config.json`)
 - live channels, movies and series with groups, search, favorites (one list per area), country and year badges
 - series with seasons and episodes
-- playback with libVLC (LGPL, bundled as separate, unmodified DLLs): stop, pause, seek, volume, full screen (F or double click), channel up/down while watching live, keyboard shortcuts (space, arrows, Esc, F, M)
+- playback with libVLC (LGPL, bundled as separate, unmodified DLLs). The video is drawn by libVLC into memory (video callbacks) and shown as an image inside the app window, so it never opens a window of its own and needs no window handle (also the base for macOS and Linux). A log file with start and player messages is `%APPDATA%\\ProIPTV\\log.txt`: stop, pause, seek, volume, full screen (F or double click), channel up/down while watching live, keyboard shortcuts (space, arrows, Esc, F, M)
 - a resizable window (starts at 1280 x 800 or at 90 percent of a smaller screen, smallest size 640 x 420, so it also fits a 13 inch laptop screen) with a wide layout: menu column on the left, content on the right; the group box, search field and dialogs follow the width
 - 11 languages, taken from the same `strings.xml` files as the Android app
 - update check by hand and once a day in the background (one notice per day at most), downloads the newest setup, checks the SHA-256 against `SHA256SUMS.txt` and starts the installer silently, which closes the app, installs and starts the new version. Test builds follow the newest test release, normal builds the newest release.

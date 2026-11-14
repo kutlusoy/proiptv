@@ -40,6 +40,8 @@ import androidx.compose.ui.window.rememberWindowState
 import com.kutlusoy.proiptv.net.Http
 
 fun main() = application {
+    Log.trim()
+    Log.write("ProIPTV ${AppInfo.label} started")
     val store = remember { Store(Store.defaultDir()).also { Strings.init(it.config.language) } }
     val scope = rememberCoroutineScope()
     val state = remember { AppState(store, scope) }

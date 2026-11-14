@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProIPTV</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: #0b0709; color: #f3ebed; }
+  main { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 1.5rem; color: #f2506f; margin: 0 0 4px; }
+  p.hint { color: #cdbfc3; margin: 0 0 18px; font-size: .95rem; }
+  label { display: block; margin: 14px 0 6px; font-size: .9rem; color: #cdbfc3; }
+  input, select { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid #4a3a3f; background: #151013; color: #f3ebed; font-size: 1rem; }
+  button { width: 100%; margin-top: 22px; padding: 14px; border: 0; border-radius: 24px; background: #c40035; color: #fff; font-size: 1.05rem; font-weight: 600; }
+  button:disabled { opacity: .5; }
+  #msg { margin-top: 16px; padding: 12px; border-radius: 10px; display: none; }
+  #msg.ok { display: block; background: #12301f; color: #9be7b6; }
+  #msg.err { display: block; background: #3a1119; color: #ff8a80; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ProIPTV</h1>
+  <p class="hint" id="hint"></p>
+  <form id="form" autocomplete="off">
+    <label for="type" id="l_type"></label>
+    <select id="type"><option value="xtream">Xtream Codes</option><option value="m3u" id="o_m3u"></option></select>
+    <label for="name" id="l_name"></label>
+    <input id="name" maxlength="100" required>
+    <label for="url" id="l_url"></label>
+    <input id="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+    <div id="cred">
+      <label for="username" id="l_user"></label>
+      <input id="username" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <label for="password" id="l_pass"></label>
+      <input id="password" type="password" autocapitalize="off" autocorrect="off">
+    </div>
+    <label for="epg" id="l_epg"></label>
+    <input id="epg" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <label for="agent" id="l_agent"></label>
+    <input id="agent" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button id="send" type="submit"></button>
+  </form>
+  <div id="msg"></div>
+</main>
+<script>
+const T = {
+  en: { hint: "Enter the account here. It is sent to your TV and saved there.", type: "Type", m3u: "M3U playlist", name: "Name", server: "Server URL", playlist: "Playlist URL", user: "Username", pass: "Password", epg: "Guide URL (XMLTV, optional)", agent: "User agent (optional)", send: "Send to the TV", ok: "Done. The account was added on the TV. You can close this page.", sending: "Sending...", network: "No connection to the TV. Is the phone in the same Wi-Fi?", invalid_link: "Invalid link. Scan the QR code on the TV again.", name_missing: "Please enter a name.", url_missing: "Please enter the address.", username_missing: "Please enter the username.", login: "The provider did not accept the login:" },
+  de: { hint: "Gib das Konto hier ein. Es wird an deinen Fernseher gesendet und dort gespeichert.", type: "Typ", m3u: "M3U-Playlist", name: "Name", server: "Server-Adresse", playlist: "Playlist-Adresse", user: "Benutzername", pass: "Passwort", epg: "Programm-Adresse (XMLTV, optional)", agent: "User-Agent (optional)", send: "An den Fernseher senden", ok: "Fertig. Das Konto wurde am Fernseher hinzugefügt. Du kannst diese Seite schließen.", sending: "Sende...", network: "Keine Verbindung zum Fernseher. Ist das Handy im selben WLAN?", invalid_link: "Ungültiger Link. Scanne den QR-Code am Fernseher erneut.", name_missing: "Bitte gib einen Namen ein.", url_missing: "Bitte gib die Adresse ein.", username_missing: "Bitte gib den Benutzernamen ein.", login: "Der Anbieter hat die Anmeldung nicht akzeptiert:" },
+  tr: { hint: "Hesabı buraya girin. Televizyonunuza gönderilir ve orada kaydedilir.", type: "Tür", m3u: "M3U oynatma listesi", name: "Ad", server: "Sunucu adresi", playlist: "Liste adresi", user: "Kullanıcı adı", pass: "Parola", epg: "Rehber adresi (XMLTV, isteğe bağlı)", agent: "User agent (isteğe bağlı)", send: "Televizyona gönder", ok: "Tamam. Hesap televizyona eklendi. Bu sayfayı kapatabilirsiniz.", sending: "Gönderiliyor...", network: "Televizyona bağlanılamadı. Telefon aynı Wi-Fi ağında mı?", invalid_link: "Geçersiz bağlantı. QR kodu televizyonda tekrar okutun.", name_missing: "Lütfen bir ad girin.", url_missing: "Lütfen adresi girin.", username_missing: "Lütfen kullanıcı adını girin.", login: "Sağlayıcı girişi kabul etmedi:" },
+  fr: { hint: "Saisissez le compte ici. Il est envoyé à votre télévision et enregistré là-bas.", type: "Type", m3u: "Liste M3U", name: "Nom", server: "Adresse du serveur", playlist: "Adresse de la liste", user: "Nom d’utilisateur", pass: "Mot de passe", epg: "Adresse du guide (XMLTV, facultatif)", agent: "User agent (facultatif)", send: "Envoyer à la télévision", ok: "Terminé. Le compte a été ajouté sur la télévision. Vous pouvez fermer cette page.", sending: "Envoi...", network: "Pas de connexion à la télévision. Le téléphone est-il sur le même Wi-Fi ?", invalid_link: "Lien invalide. Scannez de nouveau le code QR sur la télévision.", name_missing: "Veuillez saisir un nom.", url_missing: "Veuillez saisir l’adresse.", username_missing: "Veuillez saisir le nom d’utilisateur.", login: "Le fournisseur n’a pas accepté la connexion :" },
+  it: { hint: "Inserisci qui l’account. Viene inviato alla TV e salvato lì.", type: "Tipo", m3u: "Playlist M3U", name: "Nome", server: "Indirizzo del server", playlist: "Indirizzo della playlist", user: "Nome utente", pass: "Password", epg: "Indirizzo della guida (XMLTV, facoltativo)", agent: "User agent (facoltativo)", send: "Invia alla TV", ok: "Fatto. L’account è stato aggiunto sulla TV. Puoi chiudere questa pagina.", sending: "Invio...", network: "Nessuna connessione alla TV. Il telefono è nella stessa rete Wi-Fi?", invalid_link: "Link non valido. Scansiona di nuovo il codice QR sulla TV.", name_missing: "Inserisci un nome.", url_missing: "Inserisci l’indirizzo.", username_missing: "Inserisci il nome utente.", login: "Il fornitore non ha accettato l’accesso:" },
+  es: { hint: "Introduce aquí la cuenta. Se envía a tu televisor y se guarda allí.", type: "Tipo", m3u: "Lista M3U", name: "Nombre", server: "Dirección del servidor", playlist: "Dirección de la lista", user: "Usuario", pass: "Contraseña", epg: "Dirección de la guía (XMLTV, opcional)", agent: "User agent (opcional)", send: "Enviar al televisor", ok: "Listo. La cuenta se añadió en el televisor. Puedes cerrar esta página.", sending: "Enviando...", network: "Sin conexión con el televisor. ¿El móvil está en la misma red Wi-Fi?", invalid_link: "Enlace no válido. Escanea de nuevo el código QR en el televisor.", name_missing: "Introduce un nombre.", url_missing: "Introduce la dirección.", username_missing: "Introduce el usuario.", login: "El proveedor no aceptó el inicio de sesión:" },
+};
+const lang = (navigator.language || "en").slice(0, 2);
+const t = T[lang] || T.en;
+const $ = (id) => document.getElementById(id);
+const token = new URLSearchParams(location.search).get("t") || "";
+function texts() {
+  $("hint").textContent = t.hint; $("l_type").textContent = t.type; $("o_m3u").textContent = t.m3u; $("l_name").textContent = t.name;
+  $("l_user").textContent = t.user; $("l_pass").textContent = t.pass; $("l_epg").textContent = t.epg; $("l_agent").textContent = t.agent; $("send").textContent = t.send;
+  switchType();
+}
+function switchType() {
+  const x = $("type").value === "xtream";
+  $("l_url").textContent = x ? t.server : t.playlist;
+  $("cred").style.display = x ? "block" : "none";
+}
+function show(kind, text) { const m = $("msg"); m.className = kind; m.textContent = text; }
+$("type").addEventListener("change", switchType);
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("send").disabled = true; show("", ""); $("msg").style.display = "none";
+  const body = { type: $("type").value, name: $("name").value.trim(), url: $("url").value.trim(), username: $("username").value.trim(), password: $("password").value, userAgent: $("agent").value.trim(), epgUrl: $("epg").value.trim() };
+  try {
+    const r = await fetch("/api/account?t=" + encodeURIComponent(token), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (r.status === 403) { show("err", t.invalid_link); return; }
+    const a = await r.json();
+    if (a.ok) { show("ok", t.ok); $("form").style.display = "none"; }
+    else if (t[a.error]) show("err", t[a.error]);
+    else show("err", t.login + " " + (a.error || ""));
+  } catch (err) { show("err", t.network); }
+  finally { $("send").disabled = false; }
+});
+texts();
+</script>
+</body>
+</html>
