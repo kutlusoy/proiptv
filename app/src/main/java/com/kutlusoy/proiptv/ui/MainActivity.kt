@@ -68,9 +68,9 @@ private enum class Tab(val label: Int, val icon: ImageVector) {
     LIVE(R.string.nav_live, Icons.Filled.PlayArrow),
     MOVIES(R.string.nav_movies, Icons.Filled.AccountBox),
     SERIES(R.string.nav_series, Icons.AutoMirrored.Filled.List),
-    EPG(R.string.nav_epg, GuideIcon),
     RECORDINGS(R.string.nav_recordings, Icons.Filled.DateRange),
     DOWNLOADS(R.string.nav_downloads, DownloadIcon),
+    EPG(R.string.nav_epg, GuideIcon),
     ACCOUNTS(R.string.nav_accounts, Icons.Filled.Person),
     SETTINGS(R.string.nav_settings, Icons.Filled.Settings),
 }
