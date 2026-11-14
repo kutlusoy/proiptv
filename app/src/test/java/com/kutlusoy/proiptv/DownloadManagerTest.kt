@@ -26,7 +26,6 @@ import okio.Buffer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -78,15 +77,14 @@ class DownloadManagerTest {
 
     private fun movie(id: String = "42") = Download(accountId = 1, kind = Kind.MOVIE, remoteId = id, title = "Movie $id", ext = "mp4")
 
-    private fun waitDone() = runBlocking { withTimeout(10_000) { while (db.downloads().pending() > 0) delay(50) } }
+    private fun waitDone() = runBlocking {
+        withTimeout(10_000) { while (db.downloads().all().first().isEmpty() || db.downloads().pending() > 0) delay(50) }
+    }
 
     @Test
     fun downloadsAMovieToTheDevice() {
         manager.enqueue(listOf(movie()))
-        Thread.sleep(200)
         waitDone()
-        val d = runBlocking { db.downloads().nextQueued() }
-        assertNull(d)
         val row = runBlocking { db.downloads().all().first() }.single()
         assertEquals(DlStatus.DONE, row.status)
         assertEquals(payload.size.toLong(), row.bytes)
@@ -99,7 +97,6 @@ class DownloadManagerTest {
         val partial = File(dir, "$id.mp4")
         partial.writeBytes(payload.copyOf(100_000))
         manager.start()
-        Thread.sleep(200)
         waitDone()
         assertEquals("bytes=100000-", ranges.first())
         assertTrue(partial.readBytes().contentEquals(payload))
@@ -109,13 +106,11 @@ class DownloadManagerTest {
     fun failedDownloadsCanBeRetried() {
         status = 404
         manager.enqueue(listOf(movie()))
-        Thread.sleep(200)
         waitDone()
         val row = runBlocking { db.downloads().all().first() }.single()
         assertEquals(DlStatus.FAILED, row.status)
         status = 200
         manager.retry(row.id)
-        Thread.sleep(200)
         waitDone()
         assertEquals(DlStatus.DONE, runBlocking { db.downloads().all().first() }.single().status)
     }
@@ -123,11 +118,10 @@ class DownloadManagerTest {
     @Test
     fun deleteRemovesTheFileAndTheRow() {
         manager.enqueue(listOf(movie()))
-        Thread.sleep(200)
         waitDone()
         val row = runBlocking { db.downloads().all().first() }.single()
         manager.delete(row.id)
-        Thread.sleep(300)
+        runBlocking { withTimeout(5_000) { while (db.downloads().all().first().isNotEmpty()) delay(50) } }
         assertFalse(manager.fileOf(row).exists())
         assertTrue(runBlocking { db.downloads().all().first() }.isEmpty())
     }
@@ -135,7 +129,6 @@ class DownloadManagerTest {
     @Test
     fun sameItemIsOnlyQueuedOnce() {
         manager.enqueue(listOf(movie(), movie()))
-        Thread.sleep(200)
         waitDone()
         assertEquals(1, runBlocking { db.downloads().all().first() }.size)
     }

@@ -175,7 +175,7 @@ Double tap on the left half of the picture jumps 10 seconds back, double tap on 
 
 ## Android TV and TV boxes
 
-When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has big **Stop** and **Play/Pause** buttons in the middle (Stop ends playback and returns to the list) and a **More** button in the lower right corner for audio and subtitles, screen rotation and picture size. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
+When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has big **Stop** and **Play/Pause** buttons in the middle (Stop ends playback and returns to the list) and a **More** button in the upper right corner for audio and subtitles, screen rotation and picture size. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
 
 ## 6. Favorites and manual order
 
