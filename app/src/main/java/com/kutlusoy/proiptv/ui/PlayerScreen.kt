@@ -13,6 +13,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.width
+import com.kutlusoy.proiptv.data.Source
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -108,6 +111,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.kutlusoy.proiptv.ProIptvApp
 import com.kutlusoy.proiptv.R
+import com.kutlusoy.proiptv.parse.TitleParser
 import com.kutlusoy.proiptv.parse.decodeEntities
 import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.Kind
@@ -206,6 +210,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var flashBack by remember { mutableStateOf(false) }
     var flashTick by remember { mutableIntStateOf(0) }
     var moreDialog by remember { mutableStateOf(false) }
+    var listOpen by remember { mutableStateOf(false) }
     var removeFavDialog by remember { mutableStateOf(false) }
     var touched by remember { mutableIntStateOf(0) }
     var digits by remember { mutableStateOf("") }
@@ -240,7 +245,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val first = remember { FocusRequester() }
     val active = catchup ?: target
     val zapping = request is PlayRequest.Zap && catchup == null
-    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog
+    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog || listOpen
     val activeNow by rememberUpdatedState(active)
     val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
     val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
@@ -445,7 +450,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
 
-    BackHandler { onClose() }
+    BackHandler { if (listOpen) listOpen = false else onClose() }
 
     fun shiftBy(deltaMs: Long) {
         val hub = holder.lease?.hub ?: return
@@ -556,8 +561,24 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         )
         (notice ?: message?.let { stringResource(it) })?.let { Text(it, Modifier.align(Alignment.Center).background(Color(0xAA000000)).padding(12.dp), color = Color.White, textAlign = TextAlign.Center) }
         info?.let { Text(it, Modifier.align(Alignment.TopCenter).padding(24.dp).background(Color(0xAA000000)).padding(10.dp), color = Color.White, textAlign = TextAlign.Center) }
-        if (recordingHere != null) {
-            Text("\u25CF REC", Modifier.align(Alignment.TopStart).padding(24.dp).background(Color(0xAA000000)).padding(8.dp), color = Color(0xFFFF5252))
+        Row(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Fade(overlay) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    RoundControl(PlayerGlyph.BACK, stringResource(R.string.action_back), onClose, diameter = 44.dp)
+                    if (zapping) RoundControl(PlayerGlyph.MENU, stringResource(R.string.player_channel_list), { listOpen = true }, diameter = 44.dp)
+                }
+            }
+            if (recordingHere != null) {
+                Text("\u25CF REC", Modifier.background(Color(0xAA000000)).padding(8.dp), color = Color(0xFFFF5252))
+            }
+        }
+        if (listOpen && request is PlayRequest.Zap) {
+            Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { listOpen = false })
+            ChannelPanel(
+                vm, request.source, count, index,
+                onPick = { i -> index = i; listOpen = false; overlay = false },
+                modifier = Modifier.align(Alignment.CenterStart),
+            )
         }
         if (digits.isNotEmpty()) {
             Text(digits, Modifier.align(Alignment.TopEnd).padding(24.dp).background(Color(0xAA000000)).padding(12.dp), style = MaterialTheme.typography.displaySmall, color = Color.White)
@@ -568,28 +589,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     .background(Color(0xAA000000), CircleShape).padding(horizontal = 20.dp, vertical = 12.dp),
                 color = Color.White, style = MaterialTheme.typography.titleLarge,
             )
-        }
-        Fade(overlay, Modifier.align(Alignment.Center).offset(y = 58.dp)) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                val canSeek = active?.live == false || hubActive
-                Row(horizontalArrangement = Arrangement.spacedBy(22.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.then(if (!canSeek) Modifier.focusRequester(first) else Modifier), diameter = 52.dp)
-                    if (canSeek) {
-                        RoundControl(
-                            if (playing) PlayerGlyph.PAUSE else PlayerGlyph.PLAY, stringResource(if (playing) R.string.player_pause else R.string.player_play),
-                            { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, Modifier.focusRequester(first), diameter = 52.dp,
-                        )
-                    }
-                }
-                if (active?.live == false && duration > 0) {
-                    Slider(
-                        value = (position.toFloat() / duration).coerceIn(0f, 1f),
-                        onValueChange = { exo.seekTo((it * duration).toLong()); position = exo.currentPosition; touched++ },
-                        modifier = Modifier.fillMaxWidth(0.7f).focusHighlight(),
-                    )
-                    Text("${clock(position)} / ${clock(duration)}", color = Color.White)
-                }
-            }
         }
         if (zapping) {
             Fade(overlay, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) {
@@ -640,25 +639,48 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     }
                     nowNext.second?.let { Text("${stringResource(R.string.player_next)}: ${it.title.decodeEntities()}", color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
+                if (active?.live == false && duration > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(clock(position), color = Color.White)
+                        Slider(
+                            value = (position.toFloat() / duration).coerceIn(0f, 1f),
+                            onValueChange = { exo.seekTo((it * duration).toLong()); position = exo.currentPosition; touched++ },
+                            modifier = Modifier.weight(1f).focusHighlight(),
+                        )
+                        Text(clock(duration), color = Color.White)
+                    }
+                }
                 if (hubActive) {
                     Text(
                         if (behindMs < LIVE_THRESHOLD_MS) stringResource(R.string.player_live) else "-" + clock(behindMs),
                         color = if (behindMs < LIVE_THRESHOLD_MS) Color(0xFFFF5252) else Color.White,
                     )
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val i = item
-                    if (zapping && i?.epgId != null) {
-                        OutlinedButton(onClick = { guideDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_guide)) }
+                Box(Modifier.fillMaxWidth()) {
+                    Row(Modifier.align(Alignment.CenterStart), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val i = item
+                        if (zapping && i?.epgId != null) {
+                            OutlinedButton(onClick = { guideDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_guide)) }
+                        }
+                        if (hubActive) {
+                            OutlinedButton(onClick = { goLive() }, enabled = behindMs >= LIVE_THRESHOLD_MS, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_live)) }
+                            RoundControl(
+                                if (recordingHere != null) PlayerGlyph.REC_STOP else PlayerGlyph.REC,
+                                stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record),
+                                { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
+                                diameter = 44.dp,
+                            )
+                        }
                     }
-                    if (hubActive) {
-                        OutlinedButton(onClick = { goLive() }, enabled = behindMs >= LIVE_THRESHOLD_MS, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_live)) }
-                        RoundControl(
-                            if (recordingHere != null) PlayerGlyph.REC_STOP else PlayerGlyph.REC,
-                            stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record),
-                            { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
-                            diameter = 44.dp,
-                        )
+                    val canSeek = active?.live == false || hubActive
+                    Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.then(if (!canSeek) Modifier.focusRequester(first) else Modifier), diameter = 48.dp)
+                        if (canSeek) {
+                            RoundControl(
+                                if (playing) PlayerGlyph.PAUSE else PlayerGlyph.PLAY, stringResource(if (playing) R.string.player_pause else R.string.player_play),
+                                { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, Modifier.focusRequester(first), diameter = 48.dp,
+                            )
+                        }
                     }
                 }
             }
@@ -866,7 +888,7 @@ private fun Fade(visible: Boolean, modifier: Modifier = Modifier, content: @Comp
     }
 }
 
-private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN, REC, REC_STOP, STAR_ON, STAR_OFF }
+private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN, REC, REC_STOP, STAR_ON, STAR_OFF, BACK, MENU }
 
 @Composable
 private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, diameter: androidx.compose.ui.unit.Dp = 76.dp) {
@@ -906,9 +928,40 @@ private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () ->
                     if (glyph == PlayerGlyph.STAR_ON) drawPath(star, Color(0xFFFFC107))
                     else drawPath(star, Color.White, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.09f))
                 }
+                PlayerGlyph.BACK -> {
+                    val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.13f, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+                    drawPath(Path().apply { moveTo(w, h / 2); lineTo(w * 0.05f, h / 2); moveTo(w * 0.45f, h * 0.1f); lineTo(w * 0.05f, h / 2); lineTo(w * 0.45f, h * 0.9f) }, Color.White, style = stroke)
+                }
+                PlayerGlyph.MENU -> for (k in 0..2) drawRoundRect(Color.White, Offset(0f, h * (0.08f + 0.36f * k)), Size(w, h * 0.14f), androidx.compose.ui.geometry.CornerRadius(h * 0.07f))
                 PlayerGlyph.UP -> drawPath(Path().apply { moveTo(w / 2, 0f); lineTo(w, h * 0.85f); lineTo(0f, h * 0.85f); close() }, Color.White)
                 PlayerGlyph.DOWN -> drawPath(Path().apply { moveTo(0f, h * 0.15f); lineTo(w, h * 0.15f); lineTo(w / 2, h); close() }, Color.White)
                 PlayerGlyph.STOP -> drawRoundRect(Color.White, Offset(w * 0.04f, h * 0.04f), Size(w * 0.92f, h * 0.92f), androidx.compose.ui.geometry.CornerRadius(w * 0.1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChannelPanel(vm: MainViewModel, source: Source, count: Int, selected: Int, onPick: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val state = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (selected - 3).coerceAtLeast(0))
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    androidx.compose.foundation.lazy.LazyColumn(
+        modifier.fillMaxHeight().width(320.dp).background(Color(0xEE000000)).statusBarsPadding().navigationBarsPadding(),
+        state = state,
+    ) {
+        items(count, key = { it }) { i ->
+            val channel by androidx.compose.runtime.produceState<Item?>(null, i) { value = vm.repo.at(source, i) }
+            Row(
+                Modifier.fillMaxWidth().then(if (i == selected) Modifier.background(Palette.WineDeep.copy(alpha = 0.7f)).focusRequester(focus) else Modifier)
+                    .focusHighlight().clickable { onPick(i) }.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Logo(channel?.logo, Modifier.size(width = 56.dp, height = 36.dp))
+                Text(
+                    channel?.let { TitleParser.parse(it.name).title } ?: "", color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }

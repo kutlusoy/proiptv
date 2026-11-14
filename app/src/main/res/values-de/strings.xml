@@ -215,4 +215,5 @@
     <string name="update_err_too_large">Die Datei ist zu groß.</string>
     <string name="update_err_storage">Nicht genug Speicher.</string>
     <string name="update_err_install">Installation fehlgeschlagen: %1$s</string>
+    <string name="player_channel_list">Senderliste</string>
 </resources>

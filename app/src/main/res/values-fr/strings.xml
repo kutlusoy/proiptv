@@ -215,4 +215,5 @@
     <string name="update_err_too_large">Le fichier est trop volumineux.</string>
     <string name="update_err_storage">Espace insuffisant.</string>
     <string name="update_err_install">Échec de l’installation : %1$s</string>
+    <string name="player_channel_list">Liste des chaînes</string>
 </resources>
