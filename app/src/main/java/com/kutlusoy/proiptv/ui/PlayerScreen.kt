@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.input.pointer.pointerInput
@@ -517,6 +518,19 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     else -> false
                 }
             }
+            .pointerInput(zapping) {
+                var sum = 0f
+                val threshold = 90.dp.toPx()
+                detectVerticalDragGestures(
+                    onDragStart = { sum = 0f },
+                    onDragEnd = {
+                        if (zapping) {
+                            if (sum < -threshold) zap(1) else if (sum > threshold) zap(-1)
+                        }
+                    },
+                    onVerticalDrag = { _, dy -> sum += dy },
+                )
+            }
             .pointerInput(active?.live) {
                 detectTapGestures(
                     onTap = { overlay = !overlay },
@@ -572,6 +586,14 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(0.7f).focusHighlight(),
                     )
                     Text("${clock(position)} / ${clock(duration)}", color = Color.White)
+                }
+            }
+        }
+        if (zapping) {
+            AnimatedVisibility(overlay, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    RoundControl(PlayerGlyph.UP, stringResource(R.string.player_channel_prev), { zap(-1); touched++ }, size = 56.dp)
+                    RoundControl(PlayerGlyph.DOWN, stringResource(R.string.player_channel_next), { zap(1); touched++ }, size = 56.dp)
                 }
             }
         }
@@ -825,13 +847,13 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
 
 private const val SKIP_MS = 10_000L
 
-private enum class PlayerGlyph { PLAY, PAUSE, STOP }
+private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN }
 
 @Composable
-private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 76.dp) {
     var focused by remember { mutableStateOf(false) }
     Box(
-        modifier.size(76.dp).onFocusChanged { focused = it.hasFocus }
+        modifier.size(size).onFocusChanged { focused = it.hasFocus }
             .background(Color(0xCC000000), CircleShape)
             .border(if (focused) 3.dp else 1.dp, if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.35f), CircleShape)
             .semantics { contentDescription = description }
@@ -847,6 +869,8 @@ private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () ->
                     drawRect(Color.White, Offset(w * 0.08f, 0f), Size(w * 0.28f, h))
                     drawRect(Color.White, Offset(w * 0.64f, 0f), Size(w * 0.28f, h))
                 }
+                PlayerGlyph.UP -> drawPath(Path().apply { moveTo(w / 2, 0f); lineTo(w, h * 0.85f); lineTo(0f, h * 0.85f); close() }, Color.White)
+                PlayerGlyph.DOWN -> drawPath(Path().apply { moveTo(0f, h * 0.15f); lineTo(w, h * 0.15f); lineTo(w / 2, h); close() }, Color.White)
                 PlayerGlyph.STOP -> drawRoundRect(Color.White, Offset(w * 0.04f, h * 0.04f), Size(w * 0.92f, h * 0.92f), androidx.compose.ui.geometry.CornerRadius(w * 0.1f))
             }
         }

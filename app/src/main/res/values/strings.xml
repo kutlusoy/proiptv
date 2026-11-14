@@ -186,4 +186,6 @@
     <string name="epg_next_12h">Next 12 hours</string>
     <string name="epg_empty">No shows found. The guide is loaded together with the account sync.</string>
     <string name="live_search_epg">Search channels and running shows</string>
+    <string name="player_channel_next">Next channel</string>
+    <string name="player_channel_prev">Previous channel</string>
 </resources>

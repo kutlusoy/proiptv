@@ -179,6 +179,8 @@ When you close the app and open it again, it continues with the same area (Live 
 
 ## Gestures in the player
 
+While watching live TV you can switch channels in the order of the list you started from: **up** and **down** on the remote control or the keyboard, the two arrow buttons at the right edge of the screen, or a swipe with the finger (swipe up for the next channel, swipe down for the previous one).
+
 Double tap on the left half of the picture jumps 10 seconds back, double tap on the right half 10 seconds forward (movies and episodes). A single tap shows or hides the controls.
 
 ## Android TV and TV boxes

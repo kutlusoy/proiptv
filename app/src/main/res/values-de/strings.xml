@@ -185,4 +185,6 @@
     <string name="epg_next_12h">Nächste 12 Stunden</string>
     <string name="epg_empty">Keine Sendungen gefunden. Das Programm wird mit dem Konto-Abgleich geladen.</string>
     <string name="live_search_epg">Sender und laufende Sendungen suchen</string>
+    <string name="player_channel_next">Nächster Sender</string>
+    <string name="player_channel_prev">Vorheriger Sender</string>
 </resources>

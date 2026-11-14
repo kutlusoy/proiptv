@@ -185,4 +185,6 @@
     <string name="epg_next_12h">Sonraki 12 saat</string>
     <string name="epg_empty">Program bulunamadı. Rehber, hesap eşitlemesiyle birlikte yüklenir.</string>
     <string name="live_search_epg">Kanalları ve yayındaki programları ara</string>
+    <string name="player_channel_next">Sonraki kanal</string>
+    <string name="player_channel_prev">Önceki kanal</string>
 </resources>

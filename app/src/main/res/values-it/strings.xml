@@ -185,4 +185,6 @@
     <string name="epg_next_12h">Prossime 12 ore</string>
     <string name="epg_empty">Nessun programma trovato. La guida viene caricata con la sincronizzazione dell’account.</string>
     <string name="live_search_epg">Cerca canali e programmi in onda</string>
+    <string name="player_channel_next">Canale successivo</string>
+    <string name="player_channel_prev">Canale precedente</string>
 </resources>
