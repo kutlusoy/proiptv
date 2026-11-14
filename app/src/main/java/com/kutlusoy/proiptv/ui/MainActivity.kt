@@ -138,7 +138,8 @@ private fun AppRoot(vm: MainViewModel) {
     val exit: () -> Unit = { (ctx as? android.app.Activity)?.finishAffinity() }
     val tv = LocalTv.current
     val content: @Composable () -> Unit = {
-        holder.SaveableStateProvider(tab.name) {
+        val topFocus = remember(tab) { androidx.compose.ui.focus.FocusRequester() }
+        CompositionLocalProvider(LocalTopFocus provides topFocus) { holder.SaveableStateProvider(tab.name) {
             when (tab) {
                 Tab.HOME -> HomeScreen(vm)
                 Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
@@ -150,7 +151,7 @@ private fun AppRoot(vm: MainViewModel) {
                 Tab.ACCOUNTS -> AccountsScreen(vm)
                 Tab.SETTINGS -> SettingsScreen(vm)
             }
-        }
+        } }
     }
 
     if (tv) {

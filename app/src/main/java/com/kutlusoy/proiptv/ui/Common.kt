@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -56,7 +57,9 @@ fun <T> DropdownField(
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
     label: String? = null,
+    top: Boolean = false,
 ) {
+    val topFocus = LocalTopFocus.current
     var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     androidx.compose.foundation.layout.Column(modifier) {
         if (label != null) {
@@ -67,7 +70,7 @@ fun <T> DropdownField(
             )
         }
         Box {
-            androidx.compose.material3.OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth().focusHighlight()) {
+            androidx.compose.material3.OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth().then(if (top && topFocus != null) Modifier.focusRequester(topFocus) else Modifier).focusHighlight()) {
                 androidx.compose.material3.Text(selected, Modifier.weight(1f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.ArrowDropDown, null)
             }
@@ -79,6 +82,9 @@ fun <T> DropdownField(
         }
     }
 }
+
+/** The first selection field of the screen. Right on the star of a list row jumps there, so one does not scroll to the top. */
+val LocalTopFocus = androidx.compose.runtime.compositionLocalOf<androidx.compose.ui.focus.FocusRequester?> { null }
 
 val LocalChromeHidden = androidx.compose.runtime.compositionLocalOf<androidx.compose.runtime.MutableState<Boolean>> {
     androidx.compose.runtime.mutableStateOf(false)

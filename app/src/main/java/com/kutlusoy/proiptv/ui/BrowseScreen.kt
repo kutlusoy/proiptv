@@ -196,6 +196,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                 else -> category!!
             }
             DropdownField(
+                top = true,
                 selected = options.firstOrNull { it.first == current }?.second ?: allLabel,
                 options = options,
                 onSelect = { v ->
@@ -324,7 +325,13 @@ fun ChannelRow(
             }
             trailing()
         }
-        IconButton(onClick = onStar, modifier = Modifier.focusHighlight()) {
+        val top = LocalTopFocus.current
+        IconButton(
+            onClick = onStar,
+            modifier = Modifier.focusHighlight().onPreviewKeyEvent { e ->
+                if (top != null && e.key == Key.DirectionRight && e.type == KeyEventType.KeyDown) { runCatching { top.requestFocus() }; true } else false
+            },
+        ) {
             Icon(Icons.Filled.Star, stringResource(if (favorite) R.string.fav_remove else R.string.fav_add), tint = if (favorite) StarOn else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f))
         }
     }
