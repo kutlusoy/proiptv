@@ -564,7 +564,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         Row(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Fade(overlay) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    RoundControl(PlayerGlyph.BACK, stringResource(R.string.action_back), onClose, diameter = 44.dp)
                     if (zapping) RoundControl(PlayerGlyph.MENU, stringResource(R.string.player_channel_list), { listOpen = true }, diameter = 44.dp)
                 }
             }
@@ -888,7 +887,7 @@ private fun Fade(visible: Boolean, modifier: Modifier = Modifier, content: @Comp
     }
 }
 
-private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN, REC, REC_STOP, STAR_ON, STAR_OFF, BACK, MENU }
+private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN, REC, REC_STOP, STAR_ON, STAR_OFF, MENU }
 
 @Composable
 private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, diameter: androidx.compose.ui.unit.Dp = 76.dp) {
@@ -927,10 +926,6 @@ private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () ->
                     }
                     if (glyph == PlayerGlyph.STAR_ON) drawPath(star, Color(0xFFFFC107))
                     else drawPath(star, Color.White, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.09f))
-                }
-                PlayerGlyph.BACK -> {
-                    val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.13f, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
-                    drawPath(Path().apply { moveTo(w, h / 2); lineTo(w * 0.05f, h / 2); moveTo(w * 0.45f, h * 0.1f); lineTo(w * 0.05f, h / 2); lineTo(w * 0.45f, h * 0.9f) }, Color.White, style = stroke)
                 }
                 PlayerGlyph.MENU -> for (k in 0..2) drawRoundRect(Color.White, Offset(0f, h * (0.08f + 0.36f * k)), Size(w, h * 0.14f), androidx.compose.ui.geometry.CornerRadius(h * 0.07f))
                 PlayerGlyph.UP -> drawPath(Path().apply { moveTo(w / 2, 0f); lineTo(w, h * 0.85f); lineTo(0f, h * 0.85f); close() }, Color.White)
