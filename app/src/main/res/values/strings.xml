@@ -175,4 +175,15 @@
     <string name="dl_err_source">source not available</string>
     <string name="dl_err_network">network error</string>
     <string name="dl_episodes">%1$d episodes, %2$d seasons</string>
+    <string name="fav_hint_touch">Hold a favorite, then drag it to a new place.</string>
+    <string name="fav_moving">Moving: up/down to move, OK to drop it here.</string>
+    <string name="fav_hint_tv">Hold OK on a favorite, then move it with up/down. Press OK again to drop it.</string>
+    <string name="fav_remove_confirm">Remove \"%1$s\" from your favorites?</string>
+    <string name="nav_epg">EPG</string>
+    <string name="epg_search">Search shows or channels</string>
+    <string name="epg_now">Now on air</string>
+    <string name="epg_next_3h">Next 3 hours</string>
+    <string name="epg_next_12h">Next 12 hours</string>
+    <string name="epg_empty">No shows found. The guide is loaded together with the account sync.</string>
+    <string name="live_search_epg">Search channels and running shows</string>
 </resources>

@@ -6,6 +6,8 @@ import com.kutlusoy.proiptv.data.DlStatus
 import com.kutlusoy.proiptv.data.Download
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -66,6 +68,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.kutlusoy.proiptv.R
+import com.kutlusoy.proiptv.parse.TitleParser
 import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.Progress
@@ -93,14 +96,16 @@ private fun Hero(image: String?, height: Dp, onBack: () -> Unit, trailing: @Comp
 @Composable
 private fun BoxScope.FavStar(vm: MainViewModel, item: Item) {
     val keys by vm.favKeys.collectAsState()
-    val lists by vm.favLists.collectAsState()
+    val allLists by vm.favLists.collectAsState()
+    val lists = allLists.filter { it.kind == item.kind }
     var dialog by remember { mutableStateOf(false) }
+    var confirmRemove by remember { mutableStateOf(false) }
     val fav = Triple(item.accountId, item.kind, item.remoteId) in keys
     IconButton(
         onClick = {
             if (lists.size <= 1) {
                 val list = lists.firstOrNull() ?: return@IconButton
-                vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, !fav) }
+                if (fav) confirmRemove = true else vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, true) }
             } else {
                 dialog = true
             }
@@ -110,6 +115,12 @@ private fun BoxScope.FavStar(vm: MainViewModel, item: Item) {
         Icon(Icons.Filled.Star, stringResource(if (fav) R.string.fav_remove else R.string.fav_add), tint = if (fav) Color(0xFFFFC107) else Color.White.copy(alpha = 0.8f))
     }
     if (dialog) ListsDialog(vm, item) { dialog = false }
+    if (confirmRemove) {
+        RemoveFavoriteDialog(item.name, onConfirm = {
+            lists.firstOrNull()?.let { list -> vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, false) } }
+            confirmRemove = false
+        }, onDismiss = { confirmRemove = false })
+    }
 }
 
 @Composable
@@ -162,6 +173,7 @@ private fun PlayButton(label: String, focus: FocusRequester? = null, onClick: ()
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit) {
     val loaded by produceState<Pair<Boolean, VodInfo?>>(false to null, item.id) {
@@ -185,18 +197,18 @@ fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Hero(info?.backdrop ?: info?.cover ?: item.logo, heroHeight(), onBack, trailing = { FavStar(vm, item) }) {
             Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(item.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Text(remember(item.name) { TitleParser.parse(item.name).title }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 MetaRow(listOf(rating(info?.rating ?: item.rating), year(info?.releaseDate), durationText(info?.durationSecs), info?.genre, if (progress?.watched == true) "\u2713 " + stringResource(R.string.detail_watched) else null))
             }
         }
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PlayButton(
                     if (saved != null) stringResource(R.string.detail_resume, formatClock(saved.positionMs)) else stringResource(R.string.detail_play),
                     focus,
                 ) { play(false) }
                 if (saved != null) {
-                    OutlinedButton(onClick = { play(true) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.detail_restart)) }
+                    OutlinedButton(onClick = { play(true) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.detail_restart), maxLines = 1) }
                 }
                 DownloadButton(dl, onStart = {
                     vm.download(listOf(Download(accountId = item.accountId, kind = Kind.MOVIE, remoteId = item.remoteId, title = item.name, logo = item.logo, ext = item.ext ?: "mp4")))
@@ -205,7 +217,7 @@ fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit) {
                 OutlinedButton(
                     onClick = { vm.run { vm.repo.setWatched(item.accountId, Kind.MOVIE, listOf(item.remoteId), !watched); refresh++ } },
                     modifier = Modifier.focusHighlight(),
-                ) { Text(stringResource(if (watched) R.string.detail_mark_unwatched else R.string.detail_mark_watched)) }
+                ) { Text(stringResource(if (watched) R.string.detail_mark_unwatched else R.string.detail_mark_watched), maxLines = 1) }
             }
             if (saved != null && saved.durationMs > 0) {
                 LinearProgressIndicator(progress = { (saved.positionMs.toFloat() / saved.durationMs).coerceIn(0f, 1f) }, Modifier.fillMaxWidth(0.5f))
@@ -258,7 +270,7 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit) {
         item {
             Hero(info?.backdrop ?: info?.cover ?: series.logo, heroHeight(), onBack, trailing = { FavStar(vm, series) }) {
                 Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(series.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Text(remember(series.name) { TitleParser.parse(series.name).title }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     MetaRow(listOf(rating(info?.rating ?: series.rating), year(info?.releaseDate), info?.genre))
                 }
             }

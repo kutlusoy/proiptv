@@ -5,6 +5,19 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
+import com.kutlusoy.proiptv.data.FavoriteRow
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
@@ -108,25 +121,29 @@ private const val ALL_KEY = "__all"
 @Composable
 fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val accounts by vm.accounts.collectAsState()
-    val favLists by vm.favLists.collectAsState()
+    val allFavLists by vm.favLists.collectAsState()
+    val favLists = allFavLists.filter { it.kind == kind }
     val favKeys by vm.favKeys.collectAsState()
     val enabled = accounts.filter { it.enabled }
-    var accountSel by rememberSaveable { mutableStateOf<Long?>(null) }
+    val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
+    var accountSel by rememberSaveable { mutableStateOf<Long?>(prefs.browseAccount(kind)) }
     val selected = accountSel?.takeIf { id -> enabled.any { it.id == id } }
     val ids = selected?.let { listOf(it) } ?: enabled.map { it.id }
     val effective = selected ?: enabled.singleOrNull()?.id
-    var category by rememberSaveable(kind, effective) { mutableStateOf<String?>(null) }
+    var category by rememberSaveable(kind, effective) { mutableStateOf<String?>(prefs.browseCategory(kind, effective)) }
     var query by rememberSaveable(kind) { mutableStateOf("") }
-    var favMode by rememberSaveable(kind) { mutableStateOf(false) }
-    var favList by rememberSaveable { mutableStateOf<Long?>(null) }
+    var favMode by rememberSaveable(kind) { mutableStateOf(prefs.browseFav(kind)) }
+    var favList by rememberSaveable { mutableStateOf<Long?>(prefs.browseFavList(kind)) }
+    LaunchedEffect(accountSel, effective, category, favMode, favList) { if (enabled.isNotEmpty()) prefs.saveBrowse(kind, accountSel, effective, category, favMode, favList) }
     var series by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
     var movie by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
     var favDialog by remember { mutableStateOf<Item?>(null) }
+    var removeFav by remember { mutableStateOf<Item?>(null) }
     val toggleFavorite: (Item) -> Unit = { item ->
         val fav = Triple(item.accountId, item.kind, item.remoteId) in favKeys
         if (favLists.size <= 1) {
             favLists.firstOrNull()?.let { list ->
-                vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, !fav) }
+                if (fav) removeFav = item else vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, true) }
             }
         } else {
             favDialog = item
@@ -165,7 +182,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             if (searching) {
                 OutlinedTextField(
                     query, { query = it }, singleLine = true, modifier = Modifier.weight(1f),
-                    placeholder = { Text(stringResource(R.string.live_search)) },
+                    placeholder = { Text(stringResource(if (kind == Kind.LIVE) R.string.live_search_epg else R.string.live_search)) },
                     trailingIcon = {
                         IconButton(onClick = { query = ""; searching = false }) { Icon(Icons.Filled.Close, stringResource(R.string.action_close)) }
                     },
@@ -249,6 +266,12 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     }
 
     favDialog?.let { item -> ListsDialog(vm, item) { favDialog = null } }
+    removeFav?.let { item ->
+        RemoveFavoriteDialog(item.name, onConfirm = {
+            favLists.firstOrNull()?.let { list -> vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, false) } }
+            removeFav = null
+        }, onDismiss = { removeFav = null })
+    }
 }
 
 @Composable
@@ -263,11 +286,21 @@ fun ChannelRow(
     onClick: () -> Unit,
     onStar: () -> Unit,
     tall: Boolean = false,
+    rowModifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    selected: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val info = remember(name) { TitleParser.parse(name) }
     Row(
-        Modifier.fillMaxWidth().focusHighlight().clickable(enabled = available, onClick = onClick).padding(horizontal = 8.dp, vertical = 6.dp),
+        rowModifier.fillMaxWidth()
+            .then(if (selected) Modifier.background(Palette.WineDeep.copy(alpha = 0.7f), RoundedCornerShape(10.dp)) else Modifier)
+            .focusHighlight()
+            .then(
+                if (onLongClick != null) Modifier.combinedClickable(enabled = available, onClick = onClick, onLongClick = onLongClick)
+                else Modifier.clickable(enabled = available, onClick = onClick),
+            )
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -367,9 +400,9 @@ private fun CategoryRow(
 
 @Composable
 private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onSelect: (Long) -> Unit, onOpen: (Item) -> Unit) {
-    val lists by vm.favLists.collectAsState()
+    val allLists by vm.favLists.collectAsState()
+    val lists = allLists.filter { it.kind == kind }
     val listId = selectedList?.takeIf { id -> lists.any { it.id == id } } ?: lists.firstOrNull()?.id
-    var sort by remember { mutableStateOf(false) }
     var newDialog by remember { mutableStateOf(false) }
     var renameDialog by remember { mutableStateOf(false) }
     val current = lists.firstOrNull { it.id == listId }
@@ -383,15 +416,11 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
                 onSelect = onSelect,
                 modifier = Modifier.weight(1f),
             )
-            if (sort) {
-                TextButton(onClick = { sort = false }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.fav_done)) }
-            }
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.focusHighlight()) { Icon(Icons.Filled.MoreVert, stringResource(R.string.action_more)) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text(stringResource(R.string.fav_new_list)) }, onClick = { menu = false; newDialog = true })
                     if (current != null) {
-                        DropdownMenuItem(text = { Text(stringResource(R.string.fav_sort)) }, onClick = { menu = false; sort = true })
                         DropdownMenuItem(text = { Text(stringResource(R.string.fav_rename)) }, onClick = { menu = false; renameDialog = true })
                         if (lists.size > 1) {
                             DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = { menu = false; vm.run { vm.repo.deleteList(current.id) } })
@@ -402,16 +431,98 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
         }
         if (current != null) {
             val rows by vm.favoriteRows(current.id, kind).collectAsState(initial = emptyList())
+            val latestRows by rememberUpdatedState(rows)
+            var picked by remember { mutableStateOf<String?>(null) }
+            var working by remember { mutableStateOf<List<FavoriteRow>?>(null) }
+            var origin by remember { mutableIntStateOf(-1) }
+            var rowHeight by remember { mutableFloatStateOf(160f) }
+            var removing by remember { mutableStateOf<FavoriteRow?>(null) }
+            fun keyOf(r: FavoriteRow) = "${r.accountId}-${r.kind}-${r.remoteId}"
+            fun pick(key: String) {
+                if (picked != null) return
+                picked = key
+                working = latestRows
+                origin = latestRows.indexOfFirst { keyOf(it) == key }
+            }
+            fun moveLocal(delta: Int) {
+                val list = working ?: return
+                val i = list.indexOfFirst { keyOf(it) == picked }
+                val j = i + delta
+                if (i < 0 || j !in list.indices) return
+                working = list.toMutableList().also { java.util.Collections.swap(it, i, j) }
+            }
+            fun drop() {
+                val list = working
+                val to = list?.indexOfFirst { keyOf(it) == picked } ?: -1
+                picked = null
+                if (list != null && to >= 0 && to != origin) {
+                    val from = origin
+                    vm.run { vm.repo.moveFavorite(current.id, kind, from, to) }
+                } else {
+                    working = null
+                }
+            }
+            LaunchedEffect(rows) { if (picked == null) working = null }
+            val shown = working ?: rows
+
             if (rows.isEmpty()) {
                 Text(stringResource(R.string.fav_empty), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
+            } else {
+                Text(
+                    stringResource(if (picked != null) R.string.fav_moving else if (LocalTv.current) R.string.fav_hint_tv else R.string.fav_hint_touch),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (picked != null) Palette.WineSoft else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            }
+            removing?.let { r ->
+                RemoveFavoriteDialog(r.name, onConfirm = {
+                    vm.run { vm.repo.setFavorite(current.id, r.accountId, r.kind, r.remoteId, r.name, false) }
+                    removing = null
+                }, onDismiss = { removing = null })
             }
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                itemsIndexed(rows, key = { _, r -> "${r.accountId}-${r.kind}-${r.remoteId}" }) { index, row ->
+                itemsIndexed(shown, key = { _, r -> keyOf(r) }) { index, row ->
+                    val key = keyOf(row)
+                    val isPicked = picked == key
+                    val focus = remember { FocusRequester() }
+                    LaunchedEffect(isPicked, shown) { if (isPicked) runCatching { focus.requestFocus() } }
+                    val pickedKeys = Modifier
+                        .focusRequester(focus)
+                        .onSizeChanged { rowHeight = it.height.toFloat() }
+                        .onPreviewKeyEvent { e ->
+                            if (picked != key || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            when (e.key) {
+                                Key.DirectionUp -> { moveLocal(-1); true }
+                                Key.DirectionDown -> { moveLocal(1); true }
+                                Key.DirectionCenter, Key.Enter, Key.Back -> { drop(); true }
+                                else -> false
+                            }
+                        }
+                        .pointerInput(key) {
+                            var sum = 0f
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { pick(key); sum = 0f },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    sum += amount.y
+                                    while (sum > rowHeight) { moveLocal(1); sum -= rowHeight }
+                                    while (sum < -rowHeight) { moveLocal(-1); sum += rowHeight }
+                                },
+                                onDragEnd = { drop() },
+                                onDragCancel = { drop() },
+                            )
+                        }
                     ChannelRow(
                         vm, row.name, row.logo, row.accountId, row.epgId, true, row.itemId != null,
                         tall = kind != Kind.LIVE,
+                        rowModifier = pickedKeys,
+                        selected = isPicked,
+                        onLongClick = { pick(key) },
                         onClick = {
-                            if (kind == Kind.LIVE) {
+                            if (picked != null) {
+                                if (isPicked) drop()
+                            } else if (kind == Kind.LIVE) {
                                 val present = rows.take(index).count { it.itemId != null }
                                 vm.player.value = PlayRequest.Zap(Source.Favs(current.id), present)
                             } else {
@@ -419,24 +530,14 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
                                 vm.run { vm.repo.db.items().get(id)?.let(onOpen) }
                             }
                         },
-                        onStar = { vm.run { vm.repo.setFavorite(current.id, row.accountId, row.kind, row.remoteId, row.name, false) } },
-                        trailing = {
-                            if (sort) {
-                                IconButton(onClick = { vm.run { vm.repo.moveFavorite(current.id, kind, index, index - 1) } }, enabled = index > 0, modifier = Modifier.focusHighlight()) {
-                                    Icon(Icons.Filled.KeyboardArrowUp, stringResource(R.string.fav_move_up))
-                                }
-                                IconButton(onClick = { vm.run { vm.repo.moveFavorite(current.id, kind, index, index + 1) } }, enabled = index < rows.lastIndex, modifier = Modifier.focusHighlight()) {
-                                    Icon(Icons.Filled.KeyboardArrowDown, stringResource(R.string.fav_move_down))
-                                }
-                            }
-                        },
+                        onStar = { if (picked == null) removing = row },
                     )
                 }
             }
         }
     }
 
-    if (newDialog) NameDialog(null, { newDialog = false }) { name -> vm.run { onSelect(vm.repo.createList(name)) }; newDialog = false }
+    if (newDialog) NameDialog(null, { newDialog = false }) { name -> vm.run { onSelect(vm.repo.createList(name, kind)) }; newDialog = false }
     if (renameDialog && current != null) NameDialog(current.name, { renameDialog = false }) { name -> vm.run { vm.repo.renameList(current.id, name) }; renameDialog = false }
 }
 
@@ -454,7 +555,8 @@ private fun NameDialog(initial: String?, onDismiss: () -> Unit, onSave: (String)
 
 @Composable
 internal fun ListsDialog(vm: MainViewModel, item: Item, onDismiss: () -> Unit) {
-    val lists by vm.favLists.collectAsState()
+    val allLists by vm.favLists.collectAsState()
+    val lists = allLists.filter { it.kind == item.kind }
     var member by remember { mutableStateOf<Set<Long>>(emptySet()) }
     LaunchedEffect(item.id) { member = vm.repo.listsOf(item.accountId, item.kind, item.remoteId).toSet() }
     AlertDialog(

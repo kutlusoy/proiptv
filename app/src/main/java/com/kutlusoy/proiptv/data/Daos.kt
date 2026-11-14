@@ -33,6 +33,12 @@ interface AccountDao {
     suspend fun delete(id: Long)
 }
 
+private const val NOW_SECS = "CAST(strftime('%s','now') AS INTEGER)"
+private const val NAME_OR_NOW_PLAYING =
+    "(name LIKE '%' || :q || '%' OR (:q <> '' AND epgId IS NOT NULL AND EXISTS (SELECT 1 FROM programs p " +
+        "WHERE p.accountId = items.accountId AND p.epgId = items.epgId AND p.start <= " + NOW_SECS + " AND p.`end` > " + NOW_SECS +
+        " AND p.title LIKE '%' || :q || '%')))"
+
 @Dao
 interface ItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -50,23 +56,29 @@ interface ItemDao {
     @Query(
         "SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
-            "AND name LIKE '%' || :q || '%' ORDER BY accountId, ord",
+            "AND " + NAME_OR_NOW_PLAYING + " ORDER BY accountId, ord",
     )
     fun paging(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?): PagingSource<Int, Item>
 
     @Query(
         "SELECT COUNT(*) FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
-            "AND name LIKE '%' || :q || '%'",
+            "AND " + NAME_OR_NOW_PLAYING,
     )
     suspend fun count(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?): Int
 
     @Query(
         "SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
-            "AND name LIKE '%' || :q || '%' ORDER BY accountId, ord LIMIT 1 OFFSET :offset",
+            "AND " + NAME_OR_NOW_PLAYING + " ORDER BY accountId, ord LIMIT 1 OFFSET :offset",
     )
     suspend fun at(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, offset: Int): Item?
+
+    @Query(
+        "SELECT COUNT(*) FROM items WHERE kind = 0 AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
+            "AND (accountId < :accountId OR (accountId = :accountId AND ord < :ord))",
+    )
+    suspend fun livePosition(ids: List<Long>, cat: String?, accountId: Long, ord: Int): Int
 
     @Query("SELECT * FROM items WHERE kind = :kind AND accountId = :accountId AND categoryRemoteId = :cat ORDER BY ord LIMIT :limit")
     suspend fun first(kind: Int, accountId: Long, cat: String, limit: Int): List<Item>
@@ -140,6 +152,16 @@ interface ProgramDao {
 
     @Query("SELECT * FROM programs WHERE accountId = :accountId AND epgId = :epgId AND `end` > :from AND start < :to ORDER BY start")
     suspend fun range(accountId: Long, epgId: String, from: Long, to: Long): List<Program>
+
+    @Query(
+        "SELECT p.title AS title, p.start AS start, p.`end` AS `end`, i.id AS itemId, i.name AS channel, i.logo AS logo, " +
+            "i.accountId AS accountId, i.ord AS ord, i.categoryRemoteId AS category FROM programs p " +
+            "JOIN items i ON i.accountId = p.accountId AND i.epgId = p.epgId AND i.kind = 0 " +
+            "WHERE i.accountId IN (:ids) AND (:cat IS NULL OR i.categoryRemoteId = :cat) AND p.`end` > :from AND p.start < :to " +
+            "AND (:q = '' OR p.title LIKE '%' || :q || '%' OR i.name LIKE '%' || :q || '%') " +
+            "ORDER BY p.start, i.accountId, i.ord LIMIT 400",
+    )
+    fun guide(ids: List<Long>, cat: String?, from: Long, to: Long, q: String): Flow<List<GuideRow>>
 }
 
 @Dao
@@ -147,8 +169,8 @@ interface FavoriteDao {
     @Query("SELECT * FROM favorite_lists ORDER BY ord, id")
     fun lists(): Flow<List<FavoriteList>>
 
-    @Query("SELECT COUNT(*) FROM favorite_lists")
-    suspend fun listCount(): Int
+    @Query("SELECT DISTINCT kind FROM favorite_lists")
+    suspend fun listKinds(): List<Int>
 
     @Insert
     suspend fun insertList(list: FavoriteList): Long

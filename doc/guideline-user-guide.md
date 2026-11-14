@@ -84,7 +84,7 @@ The refresh only downloads again when the provider's guide has changed, and an u
 ## 4. Watch
 
 - **Menu:** the icon with three lines at the top left opens the menu with Live TV, Movies, Series, Recordings, Accounts and Settings (on a TV remote: move the focus to it and press OK, or swipe from the left edge on a touch screen).
-- **Live TV:** the dropdown above the list chooses the group of the provider (`Favorites` for your own lists, `All` for everything). With more than one account a second dropdown selects the account. The magnifier icon opens the search field, the cross closes it again.
+- **Live TV:** the dropdown above the list chooses the group of the provider (`Favorites` for your own lists, `All` for everything). With more than one account a second dropdown selects the account. The magnifier icon opens the search field, the cross closes it again. In Live TV the search also finds what is running right now: type the name of a show and the channels that currently broadcast it are listed.
 - **Country and year:** many providers put a country code in front of the title (`DE | Das Erste`, `(DE-) Film`) and a year behind it (`The Matrix (1999)`). The app reads both and shows them as small badges next to the clean title. Titles without such a marker simply have no badge. The original title stays unchanged for the search.
 - **Movies and Series:** with **All** selected the page shows rows per category (like a streaming service), with a category chosen or a search entered it shows a poster grid. Press a poster to open its **info page** first.
   - **Movie info page:** big picture, title, rating, year, length, genre, story, director and cast (as far as the provider delivers them). The red button plays the movie, or resumes it where you stopped, with **From the start** next to it.
@@ -162,6 +162,14 @@ If the app is closed by the system or the stream stays down for a long time, the
 
 The app retries three times. If the channel still fails, it looks for the same channel (same guide ID or same name) in your enabled accounts, first in the same account, and switches to it with a short message "Switched to ...". This only happens while you zap in a list, not for movies, episodes or recordings.
 
+## EPG: the program guide of all channels
+
+The menu entry **EPG** lists shows of all channels of the selected group and account. Use the dropdowns on top for the group and the account, the field below for a search in show titles and channel names, and the third dropdown for the time range: **Now on air**, **Next 3 hours** or **Next 12 hours**. A tap on an entry starts the channel; up and down while playing then follows the order of the list you came from. Shows that run right now are bold and have a progress bar. The guide itself is loaded with the account sync, see section 4.
+
+## The app remembers where you were
+
+When you close the app and open it again, it continues with the same area (Live TV, Movies, ...), the same group or favorites list and the same account selection.
+
 ## Downloads for offline use
 
 1. Open a movie: the button **Download** under the title saves it on the device. For a series open the series, then use the download symbol next to an episode, or the three dots menu next to the season selector and **Download season**.
@@ -179,10 +187,14 @@ When the app runs on Android TV or a TV box it switches to the TV layout by itse
 
 ## 6. Favorites and manual order
 
+Live TV, Movies and Series each have their own favorites lists. A list that you create in Live TV does not show up in Movies or Series. Existing lists were split by area when the app was updated, so nothing is lost.
+
 1. Live TV, in the dropdown choose **Favorites**.
-2. The dropdown on top of the favorites chooses your list. The three dots menu next to it has **New list** ("Sport", "Kids"), **Sort**, **Rename** and **Delete** for the selected list.
-3. Choose **Sort** in the three dots menu: every channel gets an arrow up and an arrow down. Move a channel with them (works with touch and with the remote control), then press **Done**.
+2. The dropdown on top of the favorites chooses your list. The three dots menu next to it has **New list** ("Sport", "Kids"), **Rename** and **Delete** for the selected list.
+3. **Change the order:** touch the favorite and hold, then drag it to the new place. With the remote control hold **OK** on the favorite until the row is highlighted, move it with **up** and **down**, and press **OK** again to fix the position. This works for channels, movies and series.
 4. Channels that the provider removed stay in the list, greyed out, so your order is not lost. They return when the provider adds them again.
+
+Removing a favorite with the star asks for confirmation first.
 
 With more than one list the star opens a dialog where you tick the lists of the channel. With one list the star toggles it directly.
 

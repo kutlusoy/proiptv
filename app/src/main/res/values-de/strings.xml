@@ -174,4 +174,15 @@
     <string name="dl_err_source">Quelle nicht verfügbar</string>
     <string name="dl_err_network">Netzwerkfehler</string>
     <string name="dl_episodes">%1$d Folgen, %2$d Staffeln</string>
+    <string name="fav_hint_touch">Favorit gedrückt halten und an eine andere Stelle ziehen.</string>
+    <string name="fav_moving">Verschieben: Pfeil hoch/runter bewegt, OK legt ihn hier ab.</string>
+    <string name="fav_hint_tv">OK auf einem Favoriten lange drücken, dann mit hoch/runter verschieben. Nochmal OK legt ihn ab.</string>
+    <string name="fav_remove_confirm">„%1$s“ aus den Favoriten entfernen?</string>
+    <string name="nav_epg">EPG</string>
+    <string name="epg_search">Sendung oder Sender suchen</string>
+    <string name="epg_now">Läuft jetzt</string>
+    <string name="epg_next_3h">Nächste 3 Stunden</string>
+    <string name="epg_next_12h">Nächste 12 Stunden</string>
+    <string name="epg_empty">Keine Sendungen gefunden. Das Programm wird mit dem Konto-Abgleich geladen.</string>
+    <string name="live_search_epg">Sender und laufende Sendungen suchen</string>
 </resources>

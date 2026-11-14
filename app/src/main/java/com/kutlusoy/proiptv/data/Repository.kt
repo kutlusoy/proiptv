@@ -200,12 +200,14 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         return db.programs().range(accountId, epgId.lowercase(), now - daysBack * 86400L, now + daysAhead * 86400L)
     }
 
-    suspend fun ensureDefaultList(name: String): Long {
-        if (db.favorites().listCount() == 0) return db.favorites().insertList(FavoriteList(name = name))
-        return -1
+    suspend fun ensureDefaultLists(name: String) {
+        val have = db.favorites().listKinds().toSet()
+        for (kind in listOf(Kind.LIVE, Kind.MOVIE, Kind.SERIES)) {
+            if (kind !in have) db.favorites().insertList(FavoriteList(name = name, kind = kind))
+        }
     }
 
-    suspend fun createList(name: String): Long = db.favorites().insertList(FavoriteList(name = name.trim()))
+    suspend fun createList(name: String, kind: Int = Kind.LIVE): Long = db.favorites().insertList(FavoriteList(name = name.trim(), kind = kind))
 
     suspend fun renameList(id: Long, name: String) = db.favorites().renameList(id, name.trim())
 

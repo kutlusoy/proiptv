@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Account::class, Category::class, Item::class, Program::class, FavoriteList::class, Favorite::class, Progress::class, Recording::class, Download::class],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -50,6 +50,27 @@ abstract class AppDatabase : RoomDatabase() {
                         update.bindLong(2, info.year.toLong())
                         update.bindLong(3, cur.getLong(0))
                         update.executeUpdateDelete()
+                    }
+                }
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE favorite_lists ADD COLUMN kind INTEGER NOT NULL DEFAULT 0")
+                val lists = ArrayList<Triple<Long, String, Int>>()
+                db.query("SELECT id, name, ord FROM favorite_lists").use { c ->
+                    while (c.moveToNext()) lists += Triple(c.getLong(0), c.getString(1), c.getInt(2))
+                }
+                for ((id, name, ord) in lists) {
+                    for (kind in intArrayOf(1, 2)) {
+                        val count = db.query("SELECT COUNT(*) FROM favorites WHERE listId = $id AND kind = $kind").use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
+                        if (count == 0) continue
+                        val insert = db.compileStatement("INSERT INTO favorite_lists (name, ord, kind) VALUES (?, ?, $kind)")
+                        insert.bindString(1, name)
+                        insert.bindLong(2, ord.toLong())
+                        val newId = insert.executeInsert()
+                        db.execSQL("UPDATE favorites SET listId = $newId WHERE listId = $id AND kind = $kind")
                     }
                 }
             }
@@ -105,6 +126,6 @@ abstract class AppDatabase : RoomDatabase() {
         )
 
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
     }
 }

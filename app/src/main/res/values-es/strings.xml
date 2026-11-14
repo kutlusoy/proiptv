@@ -174,4 +174,15 @@
     <string name="dl_err_source">fuente no disponible</string>
     <string name="dl_err_network">error de red</string>
     <string name="dl_episodes">%1$d episodios, %2$d temporadas</string>
+    <string name="fav_hint_touch">Mantén pulsado un favorito y arrástralo a otro lugar.</string>
+    <string name="fav_moving">Moviendo: arriba/abajo para mover, OK para soltarlo aquí.</string>
+    <string name="fav_hint_tv">Mantén OK sobre un favorito y muévelo con arriba/abajo. Pulsa OK de nuevo para soltarlo.</string>
+    <string name="fav_remove_confirm">¿Quitar «%1$s» de favoritos?</string>
+    <string name="nav_epg">EPG</string>
+    <string name="epg_search">Buscar programa o canal</string>
+    <string name="epg_now">En emisión ahora</string>
+    <string name="epg_next_3h">Próximas 3 horas</string>
+    <string name="epg_next_12h">Próximas 12 horas</string>
+    <string name="epg_empty">No se encontraron programas. La guía se carga con la sincronización de la cuenta.</string>
+    <string name="live_search_epg">Buscar canales y programas en emisión</string>
 </resources>

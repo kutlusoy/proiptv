@@ -70,6 +70,7 @@ private enum class Tab(val label: Int, val icon: ImageVector) {
     SERIES(R.string.nav_series, Icons.AutoMirrored.Filled.List),
     RECORDINGS(R.string.nav_recordings, Icons.Filled.DateRange),
     DOWNLOADS(R.string.nav_downloads, DownloadIcon),
+    EPG(R.string.nav_epg, GuideIcon),
     ACCOUNTS(R.string.nav_accounts, Icons.Filled.Person),
     SETTINGS(R.string.nav_settings, Icons.Filled.Settings),
 }
@@ -102,7 +103,9 @@ class MainActivity : AppCompatActivity() {
 @Composable
 private fun AppRoot(vm: MainViewModel) {
     val request by vm.player.collectAsState()
-    var tab by rememberSaveable { mutableStateOf(Tab.LIVE) }
+    val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
+    var tab by rememberSaveable { mutableStateOf(Tab.values().firstOrNull { it.name == prefs.lastTab } ?: Tab.LIVE) }
+    LaunchedEffect(tab) { prefs.lastTab = tab.name }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
@@ -124,6 +127,7 @@ private fun AppRoot(vm: MainViewModel) {
                 Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
                 Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
                 Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)
+                Tab.EPG -> EpgScreen(vm)
                 Tab.RECORDINGS -> RecordingsScreen(vm)
                 Tab.DOWNLOADS -> DownloadsScreen(vm)
                 Tab.ACCOUNTS -> AccountsScreen(vm)

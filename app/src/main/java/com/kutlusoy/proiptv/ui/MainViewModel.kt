@@ -74,7 +74,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val recordings = db.recordings().all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
-        viewModelScope.launch { repo.ensureDefaultList(app.getString(R.string.fav_title)) }
+        viewModelScope.launch { repo.ensureDefaultLists(app.getString(R.string.fav_title)) }
     }
 
     fun run(block: suspend () -> Unit) {
@@ -82,6 +82,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun categories(accountId: Long, kind: Int) = db.items().categories(accountId, kind)
+
+    fun guide(ids: List<Long>, category: String?, from: Long, to: Long, query: String) = db.programs().guide(ids, category, from, to, query)
 
     fun counts(accountId: Long) = combine(
         db.items().countFlow(accountId, Kind.LIVE),

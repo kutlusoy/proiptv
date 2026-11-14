@@ -107,6 +107,7 @@ import androidx.media3.ui.PlayerView
 import com.kutlusoy.proiptv.ProIptvApp
 import com.kutlusoy.proiptv.R
 import com.kutlusoy.proiptv.data.Item
+import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.PlayTarget
 import com.kutlusoy.proiptv.data.Program
 import com.kutlusoy.proiptv.engine.BudgetExceeded
@@ -202,6 +203,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var flashBack by remember { mutableStateOf(false) }
     var flashTick by remember { mutableIntStateOf(0) }
     var moreDialog by remember { mutableStateOf(false) }
+    var removeFavDialog by remember { mutableStateOf(false) }
     var touched by remember { mutableIntStateOf(0) }
     var digits by remember { mutableStateOf("") }
     var resize by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
@@ -228,13 +230,14 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val tried = remember { mutableSetOf<Long>() }
     val activeRecs by app.recordings.active.collectAsState()
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    val favLists by vm.favLists.collectAsState()
+    val allFavLists by vm.favLists.collectAsState()
+    val favLists = allFavLists.filter { it.kind == (item?.kind ?: Kind.LIVE) }
     val favKeys by vm.favKeys.collectAsState()
     val root = remember { FocusRequester() }
     val first = remember { FocusRequester() }
     val active = catchup ?: target
     val zapping = request is PlayRequest.Zap && catchup == null
-    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog
+    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog
     val activeNow by rememberUpdatedState(active)
     val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
     val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
@@ -606,7 +609,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                             onClick = {
                                 if (favLists.size <= 1) {
                                     val list = favLists.firstOrNull() ?: return@OutlinedButton
-                                    vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, !fav) }
+                                    if (fav) removeFavDialog = true else vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, true) }
                                 } else {
                                     listsDialog = true
                                 }
@@ -684,6 +687,14 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
     if (listsDialog) item?.let { ListsDialog(vm, it) { listsDialog = false } }
+    if (removeFavDialog) {
+        item?.let { i ->
+            RemoveFavoriteDialog(i.name, onConfirm = {
+                favLists.firstOrNull()?.let { list -> vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, false) } }
+                removeFavDialog = false
+            }, onDismiss = { removeFavDialog = false })
+        } ?: run { removeFavDialog = false }
+    }
     if (recordDialog) {
         RecordDialog(nowNext.first?.end?.times(1000), onDismiss = { recordDialog = false }) { stopAt ->
             recordDialog = false

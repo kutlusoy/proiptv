@@ -92,3 +92,32 @@ val DownloadIcon: androidx.compose.ui.graphics.vector.ImageVector by lazy {
         )
         .build()
 }
+
+@Composable
+fun RemoveFavoriteDialog(name: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        text = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.fav_remove_confirm, name.ifBlank { "?" })) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onConfirm, modifier = Modifier.focusHighlight()) {
+                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.fav_remove))
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss, modifier = Modifier.focusHighlight()) {
+                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.action_cancel))
+            }
+        },
+    )
+}
+
+val GuideIcon: androidx.compose.ui.graphics.vector.ImageVector by lazy {
+    androidx.compose.ui.graphics.vector.ImageVector.Builder("guide", 24.dp, 24.dp, 24f, 24f)
+        .addPath(
+            androidx.compose.ui.graphics.vector.PathParser().parsePathString(
+                "M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zm0-10H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1z",
+            ).toNodes(),
+            fill = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        )
+        .build()
+}

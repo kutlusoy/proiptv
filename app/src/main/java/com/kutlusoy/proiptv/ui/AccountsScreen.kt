@@ -78,7 +78,7 @@ fun AccountsScreen(vm: MainViewModel) {
             item { Text(stringResource(R.string.accounts_empty), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)) }
         }
         items(accounts, key = { it.id }) { account ->
-            val open = expandedId == account.id || accounts.size == 1
+            val open = expandedId == account.id
             AccountCard(account, sync[account.id], vm, expanded = open, onToggle = { expandedId = if (expandedId == account.id) null else account.id }, onEdit = { editing = account }, onDelete = { deleting = account })
         }
     }

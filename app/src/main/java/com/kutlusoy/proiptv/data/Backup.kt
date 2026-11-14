@@ -187,11 +187,14 @@ class BackupManager(
         }
         var favorites = 0
         val lists = db.favorites().lists().first()
+        val byArea = lists.toMutableList()
         for (l in data.lists) {
-            val listId = lists.firstOrNull { it.name == l.name }?.id ?: repo.createList(l.name)
-            val known = db.favorites().entries(listId).map { Triple(it.accountId, it.kind, it.remoteId) }.toSet()
             for (e in l.entries) {
                 val accountId = ids[e.account] ?: continue
+                val area = if (e.kind in 0..2) e.kind else Kind.LIVE
+                val listId = byArea.firstOrNull { it.name == l.name && it.kind == area }?.id
+                    ?: repo.createList(l.name, area).also { id -> byArea += FavoriteList(id = id, name = l.name, kind = area) }
+                val known = db.favorites().entries(listId).map { Triple(it.accountId, it.kind, it.remoteId) }.toSet()
                 if (Triple(accountId, e.kind, e.remoteId) in known) continue
                 repo.setFavorite(listId, accountId, e.kind, e.remoteId, e.name, true)
                 favorites++
