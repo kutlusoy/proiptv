@@ -592,8 +592,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         if (zapping) {
             AnimatedVisibility(overlay, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    RoundControl(PlayerGlyph.UP, stringResource(R.string.player_channel_prev), { zap(-1); touched++ }, size = 56.dp)
-                    RoundControl(PlayerGlyph.DOWN, stringResource(R.string.player_channel_next), { zap(1); touched++ }, size = 56.dp)
+                    RoundControl(PlayerGlyph.UP, stringResource(R.string.player_channel_prev), { zap(-1); touched++ }, diameter = 56.dp)
+                    RoundControl(PlayerGlyph.DOWN, stringResource(R.string.player_channel_next), { zap(1); touched++ }, diameter = 56.dp)
                 }
             }
         }
@@ -850,10 +850,10 @@ private const val SKIP_MS = 10_000L
 private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN }
 
 @Composable
-private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 76.dp) {
+private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, diameter: androidx.compose.ui.unit.Dp = 76.dp) {
     var focused by remember { mutableStateOf(false) }
     Box(
-        modifier.size(size).onFocusChanged { focused = it.hasFocus }
+        modifier.size(diameter).onFocusChanged { focused = it.hasFocus }
             .background(Color(0xCC000000), CircleShape)
             .border(if (focused) 3.dp else 1.dp, if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.35f), CircleShape)
             .semantics { contentDescription = description }
