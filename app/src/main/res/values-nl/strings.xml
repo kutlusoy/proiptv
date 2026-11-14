@@ -7,4 +7,9 @@
     <string name="home_continue">Verder kijken</string>
     <string name="home_search">Zoek zenders, films en series</string>
     <string name="home_no_results">Niets gevonden</string>
+    <string name="dl_pause">Pauzeren</string>
+    <string name="dl_resume">Hervatten</string>
+    <string name="dl_stop">Stoppen en verwijderen</string>
+    <string name="dl_paused">Gepauzeerd</string>
+    <string name="dl_open_folder">Map openen</string>
 </resources>

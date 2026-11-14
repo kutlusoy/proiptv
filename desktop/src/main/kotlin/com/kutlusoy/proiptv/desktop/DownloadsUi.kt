@@ -13,6 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
@@ -46,6 +49,31 @@ fun DownloadsScreen(state: AppState) {
     state.downloads.version
     val all = state.downloads.all()
     var deleting by remember { mutableStateOf<DownloadDto?>(null) }
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(DownloadManager.mediaDir("Downloads").absolutePath, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f))
+            androidx.compose.material3.OutlinedButton(onClick = {
+                val dir = DownloadManager.mediaDir("Downloads").also { it.mkdirs() }
+                runCatching { java.awt.Desktop.getDesktop().open(dir) }
+            }) {
+                Icon(Icons.Filled.FolderOpen, null)
+                Text(t("dl_open_folder"), Modifier.padding(start = 6.dp))
+            }
+        }
+        DownloadList(state, all) { deleting = it }
+    }
+    deleting?.let { d ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            text = { Text(t("dl_delete_confirm")) },
+            confirmButton = { TextButton(onClick = { state.downloadManager.delete(d.id); deleting = null }) { Text(t("action_delete")) } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(t("action_cancel")) } },
+        )
+    }
+}
+
+@Composable
+private fun DownloadList(state: AppState, all: List<DownloadDto>, onAsk: (DownloadDto) -> Unit) {
     if (all.isEmpty()) {
         Text(t("dl_empty"), Modifier.padding(16.dp), color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.75f))
         return
@@ -55,22 +83,14 @@ fun DownloadsScreen(state: AppState) {
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (movies.isNotEmpty()) {
             item { Text(t("nav_movies"), Modifier.padding(8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-            items(movies, key = { it.id }) { DownloadRow(state, it, it.title) { deleting = it } }
+            items(movies, key = { it.id }) { DownloadRow(state, it, it.title) { onAsk(it) } }
         }
         episodes.forEach { (series, list) ->
             item { Text(series, Modifier.padding(8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
             items(list.sortedWith(compareBy({ it.season }, { it.episode })), key = { it.id }) {
-                DownloadRow(state, it, "S${it.season} E${it.episode}") { deleting = it }
+                DownloadRow(state, it, "S${it.season} E${it.episode}") { onAsk(it) }
             }
         }
-    }
-    deleting?.let { d ->
-        AlertDialog(
-            onDismissRequest = { deleting = null },
-            text = { Text(t("dl_delete_confirm")) },
-            confirmButton = { TextButton(onClick = { state.downloadManager.delete(d.id); deleting = null }) { Text(t("action_delete")) } },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text(t("action_cancel")) } },
-        )
     }
 }
 
@@ -92,13 +112,19 @@ private fun DownloadRow(state: AppState, d: DownloadDto, label: String, onDelete
                     else -> d.error.orEmpty()
                 }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 else -> {
-                    Text(t(if (d.status == DlStatus.RUNNING) "dl_running" else "dl_queued") + if (d.total > 0) " · ${sizeText(d.bytes)} / ${sizeText(d.total)}" else "", style = MaterialTheme.typography.bodySmall)
-                    if (d.status == DlStatus.RUNNING && d.total > 0) LinearProgressIndicator(progress = { (d.bytes.toFloat() / d.total).coerceIn(0f, 1f) }, Modifier.fillMaxWidth())
+                    Text(t(when (d.status) { DlStatus.RUNNING -> "dl_running"; DlStatus.PAUSED -> "dl_paused"; else -> "dl_queued" }) + if (d.total > 0) " · ${sizeText(d.bytes)} / ${sizeText(d.total)}" else "", style = MaterialTheme.typography.bodySmall)
+                    if ((d.status == DlStatus.RUNNING || d.status == DlStatus.PAUSED) && d.total > 0) LinearProgressIndicator(progress = { (d.bytes.toFloat() / d.total).coerceIn(0f, 1f) }, Modifier.fillMaxWidth())
                 }
             }
         }
         if (done) Icon(Icons.Filled.PlayArrow, null)
         if (d.status == DlStatus.FAILED) IconButton(onClick = { state.downloadManager.retry(d.id) }) { Icon(Icons.Filled.Refresh, t("dl_retry")) }
-        IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, t("action_delete")) }
+        if (d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED) IconButton(onClick = { state.downloadManager.pause(d.id) }) { Icon(Icons.Filled.Pause, t("dl_pause")) }
+        if (d.status == DlStatus.PAUSED) IconButton(onClick = { state.downloadManager.resumePaused(d.id) }) { Icon(Icons.Filled.PlayArrow, t("dl_resume")) }
+        if (d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED || d.status == DlStatus.PAUSED) {
+            IconButton(onClick = { state.downloadManager.delete(d.id) }) { Icon(Icons.Filled.Stop, t("dl_stop")) }
+        } else {
+            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, t("action_delete")) }
+        }
     }
 }

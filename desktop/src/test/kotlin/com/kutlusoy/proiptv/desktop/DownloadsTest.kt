@@ -80,6 +80,40 @@ class DownloadsTest {
     }
 
     @Test
+    fun aPausedDownloadKeepsWhatWasLoadedAndContinuesAfterResume() {
+        val server = MockWebServer()
+        val payload = ByteArray(400_000) { (it % 251).toByte() }
+        server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                val range = request.getHeader("Range")
+                val from = range?.removePrefix("bytes=")?.removeSuffix("-")?.toInt() ?: 0
+                val r = MockResponse().setBody(Buffer().write(payload, from, payload.size - from)).throttleBody(40_000, 100, java.util.concurrent.TimeUnit.MILLISECONDS)
+                return if (range != null) r.setResponseCode(206) else r
+            }
+        }
+        server.start()
+        val store = DownloadStore(tempDir())
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        try {
+            val manager = DownloadManager(store, scope, OkHttpClient(), tempDir()) { server.url("/f").toString() to null }
+            manager.enqueue(listOf(movie()))
+            waitFor { (store.get(1)?.bytes ?: 0) > 0 }
+            manager.pause(1)
+            waitFor { store.get(1)?.status == DlStatus.PAUSED }
+            Thread.sleep(500)
+            assertEquals(DlStatus.PAUSED, store.get(1)?.status)
+            val partial = manager.fileOf(store.get(1)!!).length()
+            assertTrue("partial $partial", partial in 1 until payload.size.toLong())
+            manager.resumePaused(1)
+            waitFor(20_000) { store.get(1)?.status == DlStatus.DONE }
+            assertTrue(payload.contentEquals(manager.fileOf(store.get(1)!!).readBytes()))
+        } finally {
+            scope.cancel()
+            server.shutdown()
+        }
+    }
+
+    @Test
     fun aMissingSourceFailsTheDownloadWithoutCrashing() {
         val store = DownloadStore(tempDir())
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

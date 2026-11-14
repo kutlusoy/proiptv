@@ -7,4 +7,9 @@
     <string name="home_continue">متابعة المشاهدة</string>
     <string name="home_search">ابحث عن القنوات والأفلام والمسلسلات</string>
     <string name="home_no_results">لا توجد نتائج</string>
+    <string name="dl_pause">إيقاف مؤقت</string>
+    <string name="dl_resume">استئناف</string>
+    <string name="dl_stop">إيقاف وإزالة</string>
+    <string name="dl_paused">متوقف مؤقتاً</string>
+    <string name="dl_open_folder">فتح المجلد</string>
 </resources>

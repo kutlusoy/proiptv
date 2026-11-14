@@ -7,4 +7,9 @@
     <string name="home_continue">Kontynuuj oglądanie</string>
     <string name="home_search">Szukaj kanałów, filmów i seriali</string>
     <string name="home_no_results">Nic nie znaleziono</string>
+    <string name="dl_pause">Pauza</string>
+    <string name="dl_resume">Wznów</string>
+    <string name="dl_stop">Zatrzymaj i usuń</string>
+    <string name="dl_paused">Wstrzymano</string>
+    <string name="dl_open_folder">Otwórz folder</string>
 </resources>

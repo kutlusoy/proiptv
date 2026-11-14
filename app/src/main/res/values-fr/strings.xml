@@ -229,4 +229,9 @@
     <string name="remote_failed">La page de configuration n’a pas pu démarrer.</string>
     <string name="remote_added">Compte ajouté : %1$s</string>
     <string name="exit_confirm">Quitter ProIPTV ?</string>
+    <string name="dl_pause">Pause</string>
+    <string name="dl_resume">Reprendre</string>
+    <string name="dl_stop">Arrêter et supprimer</string>
+    <string name="dl_paused">En pause</string>
+    <string name="dl_open_folder">Ouvrir le dossier</string>
 </resources>
