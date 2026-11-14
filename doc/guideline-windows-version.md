@@ -158,3 +158,18 @@ Open:
 
 1. Does SignPath Foundation accept the project (one maintainer, application after the first unsigned release)?
 2. Should Linux and macOS be built from the same desktop target after Windows?
+
+## 10. macOS and Linux
+
+The Windows app is Compose for Desktop on the JVM, so the same module can run on macOS and Linux. What is missing is not the app but the platform parts:
+
+| Part | Linux | macOS |
+|---|---|---|
+| App code (accounts, lists, sync, screens, update logic) | runs as is | runs as is |
+| Video | libVLC with the X11 window handle works with the current code (`set_xwindow`). Wayland needs the XWayland path or an own render path. The `libvlc` package of the distribution or a bundled copy | libVLC needs the native view handle of a window (`set_nsobject`). A Swing canvas does not give it easily, so the video would be rendered into a Compose surface through libVLC video callbacks. More work and slower |
+| Password storage | replace Windows DPAPI by the secret service (libsecret through JNA) | replace by the Keychain through JNA |
+| Installer | `.deb` and AppImage with `jpackage`, built on `ubuntu-latest` | `.dmg` with `jpackage`, built on `macos-latest` |
+| Signature | none needed for `.deb` and AppImage | **Apple Developer account (99 USD a year)** for signing and notarization, otherwise Gatekeeper blocks the app (workaround: right click, Open) |
+| Update | the same download and checksum logic, then package manager or AppImage replacement | the same, then replace the app in `/Applications` |
+
+Order: Linux first (small steps: file naming, secret service, `.deb` and AppImage jobs, libVLC from the system), then macOS when a Mac is available for tests, because the video path and the notarization cannot be checked on a build server alone. Until then macOS and Linux are not supported, even though `./gradlew :desktop:run` may already start on them for development.
