@@ -10,6 +10,7 @@ What the app can do on Windows today:
 - live channels, movies and series with groups, search, favorites (one list per area), country and year badges
 - series with seasons and episodes
 - playback with libVLC (LGPL, bundled as separate, unmodified DLLs): stop, pause, seek, volume, full screen (F or double click), channel up/down while watching live, keyboard shortcuts (space, arrows, Esc, F, M)
+- a resizable window (starts at 1280 x 800, smallest size 900 x 600) with a wide layout: menu column on the left, content on the right; the group box, search field and dialogs follow the width
 - 11 languages, taken from the same `strings.xml` files as the Android app
 - update check by hand and once a day in the background (one notice per day at most), downloads the newest setup, checks the SHA-256 against `SHA256SUMS.txt` and starts the installer silently, which closes the app, installs and starts the new version. Test builds follow the newest test release, normal builds the newest release.
 

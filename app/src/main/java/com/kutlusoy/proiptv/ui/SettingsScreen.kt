@@ -2,6 +2,7 @@ package com.kutlusoy.proiptv.ui
 
 import android.text.format.Formatter
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -129,6 +130,18 @@ fun SettingsScreen(vm: MainViewModel) {
                 Text("ProIPTV " + stringResource(R.string.main_version, BuildConfig.VERSION_NAME))
                 Hint(stringResource(R.string.settings_license))
                 Hint("github.com/kutlusoy/proiptv")
+                Text("Ali Kutlusoy")
+                Text(
+                    "kutlusoy.dev@gmail.com", color = Palette.WineSoft,
+                    modifier = Modifier.focusHighlight().clickable {
+                        runCatching {
+                            ctx.startActivity(
+                                android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:kutlusoy.dev@gmail.com"))
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    },
+                )
             }
 
             UpdateGroup(vm)

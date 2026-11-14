@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -93,7 +93,7 @@ private fun AccountDialog(state: AppState, existing: AccountDto?, onClose: () ->
         onDismissRequest = onClose,
         title = { Text(t(if (existing == null) "accounts_add" else "account_edit_title")) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.width(460.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.widthIn(max = 460.dp).fillMaxWidth()) {
                 DropdownField(if (type == "xtream") "Xtream Codes" else t("account_type_m3u"), listOf("xtream" to "Xtream Codes", "m3u" to t("account_type_m3u")), { type = it })
                 OutlinedTextField(name, { name = it }, label = { Text(t("account_name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(url, { url = it }, label = { Text(t(if (type == "xtream") "account_server" else "account_playlist_url")) }, singleLine = true, modifier = Modifier.fillMaxWidth())

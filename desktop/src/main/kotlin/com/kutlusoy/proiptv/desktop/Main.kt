@@ -74,6 +74,7 @@ fun main() = application {
             }
         },
     ) {
+        window.minimumSize = java.awt.Dimension(900, 600)
         ProIptvTheme {
             Surface(Modifier.fillMaxSize()) {
                 App(state, updater, update)
