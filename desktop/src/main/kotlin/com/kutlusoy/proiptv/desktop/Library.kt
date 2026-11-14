@@ -21,6 +21,7 @@ object Kind {
     const val LIVE = 0
     const val MOVIE = 1
     const val SERIES = 2
+    const val EPISODE = 3
 }
 
 data class Entry(
@@ -40,7 +41,19 @@ data class Entry(
 
 data class Category(val accountId: String, val id: String, val name: String)
 
-data class Playable(val title: String, val url: String, val userAgent: String?, val live: Boolean)
+/** What the player gets. account, kind and remoteId say where to keep the progress (empty for live TV and local files). */
+data class Playable(
+    val title: String,
+    val url: String,
+    val userAgent: String?,
+    val live: Boolean,
+    val account: String = "",
+    val kind: Int = -1,
+    val remoteId: String = "",
+    val accountNumber: Long = 0,
+    val channelId: String = "",
+    val maxConnections: Int? = null,
+)
 
 data class AccountStatus(val info: XtreamInfo?, val channels: Int, val movies: Int, val series: Int, val loadedAt: Long)
 
@@ -131,14 +144,14 @@ class Library(private val store: Store) {
 
     fun playable(e: Entry): Playable? {
         val a = store.config.accounts.firstOrNull { it.id == e.accountId } ?: return null
-        if (e.url != null) return Playable(e.name, e.url, a.userAgent, e.kind == Kind.LIVE)
+        if (e.url != null) return Playable(e.name, e.url, a.userAgent, e.kind == Kind.LIVE, a.id, e.kind, e.remoteId)
         val pass = Secrets.unprotect(a.password)
         val url = when (e.kind) {
             Kind.LIVE -> StreamUrls.live(a.url, a.username, pass, e.remoteId, "ts")
             Kind.MOVIE -> StreamUrls.movie(a.url, a.username, pass, e.remoteId, e.ext.ifBlank { "mp4" })
             else -> return null
         }
-        return Playable(e.name, url, a.userAgent, e.kind == Kind.LIVE)
+        return Playable(e.name, url, a.userAgent, e.kind == Kind.LIVE, a.id, e.kind, e.remoteId)
     }
 
     suspend fun episodes(e: Entry): List<XtreamEpisode> = withContext(Dispatchers.IO) {
@@ -149,7 +162,7 @@ class Library(private val store: Store) {
     fun episodePlayable(series: Entry, ep: XtreamEpisode): Playable? {
         val a = store.config.accounts.firstOrNull { it.id == series.accountId } ?: return null
         val url = StreamUrls.episode(a.url, a.username, Secrets.unprotect(a.password), ep.id, ep.ext)
-        return Playable("${series.name} S${ep.season}E${ep.number}", url, a.userAgent, false)
+        return Playable("${series.name} S${ep.season}E${ep.number}", url, a.userAgent, false, a.id, Kind.EPISODE, ep.id)
     }
 
     /** Checks the login of an account before it is saved. */

@@ -23,7 +23,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
@@ -51,7 +55,7 @@ import androidx.compose.ui.unit.dp
 import com.kutlusoy.proiptv.net.XtreamEpisode
 import com.kutlusoy.proiptv.parse.TitleParser
 
-private const val FAV_KEY = "__fav"
+private const val FAV_PREFIX = "fav:"
 private const val ALL_KEY = "__all"
 
 @Composable
@@ -76,9 +80,9 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val shown = remember(all, category, q, state.favorites, state.guide, state.tick / 60) {
         all.asSequence()
             .filter { e ->
-                when (category) {
-                    ALL_KEY -> true
-                    FAV_KEY -> state.isFavorite(e)
+                when {
+                    category == ALL_KEY -> true
+                    category.startsWith(FAV_PREFIX) -> state.inList(e, category.removePrefix(FAV_PREFIX))
                     else -> e.categoryId == category.substringAfter('|') && e.accountId == category.substringBefore('|')
                 }
             }
@@ -87,12 +91,27 @@ fun BrowseScreen(state: AppState, kind: Int) {
                     (kind == Kind.LIVE && state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true)
             }
             .toList()
+            .let { list ->
+                // a favorites list keeps the order that was set by hand
+                if (category.startsWith(FAV_PREFIX)) {
+                    val order = state.favoriteOrder(category.removePrefix(FAV_PREFIX))
+                    list.sortedBy { order[it.key] ?: Int.MAX_VALUE }
+                } else {
+                    list
+                }
+            }
     }
+    val lists = state.listsOf(kind)
+    // the chosen favorites list may have been deleted
+    if (category.startsWith(FAV_PREFIX) && lists.none { it.id == category.removePrefix(FAV_PREFIX) }) category = ALL_KEY
+    val inFavorites = category.startsWith(FAV_PREFIX)
+    val currentList = lists.firstOrNull { it.id == category.removePrefix(FAV_PREFIX) }
+    var listDialog by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(Modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             val options = buildList<Pair<String, String>> {
-                add(FAV_KEY to t("fav_title"))
+                lists.forEach { add("$FAV_PREFIX${it.id}" to if (lists.size == 1) t("fav_title") else "\u2605 ${it.name}") }
                 add(ALL_KEY to t("live_all"))
                 categories.forEach { add("${it.accountId}|${it.id}" to it.name.ifBlank { t("live_other") }) }
             }
@@ -104,6 +123,20 @@ fun BrowseScreen(state: AppState, kind: Int) {
             )
             IconButton(onClick = { state.reload() }, enabled = !state.loading && !state.guideLoading) { Icon(Icons.Filled.Refresh, t("settings_refresh")) }
         }
+        if (inFavorites && currentList != null) {
+            var menu by remember { mutableStateOf(false) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 6.dp)) {
+                Text(t("fav_hint_touch").substringBefore('.') + ".", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.55f), modifier = Modifier.weight(1f))
+                Box {
+                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, t("action_more")) }
+                    androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(t("fav_new_list")) }, onClick = { menu = false; listDialog = "new" })
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(t("fav_rename")) }, onClick = { menu = false; listDialog = "rename" })
+                        if (lists.size > 1) androidx.compose.material3.DropdownMenuItem(text = { Text(t("action_delete")) }, onClick = { menu = false; state.deleteList(currentList.id) })
+                    }
+                }
+            }
+        }
         data.errors.forEach { (id, message) ->
             val name = state.accounts.firstOrNull { it.id == id }?.name ?: id
             Text("$name: $message", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -111,10 +144,16 @@ fun BrowseScreen(state: AppState, kind: Int) {
         if (state.loading) Text(t("series_loading"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.padding(8.dp))
         else if (shown.isEmpty()) Text(t("live_no_results"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(8.dp))
 
-        if (kind == Kind.LIVE) {
+        if (kind == Kind.LIVE || inFavorites) {
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 itemsIndexed(shown, key = { _, e -> e.key }) { index, e ->
-                    ChannelRow(state, e) { state.player = PlayRequest.Live(shown, index) }
+                    ChannelRow(
+                        state, e,
+                        onMove = if (inFavorites && q.isEmpty()) { delta -> state.moveFavorite(currentList!!.id, e, delta) } else null,
+                    ) {
+                        if (kind == Kind.LIVE) state.player = PlayRequest.Live(shown, index)
+                        else if (kind == Kind.SERIES) state.series = e else state.movie = e
+                    }
                 }
             }
         } else {
@@ -125,10 +164,25 @@ fun BrowseScreen(state: AppState, kind: Int) {
             }
         }
     }
+    listDialog?.let { mode ->
+        var name by remember(mode) { mutableStateOf(if (mode == "rename") currentList?.name.orEmpty() else "") }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { listDialog = null },
+            title = { Text(t("fav_list_name")) },
+            text = { OutlinedTextField(name, { name = it }, singleLine = true) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(enabled = name.isNotBlank(), onClick = {
+                    if (mode == "rename") currentList?.let { state.renameList(it.id, name) } else category = FAV_PREFIX + state.createList(kind, name)
+                    listDialog = null
+                }) { Text(t("action_save")) }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { listDialog = null }) { Text(t("action_cancel")) } },
+        )
+    }
 }
 
 @Composable
-private fun ChannelRow(state: AppState, e: Entry, onClick: () -> Unit) {
+private fun ChannelRow(state: AppState, e: Entry, onMove: ((Int) -> Unit)? = null, onClick: () -> Unit) {
     val info = remember(e.name) { TitleParser.parse(e.name) }
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 6.dp),
@@ -148,6 +202,10 @@ private fun ChannelRow(state: AppState, e: Entry, onClick: () -> Unit) {
             }
         }
         if (info.year > 0) Badge(info.year.toString())
+        if (onMove != null) {
+            IconButton(onClick = { onMove(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("fav_move_up")) }
+            IconButton(onClick = { onMove(1) }) { Icon(Icons.Filled.KeyboardArrowDown, t("fav_move_down")) }
+        }
         IconButton(onClick = { state.toggleFavorite(e) }) {
             Icon(if (state.isFavorite(e)) Icons.Filled.Star else Icons.Filled.StarBorder, null, tint = if (state.isFavorite(e)) Color(0xFFFFC107) else Color.White.copy(alpha = 0.4f))
         }
@@ -191,16 +249,32 @@ private fun DetailHeader(state: AppState, e: Entry, onBack: () -> Unit) {
 
 @Composable
 private fun MovieDetail(state: AppState, e: Entry) {
+    val saved = state.progress.let { it.version; it.get(e.accountId, Kind.MOVIE, e.remoteId) }
+    val resume = saved?.takeIf { it.positionMs > 5_000 }
+    fun play(startMs: Long) {
+        state.library.playable(e)?.let { state.player = PlayRequest.Single(it, startMs) }
+    }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         DetailHeader(state, e) { state.movie = null }
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             Logo(e.logo, Modifier.width(220.dp).aspectRatio(0.68f), ContentScale.Crop)
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { state.library.playable(e)?.let { state.player = PlayRequest.Single(it) } }) {
-                    Icon(Icons.Filled.PlayArrow, null)
-                    Text(t("detail_play"), Modifier.padding(start = 6.dp))
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { play(resume?.positionMs ?: 0) }) {
+                        Icon(Icons.Filled.PlayArrow, null)
+                        Text(if (resume != null) t("detail_resume", clock(resume.positionMs)) else t("detail_play"), Modifier.padding(start = 6.dp))
+                    }
+                    if (resume != null) androidx.compose.material3.OutlinedButton(onClick = { play(0) }) { Text(t("detail_restart")) }
+                    val watched = saved?.watched == true
+                    androidx.compose.material3.OutlinedButton(onClick = { state.progress.setWatched(e.accountId, Kind.MOVIE, listOf(e.remoteId), !watched) }) {
+                        Text(t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"))
+                    }
                 }
-                e.rating?.let { Text("★ $it") }
+                if (saved?.watched == true) Text("\u2713 " + t("detail_watched"), color = Palette.WineSoft)
+                if (resume != null && resume.durationMs > 0) {
+                    androidx.compose.material3.LinearProgressIndicator(progress = { (resume.positionMs.toFloat() / resume.durationMs).coerceIn(0f, 1f) }, Modifier.width(260.dp))
+                }
+                e.rating?.let { Text("\u2605 $it") }
             }
         }
     }
@@ -213,22 +287,66 @@ private fun SeriesDetail(state: AppState, e: Entry) {
     val list = episodes.orEmpty()
     val seasons = list.map { it.season }.distinct()
     val active = if (season in seasons) season else seasons.firstOrNull() ?: 1
+    val version = state.progress.version
+    fun progressOf(id: String) = state.progress.get(e.accountId, Kind.EPISODE, id)
+    val next = remember(list, version) { SeriesProgress.next(list, ::progressOf) }
+    fun play(ep: XtreamEpisode, startMs: Long = 0) {
+        state.library.episodePlayable(e, ep)?.let { state.player = PlayRequest.Single(it, startMs) }
+    }
+    var menu by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         DetailHeader(state, e) { state.series = null }
         if (episodes == null) Text(t("series_loading"))
+        next?.let { n ->
+            val ep = n.episode
+            val resume = progressOf(ep.id)?.positionMs?.takeIf { it > 5_000 } ?: 0
+            Button(onClick = { play(ep, resume) }) {
+                Icon(Icons.Filled.PlayArrow, null)
+                Text(t(if (n.continuing) "detail_continue_episode" else "detail_play_episode", ep.season, ep.number), Modifier.padding(start = 6.dp))
+            }
+        }
         if (seasons.isNotEmpty()) {
-            DropdownField(t("series_season", active), seasons.map { it to t("series_season", it) }, { season = it }, Modifier.width(240.dp))
+            val seasonEpisodes = list.filter { it.season == active }
+            val allWatched = seasonEpisodes.isNotEmpty() && seasonEpisodes.all { progressOf(it.id)?.watched == true }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                DropdownField(t("series_season", active), seasons.map { it to t("series_season", it) }, { season = it }, Modifier.width(240.dp))
+                Box {
+                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, t("action_more")) }
+                    androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(t(if (allWatched) "detail_season_unwatched" else "detail_season_watched")) },
+                            onClick = { menu = false; state.progress.setWatched(e.accountId, Kind.EPISODE, seasonEpisodes.map { it.id }, !allWatched) },
+                        )
+                    }
+                }
+            }
         }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             itemsIndexed(list.filter { it.season == active }, key = { _, ep -> ep.id }) { _, ep ->
+                val p = progressOf(ep.id)
+                val watched = p?.watched == true
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { state.library.episodePlayable(e, ep)?.let { state.player = PlayRequest.Single(it) } }.padding(8.dp),
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { play(ep, p?.positionMs?.takeIf { it > 5_000 } ?: 0) }.padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Logo(ep.image ?: e.logo, Modifier.size(width = 140.dp, height = 80.dp), ContentScale.Crop)
+                    Box {
+                        Logo(ep.image ?: e.logo, Modifier.size(width = 140.dp, height = 80.dp), ContentScale.Crop)
+                        if (p != null && p.positionMs > 0 && p.durationMs > 0) {
+                            androidx.compose.material3.LinearProgressIndicator(
+                                progress = { (p.positionMs.toFloat() / p.durationMs).coerceIn(0f, 1f) },
+                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                            )
+                        }
+                    }
                     Column(Modifier.weight(1f)) {
                         Text("${ep.number}. ${ep.title}", fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         ep.plot?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.75f)) }
+                    }
+                    IconButton(onClick = { state.progress.setWatched(e.accountId, Kind.EPISODE, listOf(ep.id), !watched) }) {
+                        Icon(
+                            Icons.Filled.CheckCircle, t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"),
+                            tint = if (watched) Palette.WineSoft else Color.White.copy(alpha = 0.3f),
+                        )
                     }
                     Icon(Icons.Filled.PlayArrow, null)
                 }

@@ -38,6 +38,13 @@ interface LibVlc : Library {
     fun libvlc_media_player_get_length(player: Pointer): Long
     fun libvlc_audio_set_volume(player: Pointer, volume: Int): Int
     fun libvlc_audio_set_mute(player: Pointer, mute: Int)
+    fun libvlc_audio_get_track_description(player: Pointer): Pointer?
+    fun libvlc_audio_get_track(player: Pointer): Int
+    fun libvlc_audio_set_track(player: Pointer, id: Int): Int
+    fun libvlc_video_get_spu_description(player: Pointer): Pointer?
+    fun libvlc_video_get_spu(player: Pointer): Int
+    fun libvlc_video_set_spu(player: Pointer, id: Int): Int
+    fun libvlc_track_description_list_release(list: Pointer)
 }
 
 /** One decoded picture, BGRA, 4 bytes per pixel. */
@@ -141,13 +148,14 @@ class VlcEngine {
         return candidates.firstOrNull { File(it, "libvlc.dll").exists() || File(it, "libvlc.so").exists() }
     }
 
-    fun play(item: Playable, volume: Int) {
+    fun play(item: Playable, volume: Int, startMs: Long = 0) {
         val l = lib ?: return
         val i = instance ?: return
         val p = player ?: return
         frame.set(null)
         val media = l.libvlc_media_new_location(i, item.url) ?: run { error = l.libvlc_errmsg(); return }
         item.userAgent?.takeIf { it.isNotBlank() }?.let { l.libvlc_media_add_option(media, ":http-user-agent=$it") }
+        if (startMs > 0) l.libvlc_media_add_option(media, ":start-time=${startMs / 1000.0}")
         l.libvlc_media_player_set_media(p, media)
         l.libvlc_media_release(media)
         l.libvlc_audio_set_volume(p, volume)
@@ -163,6 +171,38 @@ class VlcEngine {
     fun seek(ms: Long) { val l = lib ?: return; player?.let { l.libvlc_media_player_set_time(it, ms.coerceAtLeast(0)) } }
     fun setVolume(percent: Int) { val l = lib ?: return; player?.let { l.libvlc_audio_set_volume(it, percent.coerceIn(0, 200)) } }
     fun setMute(mute: Boolean) { val l = lib ?: return; player?.let { l.libvlc_audio_set_mute(it, if (mute) 1 else 0) } }
+
+    /** An audio or subtitle track: its id for libVLC and its name. */
+    class Track(val id: Int, val name: String)
+
+    class Tracks(val audio: List<Track>, val audioSelected: Int, val subtitles: List<Track>, val subtitleSelected: Int)
+
+    private fun readTracks(first: Pointer?): List<Track> {
+        val list = ArrayList<Track>()
+        var node = first
+        val size = Native.POINTER_SIZE
+        while (node != null && list.size < 200) {
+            list += Track(node.getInt(0), node.getPointer(size.toLong())?.getString(0) ?: "")
+            node = node.getPointer(2L * size)
+        }
+        return list
+    }
+
+    fun tracks(): Tracks? {
+        val l = lib ?: return null
+        val p = player ?: return null
+        val audio = l.libvlc_audio_get_track_description(p)
+        val subs = l.libvlc_video_get_spu_description(p)
+        return try {
+            Tracks(readTracks(audio), l.libvlc_audio_get_track(p), readTracks(subs), l.libvlc_video_get_spu(p))
+        } finally {
+            audio?.let { l.libvlc_track_description_list_release(it) }
+            subs?.let { l.libvlc_track_description_list_release(it) }
+        }
+    }
+
+    fun selectAudio(id: Int) { val l = lib ?: return; player?.let { l.libvlc_audio_set_track(it, id) } }
+    fun selectSubtitle(id: Int) { val l = lib ?: return; player?.let { l.libvlc_video_set_spu(it, id) } }
 
     fun release() {
         val l = lib ?: return
