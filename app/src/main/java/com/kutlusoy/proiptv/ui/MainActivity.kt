@@ -156,9 +156,12 @@ private fun AppRoot(vm: MainViewModel) {
 
     if (tv) {
         CompositionLocalProvider(LocalChromeHidden provides chromeHidden) {
+            // without a Scaffold the default content colour is black: texts and icons (row titles, the search symbol) would not be seen
+            CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
             Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 if (!chromeHidden.value) TvRail(tab, exit, railFocus, { railFocus = false }) { tab = it }
                 Box(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 36.dp, vertical = 24.dp)) { content() }
+            }
             }
         }
         return
