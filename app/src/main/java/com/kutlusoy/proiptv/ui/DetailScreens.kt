@@ -95,12 +95,13 @@ private fun BoxScope.FavStar(vm: MainViewModel, item: Item) {
     val keys by vm.favKeys.collectAsState()
     val lists by vm.favLists.collectAsState()
     var dialog by remember { mutableStateOf(false) }
+    var confirmRemove by remember { mutableStateOf(false) }
     val fav = Triple(item.accountId, item.kind, item.remoteId) in keys
     IconButton(
         onClick = {
             if (lists.size <= 1) {
                 val list = lists.firstOrNull() ?: return@IconButton
-                vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, !fav) }
+                if (fav) confirmRemove = true else vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, true) }
             } else {
                 dialog = true
             }
@@ -110,6 +111,12 @@ private fun BoxScope.FavStar(vm: MainViewModel, item: Item) {
         Icon(Icons.Filled.Star, stringResource(if (fav) R.string.fav_remove else R.string.fav_add), tint = if (fav) Color(0xFFFFC107) else Color.White.copy(alpha = 0.8f))
     }
     if (dialog) ListsDialog(vm, item) { dialog = false }
+    if (confirmRemove) {
+        RemoveFavoriteDialog(item.name, onConfirm = {
+            lists.firstOrNull()?.let { list -> vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, false) } }
+            confirmRemove = false
+        }, onDismiss = { confirmRemove = false })
+    }
 }
 
 @Composable

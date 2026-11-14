@@ -177,4 +177,5 @@
     <string name="fav_hint_touch">Bir favoriye basılı tutun, sonra yeni yerine sürükleyin.</string>
     <string name="fav_moving">Taşınıyor: yukarı/aşağı hareket ettirir, Tamam burada bırakır.</string>
     <string name="fav_hint_tv">Bir favoride Tamam tuşuna uzun basın, sonra yukarı/aşağı ile taşıyın. Bırakmak için tekrar Tamam.</string>
+    <string name="fav_remove_confirm">“%1$s” favorilerden kaldırılsın mı?</string>
 </resources>

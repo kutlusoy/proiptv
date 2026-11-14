@@ -177,4 +177,5 @@
     <string name="fav_hint_touch">Tieni premuto un preferito e trascinalo in un altro punto.</string>
     <string name="fav_moving">Spostamento: su/giù per spostare, OK per rilasciarlo qui.</string>
     <string name="fav_hint_tv">Premi a lungo OK su un preferito, poi spostalo con su/giù. Premi di nuovo OK per rilasciarlo.</string>
+    <string name="fav_remove_confirm">Rimuovere “%1$s” dai preferiti?</string>
 </resources>

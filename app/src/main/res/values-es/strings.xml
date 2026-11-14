@@ -177,4 +177,5 @@
     <string name="fav_hint_touch">Mantén pulsado un favorito y arrástralo a otro lugar.</string>
     <string name="fav_moving">Moviendo: arriba/abajo para mover, OK para soltarlo aquí.</string>
     <string name="fav_hint_tv">Mantén OK sobre un favorito y muévelo con arriba/abajo. Pulsa OK de nuevo para soltarlo.</string>
+    <string name="fav_remove_confirm">¿Quitar «%1$s» de favoritos?</string>
 </resources>

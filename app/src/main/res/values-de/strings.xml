@@ -177,4 +177,5 @@
     <string name="fav_hint_touch">Favorit gedrückt halten und an eine andere Stelle ziehen.</string>
     <string name="fav_moving">Verschieben: Pfeil hoch/runter bewegt, OK legt ihn hier ab.</string>
     <string name="fav_hint_tv">OK auf einem Favoriten lange drücken, dann mit hoch/runter verschieben. Nochmal OK legt ihn ab.</string>
+    <string name="fav_remove_confirm">„%1$s“ aus den Favoriten entfernen?</string>
 </resources>

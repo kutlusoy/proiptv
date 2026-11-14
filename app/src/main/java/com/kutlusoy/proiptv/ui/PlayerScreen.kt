@@ -202,6 +202,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var flashBack by remember { mutableStateOf(false) }
     var flashTick by remember { mutableIntStateOf(0) }
     var moreDialog by remember { mutableStateOf(false) }
+    var removeFavDialog by remember { mutableStateOf(false) }
     var touched by remember { mutableIntStateOf(0) }
     var digits by remember { mutableStateOf("") }
     var resize by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
@@ -234,7 +235,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val first = remember { FocusRequester() }
     val active = catchup ?: target
     val zapping = request is PlayRequest.Zap && catchup == null
-    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog
+    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog
     val activeNow by rememberUpdatedState(active)
     val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
     val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
@@ -606,7 +607,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                             onClick = {
                                 if (favLists.size <= 1) {
                                     val list = favLists.firstOrNull() ?: return@OutlinedButton
-                                    vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, !fav) }
+                                    if (fav) removeFavDialog = true else vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, true) }
                                 } else {
                                     listsDialog = true
                                 }
@@ -684,6 +685,14 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
     if (listsDialog) item?.let { ListsDialog(vm, it) { listsDialog = false } }
+    if (removeFavDialog) {
+        item?.let { i ->
+            RemoveFavoriteDialog(i.name, onConfirm = {
+                favLists.firstOrNull()?.let { list -> vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, false) } }
+                removeFavDialog = false
+            }, onDismiss = { removeFavDialog = false })
+        } ?: run { removeFavDialog = false }
+    }
     if (recordDialog) {
         RecordDialog(nowNext.first?.end?.times(1000), onDismiss = { recordDialog = false }) { stopAt ->
             recordDialog = false

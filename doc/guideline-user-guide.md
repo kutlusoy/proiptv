@@ -188,6 +188,8 @@ When the app runs on Android TV or a TV box it switches to the TV layout by itse
 3. **Change the order:** touch the favorite and hold, then drag it to the new place. With the remote control hold **OK** on the favorite until the row is highlighted, move it with **up** and **down**, and press **OK** again to fix the position. This works for channels, movies and series.
 4. Channels that the provider removed stay in the list, greyed out, so your order is not lost. They return when the provider adds them again.
 
+Removing a favorite with the star asks for confirmation first.
+
 With more than one list the star opens a dialog where you tick the lists of the channel. With one list the star toggles it directly.
 
 Zapping with up and down while playing follows the order of the list you started from.

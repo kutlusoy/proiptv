@@ -137,11 +137,12 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     var series by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
     var movie by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
     var favDialog by remember { mutableStateOf<Item?>(null) }
+    var removeFav by remember { mutableStateOf<Item?>(null) }
     val toggleFavorite: (Item) -> Unit = { item ->
         val fav = Triple(item.accountId, item.kind, item.remoteId) in favKeys
         if (favLists.size <= 1) {
             favLists.firstOrNull()?.let { list ->
-                vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, !fav) }
+                if (fav) removeFav = item else vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, true) }
             }
         } else {
             favDialog = item
@@ -264,6 +265,12 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     }
 
     favDialog?.let { item -> ListsDialog(vm, item) { favDialog = null } }
+    removeFav?.let { item ->
+        RemoveFavoriteDialog(item.name, onConfirm = {
+            favLists.firstOrNull()?.let { list -> vm.run { vm.repo.setFavorite(list.id, item.accountId, item.kind, item.remoteId, item.name, false) } }
+            removeFav = null
+        }, onDismiss = { removeFav = null })
+    }
 }
 
 @Composable
@@ -427,6 +434,7 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
             var working by remember { mutableStateOf<List<FavoriteRow>?>(null) }
             var origin by remember { mutableIntStateOf(-1) }
             var rowHeight by remember { mutableFloatStateOf(160f) }
+            var removing by remember { mutableStateOf<FavoriteRow?>(null) }
             fun keyOf(r: FavoriteRow) = "${r.accountId}-${r.kind}-${r.remoteId}"
             fun pick(key: String) {
                 if (picked != null) return
@@ -464,6 +472,12 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
                     color = if (picked != null) Palette.WineSoft else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
                     modifier = Modifier.padding(vertical = 4.dp),
                 )
+            }
+            removing?.let { r ->
+                RemoveFavoriteDialog(r.name, onConfirm = {
+                    vm.run { vm.repo.setFavorite(current.id, r.accountId, r.kind, r.remoteId, r.name, false) }
+                    removing = null
+                }, onDismiss = { removing = null })
             }
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 itemsIndexed(shown, key = { _, r -> keyOf(r) }) { index, row ->
@@ -514,7 +528,7 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
                                 vm.run { vm.repo.db.items().get(id)?.let(onOpen) }
                             }
                         },
-                        onStar = { if (picked == null) vm.run { vm.repo.setFavorite(current.id, row.accountId, row.kind, row.remoteId, row.name, false) } },
+                        onStar = { if (picked == null) removing = row },
                     )
                 }
             }

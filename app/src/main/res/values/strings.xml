@@ -178,4 +178,5 @@
     <string name="fav_hint_touch">Hold a favorite, then drag it to a new place.</string>
     <string name="fav_moving">Moving: up/down to move, OK to drop it here.</string>
     <string name="fav_hint_tv">Hold OK on a favorite, then move it with up/down. Press OK again to drop it.</string>
+    <string name="fav_remove_confirm">Remove \"%1$s\" from your favorites?</string>
 </resources>

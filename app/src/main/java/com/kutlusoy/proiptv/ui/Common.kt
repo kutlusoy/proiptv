@@ -92,3 +92,21 @@ val DownloadIcon: androidx.compose.ui.graphics.vector.ImageVector by lazy {
         )
         .build()
 }
+
+@Composable
+fun RemoveFavoriteDialog(name: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        text = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.fav_remove_confirm, name.ifBlank { "?" })) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onConfirm, modifier = Modifier.focusHighlight()) {
+                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.fav_remove))
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss, modifier = Modifier.focusHighlight()) {
+                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.action_cancel))
+            }
+        },
+    )
+}
