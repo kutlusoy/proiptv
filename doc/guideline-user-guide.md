@@ -257,3 +257,14 @@ Tab **Settings**. The settings are grouped in sections with dropdown menus (lang
 | Recording does not start | Free storage under 200 MB, or all provider connections are in use (the message names them). |
 | Very large lists load slowly | The first load of a big account takes a minute or more on weak devices. It runs in the background, the app stays usable. |
 | Text in another language than expected | Settings, Language. |
+
+
+## Movie information from TMDB (optional)
+
+M3U lists carry only a title, a picture and a group. Xtream providers often have a plot, cast and more. For titles without them the app can ask themoviedb.org:
+
+1. Create a free account at themoviedb.org and request an API key (Settings, API).
+2. Enter the key in the settings of the app (Android, Android TV and Windows) under **Movie information (TMDB)**.
+3. Open a movie or a series. Plot, cast, director, genre, running time, rating, trailer and a backdrop picture appear.
+
+Only the cleaned title and the year of the title that you open are sent to TMDB, together with your key, nothing else. Without a key nothing is sent and the details show what the provider delivers. The answer is kept until the app is closed, so opening a title again does not ask again.

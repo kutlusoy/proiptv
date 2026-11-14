@@ -4,6 +4,9 @@ import com.kutlusoy.proiptv.net.Http
 import com.kutlusoy.proiptv.net.StreamUrls
 import com.kutlusoy.proiptv.net.XtreamApi
 import com.kutlusoy.proiptv.net.SeriesDetail
+import com.kutlusoy.proiptv.net.SeriesInfo
+import com.kutlusoy.proiptv.net.Tmdb
+import com.kutlusoy.proiptv.parse.TitleParser
 import com.kutlusoy.proiptv.net.VodInfo
 import com.kutlusoy.proiptv.net.XtreamEpisode
 import com.kutlusoy.proiptv.net.XtreamInfo
@@ -164,11 +167,36 @@ class Library(private val store: Store) {
         api(a).seriesDetail(e.remoteId)
     }
 
-    /** Plot, cast, director and more of a movie, as far as the provider gives them (Xtream only). */
+    private fun tmdb(): Tmdb? {
+        val key = Secrets.unprotect(store.config.tmdbKey).trim()
+        return if (key.isEmpty()) null else Tmdb(Http.client, key, Strings.language)
+    }
+
+    /** Plot, cast, director and more of a movie: from the provider (Xtream), the rest from TMDB when the user has entered a key. */
     suspend fun vodInfo(e: Entry): VodInfo? = withContext(Dispatchers.IO) {
-        val a = store.config.accounts.firstOrNull { it.id == e.accountId } ?: return@withContext null
-        if (a.type != "xtream") return@withContext null
-        runCatching { api(a).vodInfo(e.remoteId) }.getOrNull()
+        val a = store.config.accounts.firstOrNull { it.id == e.accountId }
+        val base = if (a != null && a.type == "xtream") runCatching { api(a).vodInfo(e.remoteId) }.getOrNull() else null
+        if (base?.plot != null) return@withContext base
+        val t = tmdb() ?: return@withContext base
+        val parsed = TitleParser.parse(e.name)
+        val found = Tmdb.cachedMovie(t, parsed.title, parsed.year) ?: return@withContext base
+        if (base == null) found else base.copy(
+            plot = base.plot ?: found.plot, cast = base.cast ?: found.cast, director = base.director ?: found.director, genre = base.genre ?: found.genre,
+            releaseDate = base.releaseDate ?: found.releaseDate, durationSecs = base.durationSecs ?: found.durationSecs, rating = base.rating ?: found.rating,
+            cover = base.cover ?: found.cover, backdrop = base.backdrop ?: found.backdrop, trailer = base.trailer ?: found.trailer,
+        )
+    }
+
+    suspend fun seriesInfo(e: Entry, base: SeriesInfo?): SeriesInfo? = withContext(Dispatchers.IO) {
+        if (base?.plot != null) return@withContext base
+        val t = tmdb() ?: return@withContext base
+        val parsed = TitleParser.parse(e.name)
+        val found = Tmdb.cachedSeries(t, parsed.title, parsed.year) ?: return@withContext base
+        if (base == null) found else base.copy(
+            plot = base.plot ?: found.plot, cast = base.cast ?: found.cast, director = base.director ?: found.director, genre = base.genre ?: found.genre,
+            releaseDate = base.releaseDate ?: found.releaseDate, rating = base.rating ?: found.rating, cover = base.cover ?: found.cover,
+            backdrop = base.backdrop ?: found.backdrop, trailer = base.trailer ?: found.trailer,
+        )
     }
 
     fun episodePlayable(series: Entry, ep: XtreamEpisode): Playable? {

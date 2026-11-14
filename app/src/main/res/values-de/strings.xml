@@ -240,4 +240,7 @@
     <string name="detail_related_series">Ähnliche Serien</string>
     <string name="detail_genre">Genre</string>
     <string name="detail_runtime">Dauer</string>
+    <string name="settings_tmdb">Filminformationen (TMDB)</string>
+    <string name="settings_tmdb_hint">Optional. Mit deinem eigenen kostenlosen API-Schlüssel von themoviedb.org lädt die App Handlung, Besetzung und Trailer für Titel ohne Informationen (zum Beispiel aus M3U-Listen). Gesendet werden nur der Titel und das Jahr des geöffneten Titels.</string>
+    <string name="settings_tmdb_key">API-Schlüssel</string>
 </resources>

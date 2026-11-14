@@ -240,4 +240,7 @@
     <string name="detail_related_series">Séries similaires</string>
     <string name="detail_genre">Genre</string>
     <string name="detail_runtime">Durée</string>
+    <string name="settings_tmdb">Informations sur les films (TMDB)</string>
+    <string name="settings_tmdb_hint">Facultatif. Avec votre propre clé API gratuite de themoviedb.org, l\'app charge résumé, distribution et bande-annonce pour les titres sans informations (par exemple des listes M3U). Seuls le titre et l\'année sont envoyés.</string>
+    <string name="settings_tmdb_key">Clé API</string>
 </resources>

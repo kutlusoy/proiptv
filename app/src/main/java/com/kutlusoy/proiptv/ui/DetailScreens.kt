@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
+import com.kutlusoy.proiptv.net.SeriesInfo
 import com.kutlusoy.proiptv.net.trailerUrl
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -153,8 +154,8 @@ private fun MetaRow(parts: List<String?>) {
 private fun Fact(label: Int, value: String?) {
     if (value.isNullOrBlank()) return
     Row(Modifier.padding(top = 4.dp)) {
-        Text(stringResource(label) + ": ", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f), style = MaterialTheme.typography.bodyMedium)
-        Text(value, style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(label) + ": ", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium)
+        Text(value, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -178,7 +179,7 @@ private fun PlayButton(label: String, focus: FocusRequester? = null, onClick: ()
 @Composable
 fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit, onOpen: (Item) -> Unit = {}) {
     val loaded by produceState<Pair<Boolean, VodInfo?>>(false to null, item.id) {
-        value = true to runCatching { vm.repo.vodInfo(item) }.getOrNull()
+        value = true to vm.movieInfo(item)
     }
     val info = loaded.second
     var refresh by remember { mutableIntStateOf(0) }
@@ -226,7 +227,7 @@ fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit, onOpen: (Item
                 LinearProgressIndicator(progress = { (saved.positionMs.toFloat() / saved.durationMs).coerceIn(0f, 1f) }, Modifier.fillMaxWidth(0.5f))
             }
             val plot = info?.plot ?: item.plot
-            if (plot != null) Text(plot, style = MaterialTheme.typography.bodyLarge)
+            if (plot != null) Text(plot, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyLarge)
             Column {
                 Fact(R.string.detail_director, info?.director)
                 Fact(R.string.detail_cast, info?.cast)
@@ -287,7 +288,8 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit, onOp
     var season by rememberSaveable { mutableIntStateOf(-1) }
     val seasons = episodes.map { it.season }.distinct()
     val active = if (season in seasons) season else seasons.firstOrNull() ?: 1
-    val info = detail?.info
+    val extra by produceState<SeriesInfo?>(null, detail) { if (detail != null) value = vm.seriesInfo(series, detail?.info) }
+    val info = extra ?: detail?.info
     val next = SeriesProgress.next(episodes, progress)
     val focus = remember { FocusRequester() }
     LaunchedEffect(next?.episode?.id) { if (next != null) runCatching { focus.requestFocus() } }
@@ -323,7 +325,7 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit, onOp
                 RatingStars(info?.rating ?: series.rating)
                 TrailerButton(info?.trailer)
                 val plot = info?.plot ?: series.plot
-                if (plot != null) Text(plot, style = MaterialTheme.typography.bodyLarge)
+                if (plot != null) Text(plot, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyLarge)
                 Column {
                     Fact(R.string.detail_cast, info?.cast)
                     Fact(R.string.detail_director, info?.director)

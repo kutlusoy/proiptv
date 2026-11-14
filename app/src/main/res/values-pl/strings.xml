@@ -18,4 +18,7 @@
     <string name="detail_related_series">Podobne seriale</string>
     <string name="detail_genre">Gatunek</string>
     <string name="detail_runtime">Czas trwania</string>
+    <string name="settings_tmdb">Informacje o filmach (TMDB)</string>
+    <string name="settings_tmdb_hint">Opcjonalnie. Z własnym darmowym kluczem API z themoviedb.org aplikacja pobiera opis, obsadę i zwiastun dla tytułów bez informacji (np. z list M3U). Wysyłany jest tylko tytuł i rok.</string>
+    <string name="settings_tmdb_key">Klucz API</string>
 </resources>

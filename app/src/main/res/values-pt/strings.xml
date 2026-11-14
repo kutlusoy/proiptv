@@ -18,4 +18,7 @@
     <string name="detail_related_series">Séries relacionadas</string>
     <string name="detail_genre">Género</string>
     <string name="detail_runtime">Duração</string>
+    <string name="settings_tmdb">Informações de filmes (TMDB)</string>
+    <string name="settings_tmdb_hint">Opcional. Com a sua própria chave API gratuita do themoviedb.org a app carrega sinopse, elenco e trailer de títulos sem informações (por exemplo de listas M3U). Só são enviados o título e o ano.</string>
+    <string name="settings_tmdb_key">Chave API</string>
 </resources>

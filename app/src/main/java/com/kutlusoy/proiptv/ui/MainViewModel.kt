@@ -64,6 +64,37 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun download(list: List<Download>) = downloadManager.enqueue(list)
 
+    private fun tmdb(): com.kutlusoy.proiptv.net.Tmdb? {
+        val key = prefs.tmdbKey
+        return if (key.isEmpty()) null else com.kutlusoy.proiptv.net.Tmdb(com.kutlusoy.proiptv.net.Http.client, key, java.util.Locale.getDefault().toLanguageTag())
+    }
+
+    /** The information of the provider; what is missing (or all of it, for M3U) comes from TMDB when the user has entered a key. */
+    suspend fun movieInfo(item: Item): com.kutlusoy.proiptv.net.VodInfo? = withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val base = runCatching { repo.vodInfo(item) }.getOrNull()
+        if (base?.plot != null) return@withContext base
+        val t = tmdb() ?: return@withContext base
+        val parsed = com.kutlusoy.proiptv.parse.TitleParser.parse(item.name)
+        val found = com.kutlusoy.proiptv.net.Tmdb.cachedMovie(t, parsed.title, parsed.year) ?: return@withContext base
+        if (base == null) found else base.copy(
+            plot = base.plot ?: found.plot, cast = base.cast ?: found.cast, director = base.director ?: found.director, genre = base.genre ?: found.genre,
+            releaseDate = base.releaseDate ?: found.releaseDate, durationSecs = base.durationSecs ?: found.durationSecs, rating = base.rating ?: found.rating,
+            cover = base.cover ?: found.cover, backdrop = base.backdrop ?: found.backdrop, trailer = base.trailer ?: found.trailer,
+        )
+    }
+
+    suspend fun seriesInfo(series: Item, base: com.kutlusoy.proiptv.net.SeriesInfo?): com.kutlusoy.proiptv.net.SeriesInfo? = withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (base?.plot != null) return@withContext base
+        val t = tmdb() ?: return@withContext base
+        val parsed = com.kutlusoy.proiptv.parse.TitleParser.parse(series.name)
+        val found = com.kutlusoy.proiptv.net.Tmdb.cachedSeries(t, parsed.title, parsed.year) ?: return@withContext base
+        if (base == null) found else base.copy(
+            plot = base.plot ?: found.plot, cast = base.cast ?: found.cast, director = base.director ?: found.director, genre = base.genre ?: found.genre,
+            releaseDate = base.releaseDate ?: found.releaseDate, rating = base.rating ?: found.rating, cover = base.cover ?: found.cover,
+            backdrop = base.backdrop ?: found.backdrop, trailer = base.trailer ?: found.trailer,
+        )
+    }
+
     fun retryDownload(id: Long) = downloadManager.retry(id)
 
     fun pauseDownload(id: Long) = downloadManager.pause(id)

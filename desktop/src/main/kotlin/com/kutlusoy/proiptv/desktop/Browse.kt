@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kutlusoy.proiptv.net.XtreamEpisode
 import com.kutlusoy.proiptv.net.SeriesDetail
+import com.kutlusoy.proiptv.net.SeriesInfo
 import com.kutlusoy.proiptv.net.VodInfo
 import com.kutlusoy.proiptv.net.trailerUrl
 import com.kutlusoy.proiptv.parse.TitleParser
@@ -353,6 +354,7 @@ private fun RelatedRow(state: AppState, e: Entry, titleKey: String) {
 private fun SeriesDetail(state: AppState, e: Entry) {
     val detail by produceState<SeriesDetail?>(null, e.key) { value = runCatching { state.library.seriesDetail(e) }.getOrDefault(SeriesDetail(null, emptyList())) }
     val episodes = detail?.episodes
+    val seriesFacts by produceState<SeriesInfo?>(null, detail) { if (detail != null) value = state.library.seriesInfo(e, detail?.info) }
     var season by remember(e.key) { mutableStateOf(-1) }
     val list = episodes.orEmpty()
     val seasons = list.map { it.season }.distinct()
@@ -397,7 +399,7 @@ private fun SeriesDetail(state: AppState, e: Entry) {
             }
         }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            detail?.info?.let { i ->
+            (seriesFacts ?: detail?.info)?.let { i ->
                 item { Facts(i.rating ?: e.rating, i.plot, i.director, i.cast, i.releaseDate, i.genre, null, i.trailer) }
             }
             itemsIndexed(list.filter { it.season == active }, key = { _, ep -> ep.id }) { _, ep ->
