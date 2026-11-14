@@ -1,6 +1,7 @@
 package com.kutlusoy.proiptv.net
 
-import android.util.Base64
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import java.io.Closeable
 import java.io.InputStream
 import java.net.URLEncoder
@@ -221,10 +222,11 @@ class XtreamApi(
         }
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
     private fun decode(value: String?): String? {
         if (value.isNullOrBlank()) return null
         return try {
-            val text = String(Base64.decode(value, Base64.DEFAULT), Charsets.UTF_8)
+            val text = String(Base64.Mime.decode(value), Charsets.UTF_8)
             if (text.contains('\uFFFD')) value else text
         } catch (e: IllegalArgumentException) {
             value

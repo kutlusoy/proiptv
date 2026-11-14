@@ -108,7 +108,7 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
             val minutes = ((program.end - program.start) / 60).toInt() + 5
             StreamUrls.xtreamCatchup(account.url, account.username, secrets.decrypt(account.password), item.remoteId, program.start, minutes)
         } else {
-            StreamUrls.m3uCatchup(item, program.start, program.end, now)
+            StreamUrls.m3uCatchup(item.url, item.catchupSource, program.start, program.end, now)
         } ?: return@withContext null
         PlayTarget(url, account.userAgent, "${item.name}: ${program.title}", false, item.accountId, Kind.EPISODE, "${item.remoteId}-${program.start}")
     }

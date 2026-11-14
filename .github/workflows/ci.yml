@@ -64,3 +64,8 @@ jobs:
         with:
           name: proiptv-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+
+  windows:
+    uses: ./.github/workflows/windows-build.yml
+    with:
+      kind: ci

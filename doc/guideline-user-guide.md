@@ -191,9 +191,17 @@ While watching live TV you can switch channels in the order of the list you star
 
 Double tap on the left half of the picture jumps 10 seconds back, double tap on the right half 10 seconds forward (movies and episodes). A single tap shows or hides the controls. Recording is the red **REC** button at the bottom, it turns into a red square while a recording runs.
 
+## ProIPTV on Windows
+
+Download `ProIPTV-<version>-windows-x64-setup.exe` from the release page (or from a test release) and start it. It installs for your Windows user, without administrator rights, with a start menu entry and an uninstaller. As long as the installer is not signed, Windows SmartScreen shows "Windows protected your PC": click **More info** and then **Run anyway**.
+
+Add your accounts under **Accounts** (the help texts are the same as on Android), then open Live TV, Movies or Series. While watching: **Space** pause, **arrow left/right** 10 seconds (movies), **arrow up/down** previous and next channel (live), **F** or a double click full screen, **Esc** leaves full screen and then stops, mouse wheel changes the volume. Under **Settings** you find the language and the **Update** section; the app also checks once a day by itself and asks once per day when a newer version is there. The update closes the app, installs the new version and starts it again. Your accounts and favorites stay, they are in `%APPDATA%\ProIPTV`.
+
+The Windows version does not have guide (EPG), recording, time shift, downloads and the track menu yet, see `doc/guideline-windows-version.md`.
+
 ## Android TV and TV boxes
 
-When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has big **Stop** and **Play/Pause** buttons in the middle (Stop ends playback and returns to the list) and a **star** (favorite) and a **More** button in the upper right corner for audio and subtitles, screen rotation and picture size. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
+When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has **Stop** and **Play/Pause** in the middle of the bottom row (Stop ends playback and returns to the list), a **menu button** with the channel list in the upper left corner, and a **star** (favorite) and a **More** button in the upper right corner for audio and subtitles, screen rotation and picture size. The menu button opens a list of the channels of the list you started from at the left edge, the channel keeps playing, a tap on another channel switches to it and closes the list. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
 
 ## 6. Favorites and manual order
 

@@ -215,4 +215,5 @@
     <string name="update_err_too_large">El archivo es demasiado grande.</string>
     <string name="update_err_storage">Espacio insuficiente.</string>
     <string name="update_err_install">Error de instalación: %1$s</string>
+    <string name="player_channel_list">Lista de canales</string>
 </resources>

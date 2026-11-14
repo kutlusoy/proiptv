@@ -215,4 +215,5 @@
     <string name="update_err_too_large">Dosya çok büyük.</string>
     <string name="update_err_storage">Yeterli alan yok.</string>
     <string name="update_err_install">Yükleme başarısız: %1$s</string>
+    <string name="player_channel_list">Kanal listesi</string>
 </resources>

@@ -1,5 +1,24 @@
 # ProIPTV: Windows version
 
+## Current state (first Windows version)
+
+Every build of the repository now ships a Windows installer: CI (artifact), **Test release** (pre-release `test-<number>`) and **Release** (same GitHub release as the Android files). The setup is a normal installer (Inno Setup, no portable version) with start menu entry, optional desktop icon, uninstaller and update. It is **not signed yet**, so Windows SmartScreen may warn ("More info", "Run anyway"). Signing follows later (see section 4).
+
+What the app can do on Windows today:
+
+- several Xtream Codes and M3U accounts (passwords protected with Windows DPAPI, config in `%APPDATA%\ProIPTV\config.json`)
+- live channels, movies and series with groups, search, favorites (one list per area), country and year badges
+- series with seasons and episodes
+- playback with libVLC (LGPL, bundled as separate, unmodified DLLs): stop, pause, seek, volume, full screen (F or double click), channel up/down while watching live, keyboard shortcuts (space, arrows, Esc, F, M)
+- 11 languages, taken from the same `strings.xml` files as the Android app
+- update check by hand and once a day in the background (one notice per day at most), downloads the newest setup, checks the SHA-256 against `SHA256SUMS.txt` and starts the installer silently, which closes the app, installs and starts the new version. Test builds follow the newest test release, normal builds the newest release.
+
+Not in the Windows version yet (the Android app has them): program guide (EPG) and EPG search, recording, time shift and the stream hub, downloads, audio and subtitle track menu, several favorites lists, watched marks and resume, TV style navigation. They need the shared engine (section 5) and come step by step.
+
+How it is built (differs from the plan below): the desktop app is the Gradle module `desktop`. Instead of a full Kotlin Multiplatform refactor the module compiles the Android-free source files of the app directly (`parse`, Xtream client, stream URLs, update logic, see `syncShared` in `desktop/build.gradle`), so there is one copy of them. The installer is built with Inno Setup instead of an MSI, because it can update silently and runs without administrator rights (per user installation). libVLC 3.0.21 is downloaded in the build, checked against a pinned SHA-256 and reduced to the plugins in `desktop/vlc/plugins.txt` (GPL only plugins are left out, the build fails if a listed plugin is missing).
+
+Not verified yet: I could build and test the app only on Linux. The Windows installer, the libVLC start and the video output have to be tried on a real Windows machine with the first test release.
+
 - **Version:** 0.3 (draft)
 - **Date:** November 13, 2026
 - **Audience:** Maintainers who decide on and build a Windows release
@@ -124,9 +143,10 @@ The same desktop target also builds for Linux and macOS with little extra work (
 
 - [ ] Android engine finished (0.0.7)
 - [ ] libVLC version chosen, license of every bundled plugin checked, notices added
+- [x] Windows installer is built and attached to every CI run, test release and release (unsigned)
 - [ ] First unsigned Windows release published, then SignPath Foundation set up (see the SignPath guide checklist)
 - [ ] Multiplatform refactor merged, Android release unchanged
-- [ ] Windows installer builds in the release workflow
+- [x] Windows installer builds in the release workflow
 - [ ] First Windows pre-release tested on a clean Windows machine
 - [ ] In-app update tested from one Windows release to the next
 
@@ -138,3 +158,18 @@ Open:
 
 1. Does SignPath Foundation accept the project (one maintainer, application after the first unsigned release)?
 2. Should Linux and macOS be built from the same desktop target after Windows?
+
+## 10. macOS and Linux
+
+The Windows app is Compose for Desktop on the JVM, so the same module can run on macOS and Linux. What is missing is not the app but the platform parts:
+
+| Part | Linux | macOS |
+|---|---|---|
+| App code (accounts, lists, sync, screens, update logic) | runs as is | runs as is |
+| Video | libVLC with the X11 window handle works with the current code (`set_xwindow`). Wayland needs the XWayland path or an own render path. The `libvlc` package of the distribution or a bundled copy | libVLC needs the native view handle of a window (`set_nsobject`). A Swing canvas does not give it easily, so the video would be rendered into a Compose surface through libVLC video callbacks. More work and slower |
+| Password storage | replace Windows DPAPI by the secret service (libsecret through JNA) | replace by the Keychain through JNA |
+| Installer | `.deb` and AppImage with `jpackage`, built on `ubuntu-latest` | `.dmg` with `jpackage`, built on `macos-latest` |
+| Signature | none needed for `.deb` and AppImage | **Apple Developer account (99 USD a year)** for signing and notarization, otherwise Gatekeeper blocks the app (workaround: right click, Open) |
+| Update | the same download and checksum logic, then package manager or AppImage replacement | the same, then replace the app in `/Applications` |
+
+Order: Linux first (small steps: file naming, secret service, `.deb` and AppImage jobs, libVLC from the system), then macOS when a Mac is available for tests, because the video path and the notarization cannot be checked on a build server alone. Until then macOS and Linux are not supported, even though `./gradlew :desktop:run` may already start on them for development.

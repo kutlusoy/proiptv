@@ -2,11 +2,11 @@
 
 # ProIPTV
 
-Android IPTV player for phones, tablets and Android TV. It plays the streams of your own provider: Xtream Codes accounts, M3U playlists and XMLTV guides, with several accounts side by side, many source types (more are planned) (Xtream Codes, M3U, Stalker portal, HDHomeRun, Enigma2, TVHeadend and more), live TV, guide, movies, series, catch-up, favorites with manual sorting, recording and time shift. No content is included, no account with us, no ads, no analytics.
+IPTV player for **Android** (phones, tablets, Android TV) and **Windows**. It plays the streams of your own provider: Xtream Codes accounts, M3U playlists and XMLTV guides, with several accounts side by side, many source types (more are planned) (Xtream Codes, M3U, Stalker portal, HDHomeRun, Enigma2, TVHeadend and more), live TV, guide, movies, series, catch-up, favorites with manual sorting, recording and time shift. No content is included, no account with us, no ads, no analytics.
 
 - **Application ID:** `com.kutlusoy.proiptv`
 - **Version:** 0.0.1 (project skeleton, see below)
-- **Min SDK:** 24 (Android 7.0)
+- **Platforms:** Android 7.0 or newer (min SDK 24), Windows 10 or 11 (64 bit, first version, see below)
 - **License:** MIT
 
 ## State
@@ -19,6 +19,7 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 - **Live TV** with groups, search, now and next, zapping with the remote control, number keys, guide per channel and **catch-up**
 - **Favorites for movies and series** as well as channels, and **watched marks** (by hand and per season)
 - **Movies and series** with category rows, a film-style **info page** (picture, story, cast, resume) before playing, seasons as a dropdown and episode lists with progress
+- **Windows version** (setup, not portable, libVLC player, in-app update), built with every CI run, test release and release; first version with accounts, live TV, movies, series and favorites, unsigned for now
 - **Update check** in the settings (manual and once a day in the background with one notification per day), verified by checksum before the Android installer is called
 - **EPG screen** to search and filter the guide of all channels, jump to the channel, and a live search that also finds running shows
 - **Downloads for offline use** of movies and series (with seasons and episodes), played from the device
@@ -33,6 +34,16 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 
 Not yet: multiview, parental PIN, Stalker portal, HDHomeRun, Enigma2, TVHeadend, Jellyfin and the other sources. See the roadmap in [doc/guideline-product-plan.md](doc/guideline-product-plan.md) and the scope in [doc/guideline-feature-matrix.md](doc/guideline-feature-matrix.md). How to install and use it: [doc/guideline-user-guide.md](doc/guideline-user-guide.md).
 
+## Platforms
+
+| Platform | Download | Player | State |
+|---|---|---|---|
+| Android (phone, tablet, Android TV) | `ProIPTV-<version>.apk` (and `.aab` for Google Play) from the release page | Media3 with the own stream hub | full feature set, see State |
+| Windows 10 / 11 (64 bit) | `ProIPTV-<version>-windows-x64-setup.exe` from the release page, a normal installer (no portable version), updates itself | libVLC (bundled, LGPL) | first version: accounts, live TV, movies, series, favorites. No guide (EPG), recording, time shift, downloads or track menu yet. The installer is not signed yet, SmartScreen may warn |
+| macOS, Linux | not available yet | | possible with the same code base, see [the Windows document](doc/guideline-windows-version.md) section 10 |
+
+Every CI run, every test release and every release also builds the Windows installer; the release and test release workflows publish it next to the APK with the same `SHA256SUMS.txt`.
+
 ## Build
 
 Requirements: Android Studio (or just JDK 17 and the Android SDK 36). The Gradle wrapper is included.
@@ -42,6 +53,8 @@ Requirements: Android Studio (or just JDK 17 and the Android SDK 36). The Gradle
 ```
 
 The debug APK is written to `app/build/outputs/apk/debug/`.
+
+The Windows app is the Gradle module `desktop` (Compose for Desktop). On any system with JDK 17: `./gradlew :desktop:test :desktop:run` runs it (libVLC has to be installed or `PROIPTV_VLC_DIR` has to point to a folder with `libvlc`), `./gradlew :desktop:createDistributable` builds the app folder. The installer itself (libVLC download, Inno Setup) is built by `.github/workflows/windows-build.yml` on a Windows runner.
 
 Debug builds have their own application ID, `com.kutlusoy.proiptv.debug`, and are installed next to the release app without touching it.
 
@@ -54,6 +67,8 @@ For a signed local release build, put a `signing/release.properties` file into `
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `CI` | every push, pull requests, manual | version file check, unit tests (parsers, fake provider server, app start), lint, debug APK as build artifact (`proiptv-debug-apk`), release build, version code check |
+| `Windows build` | called by `CI`, `Test release` and `Release` | builds the Windows installer: app folder with its own Java runtime, libVLC (pinned version and checksum, only the needed plugins), Inno Setup, size and checksum check |
+| `Test release` | manual | builds the debug APK (test key) and the Windows installer and publishes both as pre-release `test-<number>` without any secret |
 | `Release` | tag `v*` (for example `v0.0.1`) | checks the tag against `app/version.txt`, runs the tests, builds the signed APK and AAB, verifies the APK (application ID, version, certificate), publishes a GitHub release with the signing certificate (SHA-256 and SHA-1), the checksums, the Android versions and the source commit (tags with a suffix such as `-rc1` become pre-releases) |
 
 ## What you have to enter where

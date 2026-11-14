@@ -27,23 +27,24 @@ class UpdateException(val code: Code, detail: String? = null) : Exception(detail
 }
 
 object ReleaseParser {
-    private val APK_NAME = Regex("^ProIPTV-.+\\.apk$")
+    val APK_NAME = Regex("^ProIPTV-.+\\.apk$")
+    val WINDOWS_NAME = Regex("^ProIPTV-.+-windows-x64-setup\\.exe$")
     private const val CHECKSUMS_NAME = "SHA256SUMS.txt"
     private val TEST_TAG = Regex("^test-(\\d+)$")
     private val json = Json { ignoreUnknownKeys = true }
 
     /** The answer of /releases/latest. Null for a draft, a pre-release or a bad answer. */
-    fun parseLatest(text: String): ReleaseInfo? {
+    fun parseLatest(text: String, pattern: Regex = APK_NAME): ReleaseInfo? {
         val root = runCatching { json.parseToJsonElement(text).jsonObject }.getOrNull() ?: return null
         if (root.flag("draft") || root.flag("prerelease")) return null
         val tag = root.str("tag_name") ?: return null
         val version = tag.removePrefix("v")
         val code = Versions.code(version) ?: return null
-        return build(root, version, code, 0)
+        return build(root, version, code, 0, pattern)
     }
 
     /** The newest test release (pre-release with a tag like test-12) from the list of releases. */
-    fun parseNewestTest(text: String): ReleaseInfo? {
+    fun parseNewestTest(text: String, pattern: Regex = APK_NAME): ReleaseInfo? {
         val list: JsonArray = runCatching { json.parseToJsonElement(text).jsonArray }.getOrNull() ?: return null
         var best: Pair<Int, JsonObject>? = null
         for (element in list) {
@@ -53,10 +54,10 @@ object ReleaseParser {
             if (best == null || n > best.first) best = n to obj
         }
         val (n, obj) = best ?: return null
-        return build(obj, "test $n", 0, n)
+        return build(obj, "test $n", 0, n, pattern)
     }
 
-    private fun build(root: JsonObject, version: String, code: Long, build: Int): ReleaseInfo {
+    private fun build(root: JsonObject, version: String, code: Long, build: Int, pattern: Regex): ReleaseInfo {
         var apkName: String? = null
         var apkUrl: String? = null
         var apkSize = -1L
@@ -67,7 +68,7 @@ object ReleaseParser {
             val url = asset.str("browser_download_url") ?: return@forEach
             when {
                 name == CHECKSUMS_NAME -> checksumsUrl = url
-                apkName == null && APK_NAME.matches(name) -> {
+                apkName == null && pattern.matches(name) -> {
                     apkName = name
                     apkUrl = url
                     apkSize = runCatching { asset["size"]?.jsonPrimitive?.long }.getOrNull() ?: -1L
