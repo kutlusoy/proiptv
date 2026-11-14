@@ -15,6 +15,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,6 +73,14 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     OutlinedButton(onClick = { state.refreshGuide() }, enabled = !state.guideLoading) { Text(t("account_sync_guide")) }
                 }
                 Hint(t("settings_guide_info"))
+            }
+            Group(t("settings_tmdb")) {
+                var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
+                OutlinedTextField(
+                    key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(t("settings_tmdb_key")) },
+                )
+                Hint(t("settings_tmdb_hint"))
             }
             Group(t("settings_group_playback")) {
                 val vlc = state.engine

@@ -77,12 +77,12 @@ fun HomeScreen(vm: MainViewModel) {
 
     series?.let {
         BackHandler { series = null }
-        SeriesDetailScreen(vm, it) { series = null }
+        SeriesDetailScreen(vm, it, { series = null }, onOpen = { o -> if (o.kind == Kind.SERIES) { series = o; movie = null } else { movie = o; series = null } })
         return
     }
     movie?.let {
         BackHandler { movie = null }
-        MovieDetail(vm, it) { movie = null }
+        MovieDetail(vm, it, { movie = null }, onOpen = { o -> if (o.kind == Kind.SERIES) { series = o; movie = null } else { movie = o; series = null } })
         return
     }
     if (enabled.isEmpty()) {

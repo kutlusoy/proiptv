@@ -236,4 +236,12 @@
     <string name="dl_paused">Paused</string>
     <string name="dl_open_folder">Open folder</string>
     <string name="epg_to_channel">Go to channel</string>
+    <string name="detail_trailer">Watch trailer</string>
+    <string name="detail_related_movies">Related movies</string>
+    <string name="detail_related_series">Related series</string>
+    <string name="detail_genre">Genre</string>
+    <string name="detail_runtime">Duration</string>
+    <string name="settings_tmdb">Movie information (TMDB)</string>
+    <string name="settings_tmdb_hint">Optional. With your own free API key from themoviedb.org the app loads plot, cast and trailer for titles that have none (for example from M3U lists). Only the title and the year of the opened title are sent.</string>
+    <string name="settings_tmdb_key">API key</string>
 </resources>

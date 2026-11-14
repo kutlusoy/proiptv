@@ -17,6 +17,10 @@ class Prefs(context: Context) {
         get() = sp.getInt("ui_mode", 0)
         set(value) = sp.edit().putInt("ui_mode", value).apply()
 
+    var tmdbKey: String
+        get() = sp.getString("tmdb_key", "") ?: ""
+        set(value) = sp.edit().putString("tmdb_key", value.trim()).apply()
+
     var lastTab: String
         get() = sp.getString("last_tab", "") ?: ""
         set(value) = sp.edit().putString("last_tab", value).apply()

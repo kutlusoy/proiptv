@@ -235,4 +235,12 @@
     <string name="dl_paused">Duraklatıldı</string>
     <string name="dl_open_folder">Klasörü aç</string>
     <string name="epg_to_channel">Kanala git</string>
+    <string name="detail_trailer">Fragmanı izle</string>
+    <string name="detail_related_movies">İlgili filmler</string>
+    <string name="detail_related_series">İlgili diziler</string>
+    <string name="detail_genre">Tür</string>
+    <string name="detail_runtime">Süre</string>
+    <string name="settings_tmdb">Film bilgileri (TMDB)</string>
+    <string name="settings_tmdb_hint">İsteğe bağlı. themoviedb.org\'dan aldığınız ücretsiz API anahtarıyla uygulama, bilgisi olmayan başlıklar (örneğin M3U listeleri) için konu, oyuncular ve fragmanı yükler. Yalnızca başlık ve yıl gönderilir.</string>
+    <string name="settings_tmdb_key">API anahtarı</string>
 </resources>

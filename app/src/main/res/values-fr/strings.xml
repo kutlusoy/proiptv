@@ -235,4 +235,12 @@
     <string name="dl_paused">En pause</string>
     <string name="dl_open_folder">Ouvrir le dossier</string>
     <string name="epg_to_channel">Aller à la chaîne</string>
+    <string name="detail_trailer">Voir la bande-annonce</string>
+    <string name="detail_related_movies">Films similaires</string>
+    <string name="detail_related_series">Séries similaires</string>
+    <string name="detail_genre">Genre</string>
+    <string name="detail_runtime">Durée</string>
+    <string name="settings_tmdb">Informations sur les films (TMDB)</string>
+    <string name="settings_tmdb_hint">Facultatif. Avec votre propre clé API gratuite de themoviedb.org, l\'app charge résumé, distribution et bande-annonce pour les titres sans informations (par exemple des listes M3U). Seuls le titre et l\'année sont envoyés.</string>
+    <string name="settings_tmdb_key">Clé API</string>
 </resources>

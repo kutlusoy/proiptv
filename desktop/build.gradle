@@ -24,7 +24,7 @@ def infoDir = layout.buildDirectory.dir('generated/appinfo')
 tasks.register('syncShared', Copy) {
     from(sharedRoot) {
         include 'parse/Entities.kt', 'parse/M3uParser.kt', 'parse/TitleParser.kt', 'parse/XmltvParser.kt'
-        include 'net/Http.kt', 'net/XtreamApi.kt', 'net/XtreamUrl.kt', 'net/StreamUrls.kt', 'net/Upstream.kt'
+        include 'net/Http.kt', 'net/XtreamApi.kt', 'net/XtreamUrl.kt', 'net/StreamUrls.kt', 'net/Upstream.kt', 'net/Tmdb.kt'
         include 'engine/*.kt'
         include 'update/Release.kt', 'update/UpdateDownloader.kt'
     }

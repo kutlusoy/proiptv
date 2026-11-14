@@ -169,16 +169,21 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
 
     series?.let {
         BackHandler { series = null }
-        SeriesDetailScreen(vm, it) { series = null }
+        SeriesDetailScreen(vm, it, { series = null }, onOpen = { o -> if (o.kind == Kind.SERIES) { series = o; movie = null } else { movie = o; series = null } })
         return
     }
     movie?.let {
         BackHandler { movie = null }
-        MovieDetail(vm, it) { movie = null }
+        MovieDetail(vm, it, { movie = null }, onOpen = { o -> if (o.kind == Kind.SERIES) { series = o; movie = null } else { movie = o; series = null } })
         return
     }
 
     val categories by (effective?.let { vm.categories(it, kind) } ?: kotlinx.coroutines.flow.flowOf(emptyList())).collectAsState(initial = emptyList())
+    // with several accounts and no single one chosen the categories of all of them are offered, each with its account name
+    val everyCategory by remember(enabled.map { it.id }, effective, kind) {
+        if (effective == null && enabled.size > 1) kotlinx.coroutines.flow.combine(enabled.map { vm.categories(it.id, kind) }) { lists -> lists.toList().flatten() }
+        else kotlinx.coroutines.flow.flowOf(emptyList())
+    }.collectAsState(initial = emptyList())
 
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
         Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -189,6 +194,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                 add(FAV_KEY to favLabel)
                 add(ALL_KEY to allLabel)
                 if (effective != null) categories.forEach { add(it.remoteId to it.name.ifBlank { otherLabel }) }
+                else everyCategory.forEach { c -> add("${c.accountId}|${c.remoteId}" to ((enabled.firstOrNull { it.id == c.accountId }?.name?.let { "$it \u00B7 " } ?: "") + c.name.ifBlank { otherLabel })) }
             }
             val current = when {
                 favMode -> FAV_KEY
@@ -203,7 +209,17 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                     when (v) {
                         FAV_KEY -> favMode = true
                         ALL_KEY -> { favMode = false; category = null }
-                        else -> { favMode = false; category = v }
+                        else -> {
+                            val account = if (effective == null) v.substringBefore('|').toLongOrNull() else null
+                            if (account != null) {
+                                // a category of one account: switch to that account and open the category
+                                prefs.saveBrowse(kind, account, account, v.substringAfter('|'), false, favList)
+                                favMode = false
+                                accountSel = account
+                            } else {
+                                favMode = false; category = v
+                            }
+                        }
                     }
                 },
                 modifier = Modifier.weight(1f),
@@ -358,7 +374,7 @@ private fun NowPlaying(vm: MainViewModel, accountId: Long, epgId: String?) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boolean = false, onLongClick: () -> Unit = {}, onClick: () -> Unit) {
+internal fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boolean = false, onLongClick: () -> Unit = {}, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "poster")
     Column(

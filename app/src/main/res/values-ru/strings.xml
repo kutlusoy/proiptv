@@ -13,4 +13,12 @@
     <string name="dl_paused">На паузе</string>
     <string name="dl_open_folder">Открыть папку</string>
     <string name="epg_to_channel">Перейти к каналу</string>
+    <string name="detail_trailer">Смотреть трейлер</string>
+    <string name="detail_related_movies">Похожие фильмы</string>
+    <string name="detail_related_series">Похожие сериалы</string>
+    <string name="detail_genre">Жанр</string>
+    <string name="detail_runtime">Продолжительность</string>
+    <string name="settings_tmdb">Информация о фильмах (TMDB)</string>
+    <string name="settings_tmdb_hint">По желанию. С вашим бесплатным ключом API от themoviedb.org приложение загружает описание, актёров и трейлер для названий без данных (например из списков M3U). Отправляются только название и год.</string>
+    <string name="settings_tmdb_key">Ключ API</string>
 </resources>

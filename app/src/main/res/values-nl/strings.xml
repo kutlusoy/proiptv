@@ -13,4 +13,12 @@
     <string name="dl_paused">Gepauzeerd</string>
     <string name="dl_open_folder">Map openen</string>
     <string name="epg_to_channel">Naar zender</string>
+    <string name="detail_trailer">Trailer bekijken</string>
+    <string name="detail_related_movies">Gerelateerde films</string>
+    <string name="detail_related_series">Gerelateerde series</string>
+    <string name="detail_genre">Genre</string>
+    <string name="detail_runtime">Duur</string>
+    <string name="settings_tmdb">Filminformatie (TMDB)</string>
+    <string name="settings_tmdb_hint">Optioneel. Met je eigen gratis API-sleutel van themoviedb.org laadt de app plot, cast en trailer voor titels zonder informatie (bijvoorbeeld uit M3U-lijsten). Alleen de titel en het jaar worden verstuurd.</string>
+    <string name="settings_tmdb_key">API-sleutel</string>
 </resources>

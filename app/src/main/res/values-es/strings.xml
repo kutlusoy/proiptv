@@ -235,4 +235,12 @@
     <string name="dl_paused">En pausa</string>
     <string name="dl_open_folder">Abrir carpeta</string>
     <string name="epg_to_channel">Ir al canal</string>
+    <string name="detail_trailer">Ver tráiler</string>
+    <string name="detail_related_movies">Películas relacionadas</string>
+    <string name="detail_related_series">Series relacionadas</string>
+    <string name="detail_genre">Género</string>
+    <string name="detail_runtime">Duración</string>
+    <string name="settings_tmdb">Información de películas (TMDB)</string>
+    <string name="settings_tmdb_hint">Opcional. Con tu propia clave API gratuita de themoviedb.org la app carga sinopsis, reparto y tráiler de los títulos sin información (por ejemplo de listas M3U). Solo se envían el título y el año.</string>
+    <string name="settings_tmdb_key">Clave API</string>
 </resources>

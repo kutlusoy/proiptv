@@ -57,6 +57,7 @@ data class ConfigDto(
     val timeshift: Boolean = true,
     val bufferMb: Int = 512,
     val lastCategory: Map<String, String> = emptyMap(),
+    val tmdbKey: String = "",
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */

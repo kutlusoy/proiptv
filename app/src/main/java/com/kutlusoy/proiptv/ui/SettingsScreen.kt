@@ -100,6 +100,15 @@ fun SettingsScreen(vm: MainViewModel) {
                 }
             }
 
+            Group(stringResource(R.string.settings_tmdb)) {
+                val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
+                var key by remember { mutableStateOf(prefs.tmdbKey) }
+                androidx.compose.material3.OutlinedTextField(
+                    key, { key = it; prefs.tmdbKey = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.settings_tmdb_key)) },
+                )
+                Hint(stringResource(R.string.settings_tmdb_hint))
+            }
             Group(stringResource(R.string.settings_group_playback)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.settings_timeshift), Modifier.weight(1f))
