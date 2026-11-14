@@ -68,6 +68,7 @@ private enum class Tab(val label: Int, val icon: ImageVector) {
     LIVE(R.string.nav_live, Icons.Filled.PlayArrow),
     MOVIES(R.string.nav_movies, Icons.Filled.AccountBox),
     SERIES(R.string.nav_series, Icons.AutoMirrored.Filled.List),
+    EPG(R.string.nav_epg, GuideIcon),
     RECORDINGS(R.string.nav_recordings, Icons.Filled.DateRange),
     DOWNLOADS(R.string.nav_downloads, DownloadIcon),
     ACCOUNTS(R.string.nav_accounts, Icons.Filled.Person),
@@ -126,6 +127,7 @@ private fun AppRoot(vm: MainViewModel) {
                 Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
                 Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
                 Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)
+                Tab.EPG -> EpgScreen(vm)
                 Tab.RECORDINGS -> RecordingsScreen(vm)
                 Tab.DOWNLOADS -> DownloadsScreen(vm)
                 Tab.ACCOUNTS -> AccountsScreen(vm)

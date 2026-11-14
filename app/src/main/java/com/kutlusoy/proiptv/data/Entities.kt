@@ -195,3 +195,15 @@ data class Download(
     val error: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
 )
+
+data class GuideRow(
+    val title: String,
+    val start: Long,
+    val end: Long,
+    val itemId: Long,
+    val channel: String,
+    val logo: String?,
+    val accountId: Long,
+    val ord: Int,
+    val category: String,
+)

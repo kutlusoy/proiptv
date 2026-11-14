@@ -182,7 +182,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             if (searching) {
                 OutlinedTextField(
                     query, { query = it }, singleLine = true, modifier = Modifier.weight(1f),
-                    placeholder = { Text(stringResource(R.string.live_search)) },
+                    placeholder = { Text(stringResource(if (kind == Kind.LIVE) R.string.live_search_epg else R.string.live_search)) },
                     trailingIcon = {
                         IconButton(onClick = { query = ""; searching = false }) { Icon(Icons.Filled.Close, stringResource(R.string.action_close)) }
                     },

@@ -178,4 +178,11 @@
     <string name="fav_moving">Déplacement : haut/bas pour déplacer, OK pour le poser ici.</string>
     <string name="fav_hint_tv">Appui long sur OK sur un favori, puis déplacez-le avec haut/bas. Appuyez de nouveau sur OK pour le poser.</string>
     <string name="fav_remove_confirm">Retirer « %1$s » des favoris ?</string>
+    <string name="nav_epg">EPG</string>
+    <string name="epg_search">Rechercher une émission ou une chaîne</string>
+    <string name="epg_now">En ce moment</string>
+    <string name="epg_next_3h">3 prochaines heures</string>
+    <string name="epg_next_12h">12 prochaines heures</string>
+    <string name="epg_empty">Aucune émission trouvée. Le guide est chargé avec la synchronisation du compte.</string>
+    <string name="live_search_epg">Rechercher des chaînes et des émissions en cours</string>
 </resources>
