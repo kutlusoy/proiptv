@@ -1,6 +1,10 @@
 package com.kutlusoy.proiptv.desktop
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,12 +38,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import java.awt.Canvas
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import kotlinx.coroutines.delay
 
 /** Holds what is playing right now, so the screen and the keyboard shortcuts of the window use the same functions. */
@@ -107,7 +107,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             delay(500)
         }
     }
-    DisposableEffect(controller) { onDispose { engine.stop(); engine.detach() } }
+    DisposableEffect(controller) { onDispose { engine.stop() } }
     val fullscreen = state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen
 
     Column(Modifier.fillMaxSize().background(Color.Black)) {
@@ -120,25 +120,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             if (!engine.available) {
                 Text(engine.error ?: "libVLC not found", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp))
             } else {
-                SwingPanel(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = {
-                        object : Canvas() {
-                            override fun addNotify() {
-                                super.addNotify()
-                                engine.attach(this)
-                            }
-                        }.apply {
-                            background = java.awt.Color.BLACK
-                            isFocusable = false
-                            addMouseListener(object : MouseAdapter() {
-                                override fun mouseClicked(e: MouseEvent) { if (e.clickCount == 2) state.toggleFullscreen() }
-                            })
-                            addMouseWheelListener { e -> controller.changeVolume(controller.volume - e.wheelRotation * 5) }
-                        }
-                    },
-                    update = { engine.attach(it) },
-                )
+                VideoSurface(engine, Modifier.fillMaxSize(), onDoubleClick = { state.toggleFullscreen() }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
             }
             controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
@@ -166,5 +148,39 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(120.dp))
             IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, null) }
         }
+    }
+}
+
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable
+private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit) {
+    var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    LaunchedEffect(engine) {
+        var shown = -1L
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { }
+            val f = engine.frame.get()
+            if (f == null) {
+                if (image != null) image = null
+                shown = -1L
+            } else if (f.version != shown) {
+                shown = f.version
+                image = org.jetbrains.skia.Image.makeRaster(
+                    org.jetbrains.skia.ImageInfo(f.width, f.height, org.jetbrains.skia.ColorType.BGRA_8888, org.jetbrains.skia.ColorAlphaType.OPAQUE),
+                    f.pixels, f.width * 4,
+                ).toComposeImageBitmap()
+            }
+        }
+    }
+    androidx.compose.foundation.Canvas(
+        modifier.background(Color.Black)
+            .pointerInput(Unit) { detectTapGestures(onDoubleTap = { onDoubleClick() }) }
+            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> onScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
+    ) {
+        val img = image ?: return@Canvas
+        val scale = minOf(size.width / img.width, size.height / img.height)
+        val w = (img.width * scale).toInt()
+        val h = (img.height * scale).toInt()
+        drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - w) / 2).toInt(), ((size.height - h) / 2).toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h))
     }
 }
