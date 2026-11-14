@@ -56,6 +56,8 @@ import kotlinx.coroutines.delay
 /** Holds what is playing right now, so the screen and the keyboard shortcuts of the window use the same functions. */
 class PlayerController(private val state: AppState, private val request: PlayRequest) {
     private val engine get() = state.engine
+    var started = false
+    fun isFor(r: PlayRequest) = r === request
     var index by mutableIntStateOf(if (request is PlayRequest.Live) request.index else 0)
     var title by mutableStateOf("")
     var paused by mutableStateOf(false)
@@ -227,14 +229,14 @@ class PlayerController(private val state: AppState, private val request: PlayReq
 @Composable
 fun PlayerScreen(state: AppState, controller: PlayerController) {
     val engine = state.engine
-    LaunchedEffect(controller) { controller.start() }
+    LaunchedEffect(controller) { if (!controller.started) { controller.started = true; controller.start() } }
     LaunchedEffect(controller) {
         while (true) {
             controller.poll()
             delay(500)
         }
     }
-    DisposableEffect(controller) { onDispose { engine.stop() } }
+    DisposableEffect(controller) { onDispose { if (state.player == null) engine.stop() } }
     val fullscreen = state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen
 
     var barVisible by remember { mutableStateOf(true) }
