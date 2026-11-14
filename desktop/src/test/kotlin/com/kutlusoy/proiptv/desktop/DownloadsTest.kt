@@ -92,4 +92,13 @@ class DownloadsTest {
             scope.cancel()
         }
     }
+
+    @Test
+    fun theInstallerShipsEveryPluginThatTheAppNeeds() {
+        val listed = File("vlc/plugins.txt").readLines().filter { it.isNotBlank() && !it.startsWith("#") }.toSet()
+        // imem: media from callbacks (shared stream buffer), vmem: pictures into memory, the others decode and play the usual streams
+        for (needed in listOf("access/libimem_plugin.dll", "video_output/libvmem_plugin.dll", "access/libhttp_plugin.dll", "access/libhttps_plugin.dll", "demux/libts_plugin.dll", "codec/libavcodec_plugin.dll", "audio_output/libmmdevice_plugin.dll", "logger/libfile_logger_plugin.dll")) {
+            assertTrue("$needed is missing in plugins.txt", needed in listed)
+        }
+    }
 }
