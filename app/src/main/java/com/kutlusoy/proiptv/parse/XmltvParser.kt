@@ -59,7 +59,7 @@ object XmltvParser {
                     "desc" -> if (inProgramme && desc == null) desc = parser.nextText()
                 }
             } else if (event == XmlPullParser.END_TAG && parser.name == "programme") {
-                if (inProgramme) yield(XmltvProgram(channel!!, start, stop, title?.trim().orEmpty(), desc?.trim()))
+                if (inProgramme) yield(XmltvProgram(channel!!, start, stop, title?.trim().orEmpty().decodeEntities(), desc?.trim()?.decodeEntities()))
                 inProgramme = false
             }
             event = parser.next()

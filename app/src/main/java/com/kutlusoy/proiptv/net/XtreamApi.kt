@@ -15,6 +15,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.decodeToSequence
+import com.kutlusoy.proiptv.parse.decodeEntities
 import okhttp3.OkHttpClient
 import okhttp3.Response
 
@@ -133,7 +134,7 @@ class XtreamApi(
     }
 
     private fun text(o: JsonObject, vararg keys: String): String? =
-        keys.firstNotNullOfOrNull { k -> o.str(k)?.trim()?.takeIf { it.isNotEmpty() && it != "null" } }
+        keys.firstNotNullOfOrNull { k -> o.str(k)?.trim()?.takeIf { it.isNotEmpty() && it != "null" }?.decodeEntities() }
 
     private fun firstUrl(e: JsonElement?): String? = when (e) {
         is JsonArray -> e.firstNotNullOfOrNull { (it as? JsonPrimitive)?.contentOrNull?.takeIf { s -> s.isNotBlank() } }
@@ -192,7 +193,7 @@ class XtreamApi(
                         id = id,
                         season = o.int("season") ?: seasonKey.toIntOrNull() ?: 1,
                         number = o.int("episode_num") ?: 0,
-                        title = o.str("title") ?: "Episode ${o.int("episode_num") ?: ""}",
+                        title = (o.str("title") ?: "Episode ${o.int("episode_num") ?: ""}").decodeEntities(),
                         ext = o.str("container_extension") ?: "mp4",
                         plot = episodeInfo?.let { text(it, "plot") },
                         durationSecs = episodeInfo?.int("duration_secs"),
@@ -215,7 +216,7 @@ class XtreamApi(
                 val start = o.long("start_timestamp") ?: return@mapNotNull null
                 val end = o.long("stop_timestamp") ?: return@mapNotNull null
                 if (end <= start) return@mapNotNull null
-                ShortProgram(start, end, decode(o.str("title")).orEmpty(), decode(o.str("description")))
+                ShortProgram(start, end, decode(o.str("title")).orEmpty().decodeEntities(), decode(o.str("description"))?.decodeEntities())
             }
         }
     }

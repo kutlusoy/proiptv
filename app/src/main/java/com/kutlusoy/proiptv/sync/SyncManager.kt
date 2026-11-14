@@ -15,6 +15,7 @@ import com.kutlusoy.proiptv.net.int
 import com.kutlusoy.proiptv.net.maybeGunzip
 import com.kutlusoy.proiptv.net.str
 import com.kutlusoy.proiptv.parse.M3uParser
+import com.kutlusoy.proiptv.parse.decodeEntities
 import com.kutlusoy.proiptv.parse.TitleParser
 import com.kutlusoy.proiptv.parse.XmltvParser
 import java.io.BufferedReader
@@ -188,7 +189,7 @@ class SyncManager(
     private suspend fun loadXtreamKind(api: XtreamApi, account: Account, kind: Int, catAction: String, streamAction: String, gen: Int, phase: Phase) {
         val cats = api.stream(catAction).use { s ->
             s.items.mapIndexed { i, o ->
-                Category(accountId = account.id, kind = kind, remoteId = o.str("category_id").orEmpty(), name = o.str("category_name").orEmpty(), ord = i)
+                Category(accountId = account.id, kind = kind, remoteId = o.str("category_id").orEmpty(), name = o.str("category_name").orEmpty().decodeEntities(), ord = i)
             }.toList()
         }
         db.items().replaceCategories(account.id, kind, cats)
@@ -198,7 +199,7 @@ class SyncManager(
         api.stream(streamAction).use { s ->
             for (o in s.items) {
                 val remote = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
-                val name = o.str("name").orEmpty()
+                val name = o.str("name").orEmpty().decodeEntities()
                 val info = TitleParser.parse(name, groupNames[o.str("category_id").orEmpty()].orEmpty())
                 batch += Item(
                     accountId = account.id, kind = kind, remoteId = remote,
@@ -209,7 +210,7 @@ class SyncManager(
                     ext = o.str("container_extension")?.takeIf { it.isNotBlank() },
                     archiveDays = if (o.int("tv_archive") == 1) o.int("tv_archive_duration") ?: 0 else 0,
                     rating = o.str("rating")?.takeIf { it.isNotBlank() },
-                    plot = o.str("plot")?.takeIf { it.isNotBlank() },
+                    plot = o.str("plot")?.takeIf { it.isNotBlank() }?.decodeEntities(),
                     ord = ord++, gen = gen,
                 )
                 if (batch.size >= BATCH) {

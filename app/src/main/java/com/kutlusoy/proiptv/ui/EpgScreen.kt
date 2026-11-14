@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kutlusoy.proiptv.R
+import com.kutlusoy.proiptv.parse.decodeEntities
 import com.kutlusoy.proiptv.data.GuideRow
 import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.Source
@@ -139,7 +140,7 @@ private fun GuideEntry(row: GuideRow, nowSecs: Long, format: DateFormat, onClick
     ) {
         Logo(row.logo, Modifier.size(width = 56.dp, height = 36.dp))
         Column(Modifier.weight(1f)) {
-            Text(row.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeightBold = live)
+            Text(row.title.decodeEntities(), maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeightBold = live)
             Text(
                 TitleParser.parse(row.channel).title + "  ·  " + format.format(Date(row.start * 1000)) + " - " + format.format(Date(row.end * 1000)),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f), maxLines = 1, overflow = TextOverflow.Ellipsis,

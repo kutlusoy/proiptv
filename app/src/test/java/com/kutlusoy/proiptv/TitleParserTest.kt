@@ -1,6 +1,7 @@
 package com.kutlusoy.proiptv
 
 import com.kutlusoy.proiptv.parse.TitleParser
+import com.kutlusoy.proiptv.parse.decodeEntities
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -45,5 +46,18 @@ class TitleParserTest {
     fun groupFallback() {
         assertEquals("DE", TitleParser.parse("Das Erste HD", "DE | Allgemein").country)
         assertEquals("FR", TitleParser.parse("FR: TF1", "DE | Allgemein").country)
+    }
+}
+
+class EntitiesTest {
+    @org.junit.Test
+    fun decodesDoubleEscapedText() {
+        org.junit.Assert.assertEquals("Wau & Wau", "Wau &amp; Wau".decodeEntities())
+        org.junit.Assert.assertEquals("Tom & Jerry", "Tom &amp;amp; Jerry".decodeEntities())
+        org.junit.Assert.assertEquals("a < b > c", "a &lt; b &gt; c".decodeEntities())
+        org.junit.Assert.assertEquals("It's \"x\"", "It&#39;s &quot;x&quot;".decodeEntities())
+        org.junit.Assert.assertEquals("ä ö", "&#xE4; &#246;".decodeEntities())
+        org.junit.Assert.assertEquals("Fish &chips; and R&B", "Fish &chips; and R&B".decodeEntities())
+        org.junit.Assert.assertEquals("plain", "plain".decodeEntities())
     }
 }
