@@ -18,6 +18,7 @@ data class AccountDto(
     val password: String = "",
     val userAgent: String? = null,
     val enabled: Boolean = true,
+    val epgUrl: String? = null,
 )
 
 @Serializable

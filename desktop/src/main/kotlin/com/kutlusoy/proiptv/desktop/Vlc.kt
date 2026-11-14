@@ -72,7 +72,9 @@ class VlcEngine {
             if (mem != null && frameBytes > 0) {
                 val bytes = ByteArray(frameBytes)
                 mem.read(0, bytes, 0, frameBytes)
-                frame.set(Frame(frameWidth, frameHeight, bytes, versions.incrementAndGet()))
+                val n = versions.incrementAndGet()
+                if (n == 1L || n % 500 == 0L) Log.write("picture $n arrived (${frameWidth}x$frameHeight)")
+                frame.set(Frame(frameWidth, frameHeight, bytes, n))
             }
         }
     }
@@ -109,7 +111,7 @@ class VlcEngine {
             }
             val name = if (System.getProperty("os.name").lowercase().contains("win")) "libvlc" else "vlc"
             val loaded = Native.load(name, LibVlc::class.java)
-            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=any", if (System.getenv("PROIPTV_VLC_VERBOSE") != null) "--verbose=2" else "--quiet")
+            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=none", if (System.getenv("PROIPTV_VLC_VERBOSE") != null) "--verbose=2" else "--quiet")
             val inst = loaded.libvlc_new(args.size, args)
             if (inst == null) {
                 error = loaded.libvlc_errmsg() ?: "libvlc_new failed"

@@ -13,6 +13,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.width
 import com.kutlusoy.proiptv.data.Source
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -242,6 +244,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val favLists = allFavLists.filter { it.kind == (item?.kind ?: Kind.LIVE) }
     val favKeys by vm.favKeys.collectAsState()
     val root = remember { FocusRequester() }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val first = remember { FocusRequester() }
     val active = catchup ?: target
     val zapping = request is PlayRequest.Zap && catchup == null
@@ -498,19 +501,27 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     Box(
         Modifier.fillMaxSize().background(Color.Black)
             .focusRequester(root)
+            .focusable()
             .onPreviewKeyEvent { e ->
                 if (e.type != KeyEventType.KeyDown || dialogOpen) return@onPreviewKeyEvent false
                 touched++
                 val code = e.key.nativeKeyCode
                 when {
+                    // up and down always change the channel, whether the controls are shown or not
                     e.key == Key.DirectionUp || e.key == Key.ChannelDown || e.key == Key.PageUp -> {
                         if (zapping) { zap(-1); true } else { overlay = true; false }
                     }
                     e.key == Key.DirectionDown || e.key == Key.ChannelUp || e.key == Key.PageDown -> {
                         if (zapping) { zap(1); true } else { overlay = true; false }
                     }
-                    e.key == Key.DirectionLeft && hubActive && !overlay -> { shiftBy(-SHIFT_STEP_MS); true }
-                    e.key == Key.DirectionRight && hubActive && !overlay -> { shiftBy(SHIFT_STEP_MS); true }
+                    // left and right bring the controls back, then they walk through all of them
+                    zapping && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight) -> {
+                        if (!overlay) overlay = true
+                        else focusManager.moveFocus(if (e.key == Key.DirectionLeft) FocusDirection.Previous else FocusDirection.Next)
+                        true
+                    }
+                    e.key == Key.MediaRewind && hubActive -> { shiftBy(-SHIFT_STEP_MS); true }
+                    e.key == Key.MediaFastForward && hubActive -> { shiftBy(SHIFT_STEP_MS); true }
                     e.key == Key.DirectionLeft && active?.live == false && !overlay -> { exo.seekBack(); true }
                     e.key == Key.DirectionRight && active?.live == false && !overlay -> { exo.seekForward(); true }
                     (e.key == Key.DirectionCenter || e.key == Key.Enter) && !overlay -> { overlay = true; true }
@@ -581,7 +592,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 color = Color.White, style = MaterialTheme.typography.titleLarge,
             )
         }
-        if (zapping) {
+        if (zapping && !LocalTv.current) {
             Fade(overlay, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     RoundControl(PlayerGlyph.UP, stringResource(R.string.player_channel_prev), { zap(-1); touched++ }, diameter = 56.dp)
@@ -895,7 +906,7 @@ private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () ->
     Box(
         modifier.size(diameter).onFocusChanged { focused = it.hasFocus }
             .background(Color(0xCC000000), CircleShape)
-            .border(if (focused) 3.dp else 1.dp, if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.35f), CircleShape)
+            .border(if (focused) 3.dp else 1.5.dp, if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f), CircleShape)
             .semantics { contentDescription = description }
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,

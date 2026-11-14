@@ -9,7 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 enum class Tab(val label: String) {
-    LIVE("nav_live"), MOVIES("nav_movies"), SERIES("nav_series"), ACCOUNTS("nav_accounts"), SETTINGS("nav_settings"),
+    LIVE("nav_live"), MOVIES("nav_movies"), SERIES("nav_series"), EPG("nav_epg"), ACCOUNTS("nav_accounts"), SETTINGS("nav_settings"),
 }
 
 sealed interface PlayRequest {
@@ -24,6 +24,9 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     var tab by mutableStateOf(Tab.LIVE)
     var data by mutableStateOf(LibraryData())
     var loading by mutableStateOf(false)
+    var guide by mutableStateOf(Guide())
+    var guideLoading by mutableStateOf(false)
+    var tick by mutableStateOf(System.currentTimeMillis() / 1000)
     var accounts by mutableStateOf(store.config.accounts)
     var favorites by mutableStateOf(store.config.favorites)
     var player by mutableStateOf<PlayRequest?>(null)
@@ -38,6 +41,20 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         scope.launch {
             data = library.load()
             loading = false
+            refreshGuide()
+        }
+    }
+
+    /** Loads the program guide again, also by hand from the accounts and the settings. */
+    fun refreshGuide() {
+        if (guideLoading) return
+        guideLoading = true
+        scope.launch {
+            try {
+                guide = library.loadGuide(data.entries(Kind.LIVE))
+            } finally {
+                guideLoading = false
+            }
         }
     }
 

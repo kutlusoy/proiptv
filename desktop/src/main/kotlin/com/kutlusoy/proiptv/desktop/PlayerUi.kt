@@ -1,6 +1,8 @@
 package com.kutlusoy.proiptv.desktop
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -52,6 +56,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var position by mutableLongStateOf(0)
     var length by mutableLongStateOf(0)
     var failed by mutableStateOf<String?>(null)
+    var listOpen by mutableStateOf(false)
 
     val live: Boolean get() = request is PlayRequest.Live
     val canZap: Boolean get() = request is PlayRequest.Live && request.entries.size > 1
@@ -67,6 +72,17 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         failed = null
         engine.play(item, volume)
     }
+
+    /** Plays the channel at this position of the list the player was started from. */
+    fun jump(i: Int) {
+        val r = request as? PlayRequest.Live ?: return
+        if (i !in r.entries.indices) return
+        index = i
+        listOpen = false
+        start()
+    }
+
+    val entries: List<Entry> get() = (request as? PlayRequest.Live)?.entries.orEmpty()
 
     fun zap(delta: Int) {
         val r = request as? PlayRequest.Live ?: return
@@ -97,6 +113,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun PlayerScreen(state: AppState, controller: PlayerController) {
     val engine = state.engine
@@ -110,44 +127,107 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     DisposableEffect(controller) { onDispose { engine.stop() } }
     val fullscreen = state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen
 
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
-        if (!fullscreen) {
+    var barVisible by remember { mutableStateOf(true) }
+    var lastMove by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(fullscreen) {
+        barVisible = true
+        while (fullscreen) {
+            delay(500)
+            barVisible = controller.listOpen || System.currentTimeMillis() - lastMove < 3000
+        }
+        barVisible = true
+    }
+
+    val video: @Composable (Modifier) -> Unit = { modifier ->
+        if (!engine.available) {
+            Text(engine.error ?: "libVLC not found", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp))
+        } else {
+            VideoSurface(engine, modifier, onDoubleClick = { state.toggleFullscreen() }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
+        }
+        controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+    if (fullscreen) {
+        // the picture fills the screen, the controls float above it and fade away when the mouse rests
+        Box(
+            Modifier.fillMaxSize().background(Color.Black).onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Move) {
+                lastMove = System.currentTimeMillis()
+                barVisible = true
+            },
+            contentAlignment = Alignment.Center,
+        ) {
+            video(Modifier.fillMaxSize())
+            if (barVisible) ControlBar(state, controller, Modifier.align(Alignment.BottomCenter), floating = true)
+        }
+    } else {
+        Column(Modifier.fillMaxSize().background(Color.Black)) {
             Row(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(controller.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = 1)
             }
+            Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
+            ControlBar(state, controller, Modifier, floating = false)
         }
-        Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black), contentAlignment = Alignment.Center) {
-            if (!engine.available) {
-                Text(engine.error ?: "libVLC not found", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp))
-            } else {
-                VideoSurface(engine, Modifier.fillMaxSize(), onDoubleClick = { state.toggleFullscreen() }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
+    }
+    if (controller.listOpen && controller.canZap) {
+        Box(Modifier.fillMaxSize().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { controller.listOpen = false })
+        ChannelPanel(state, controller, Modifier.align(Alignment.CenterStart))
+    }
+    }
+}
+
+/** The channels of the list the player was started from, at the left edge. The channel keeps playing while the list is open. */
+@Composable
+private fun ChannelPanel(state: AppState, controller: PlayerController, modifier: Modifier) {
+    val list = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (controller.index - 3).coerceAtLeast(0))
+    androidx.compose.foundation.lazy.LazyColumn(modifier.fillMaxHeight().width(340.dp).background(Palette.Velvet), state = list) {
+        itemsIndexed(controller.entries, key = { _, e -> e.key }) { i, e ->
+            val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
+            Row(
+                Modifier.fillMaxWidth().background(if (i == controller.index) Palette.WineDeep.copy(alpha = 0.7f) else Color.Transparent)
+                    .clickable { controller.jump(i) }.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Logo(e.logo, Modifier.size(width = 56.dp, height = 36.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White)
+                    if (now != null) Text(now.title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                }
             }
-            controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-        Row(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            IconButton(onClick = { controller.stop() }) { Icon(Icons.Filled.Stop, t("player_stop")) }
-            IconButton(onClick = { controller.togglePause() }) {
-                Icon(if (controller.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, t(if (controller.paused) "player_play" else "player_pause"))
-            }
-            if (controller.canZap) {
-                IconButton(onClick = { controller.zap(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("player_channel_prev")) }
-                IconButton(onClick = { controller.zap(1) }) { Icon(Icons.Filled.KeyboardArrowDown, t("player_channel_next")) }
-            }
-            if (!controller.live && controller.length > 0) {
-                Text(clock(controller.position), style = MaterialTheme.typography.bodySmall)
-                Slider(
-                    value = (controller.position.toFloat() / controller.length).coerceIn(0f, 1f),
-                    onValueChange = { state.engine.seek((it * controller.length).toLong()); controller.poll() },
-                    modifier = Modifier.weight(1f),
-                )
-                Text(clock(controller.length), style = MaterialTheme.typography.bodySmall)
-            } else {
-                Box(Modifier.weight(1f))
-            }
-            Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp))
-            Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(120.dp))
-            IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, null) }
+    }
+}
+
+@Composable
+private fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
+    Row(
+        modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (controller.canZap) IconButton(onClick = { controller.listOpen = !controller.listOpen }) { Icon(Icons.Filled.Menu, t("player_channel_list")) }
+        IconButton(onClick = { controller.stop() }) { Icon(Icons.Filled.Stop, t("player_stop")) }
+        IconButton(onClick = { controller.togglePause() }) {
+            Icon(if (controller.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, t(if (controller.paused) "player_play" else "player_pause"))
         }
+        if (controller.canZap) {
+            IconButton(onClick = { controller.zap(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("player_channel_prev")) }
+            IconButton(onClick = { controller.zap(1) }) { Icon(Icons.Filled.KeyboardArrowDown, t("player_channel_next")) }
+        }
+        if (floating) Text(controller.title, Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+        if (!controller.live && controller.length > 0) {
+            Text(clock(controller.position), style = MaterialTheme.typography.bodySmall)
+            Slider(
+                value = (controller.position.toFloat() / controller.length).coerceIn(0f, 1f),
+                onValueChange = { state.engine.seek((it * controller.length).toLong()); controller.poll() },
+                modifier = Modifier.weight(1f),
+            )
+            Text(clock(controller.length), style = MaterialTheme.typography.bodySmall)
+        } else {
+            Box(Modifier.weight(1f))
+        }
+        Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp))
+        Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(120.dp))
+        IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, null) }
     }
 }
 

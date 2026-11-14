@@ -73,7 +73,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val categories = data.categories(kind)
     val all = data.entries(kind)
     val q = query.trim()
-    val shown = remember(all, category, q, state.favorites) {
+    val shown = remember(all, category, q, state.favorites, state.guide, state.tick / 60) {
         all.asSequence()
             .filter { e ->
                 when (category) {
@@ -82,7 +82,10 @@ fun BrowseScreen(state: AppState, kind: Int) {
                     else -> e.categoryId == category.substringAfter('|') && e.accountId == category.substringBefore('|')
                 }
             }
-            .filter { e -> q.isEmpty() || e.name.contains(q, ignoreCase = true) }
+            .filter { e ->
+                q.isEmpty() || e.name.contains(q, ignoreCase = true) ||
+                    (kind == Kind.LIVE && state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true)
+            }
             .toList()
     }
 
@@ -99,7 +102,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 placeholder = { Text(t(if (kind == Kind.LIVE) "live_search" else "live_search")) },
                 trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, null) } },
             )
-            IconButton(onClick = { state.reload() }, enabled = !state.loading) { Icon(Icons.Filled.Refresh, t("settings_refresh")) }
+            IconButton(onClick = { state.reload() }, enabled = !state.loading && !state.guideLoading) { Icon(Icons.Filled.Refresh, t("settings_refresh")) }
         }
         data.errors.forEach { (id, message) ->
             val name = state.accounts.firstOrNull { it.id == id }?.name ?: id
@@ -133,7 +136,17 @@ private fun ChannelRow(state: AppState, e: Entry, onClick: () -> Unit) {
     ) {
         Logo(e.logo, Modifier.size(width = 64.dp, height = 40.dp))
         if (info.country.isNotEmpty()) Badge(info.country)
-        Text(info.title, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
+        Column(Modifier.weight(1f)) {
+            Text(info.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (now != null) {
+                Text(now.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.65f))
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { ((state.tick - now.start).toFloat() / (now.end - now.start).coerceAtLeast(1)).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                )
+            }
+        }
         if (info.year > 0) Badge(info.year.toString())
         IconButton(onClick = { state.toggleFavorite(e) }) {
             Icon(if (state.isFavorite(e)) Icons.Filled.Star else Icons.Filled.StarBorder, null, tint = if (state.isFavorite(e)) Color(0xFFFFC107) else Color.White.copy(alpha = 0.4f))

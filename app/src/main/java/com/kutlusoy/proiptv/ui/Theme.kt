@@ -4,6 +4,8 @@ import android.app.UiModeManager
 import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.node.invalidateDraw
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.Typography
@@ -26,7 +28,7 @@ object Palette {
 }
 
 private val Colors = darkColorScheme(
-    primary = Palette.Wine,
+    primary = Color(0xFFE23A60),
     onPrimary = Color.White,
     primaryContainer = Palette.WineDeep,
     onPrimaryContainer = Color(0xFFFFD9DE),
@@ -43,7 +45,7 @@ private val Colors = darkColorScheme(
     onSurfaceVariant = Color(0xFFCDBFC3),
     surfaceContainer = Palette.Surface,
     surfaceContainerHigh = Palette.SurfaceHigh,
-    outline = Palette.Outline,
+    outline = Color(0xFF8F7A81),
     outlineVariant = Color(0xFF33272B),
     error = Color(0xFFFF8A80),
 )
@@ -85,9 +87,61 @@ private fun tvTypography(): Typography {
     )
 }
 
+/**
+ * A clear focus ring for the remote control: the element with the focus gets a bright frame and a light fill, on every button,
+ * list row and menu entry, also in dialogs. Without it the default focus look of the buttons is hardly visible on a dark TV screen.
+ */
+private object FocusRingIndication : androidx.compose.foundation.IndicationNodeFactory {
+    override fun create(interactionSource: androidx.compose.foundation.interaction.InteractionSource): androidx.compose.ui.node.DelegatableNode =
+        Node(interactionSource)
+
+    override fun equals(other: Any?) = other === this
+    override fun hashCode() = -1
+
+    private class Node(private val source: androidx.compose.foundation.interaction.InteractionSource) :
+        androidx.compose.ui.Modifier.Node(), androidx.compose.ui.node.DrawModifierNode {
+        private var focused = false
+        private var pressed = false
+
+        override fun onAttach() {
+            coroutineScope.launch {
+                source.interactions.collect { i ->
+                    when (i) {
+                        is androidx.compose.foundation.interaction.FocusInteraction.Focus -> focused = true
+                        is androidx.compose.foundation.interaction.FocusInteraction.Unfocus -> focused = false
+                        is androidx.compose.foundation.interaction.PressInteraction.Press -> pressed = true
+                        is androidx.compose.foundation.interaction.PressInteraction.Release, is androidx.compose.foundation.interaction.PressInteraction.Cancel -> pressed = false
+                    }
+                    invalidateDraw()
+                }
+            }
+        }
+
+        override fun androidx.compose.ui.graphics.drawscope.ContentDrawScope.draw() {
+            drawContent()
+            if (focused || pressed) {
+                val radius = androidx.compose.ui.geometry.CornerRadius(12.dp.toPx())
+                drawRoundRect(Color.White.copy(alpha = if (pressed) 0.25f else 0.14f), cornerRadius = radius)
+                if (focused) {
+                    val stroke = 3.dp.toPx()
+                    drawRoundRect(
+                        Color.White, topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
+                        size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke), cornerRadius = radius,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(stroke),
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun ProIptvTheme(tv: Boolean = false, content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = Colors, shapes = AppShapes, typography = if (tv) tvTypography() else Typography()) {
-        androidx.compose.runtime.CompositionLocalProvider(LocalTv provides tv, content = content)
+        if (tv) {
+            androidx.compose.runtime.CompositionLocalProvider(LocalTv provides true, androidx.compose.foundation.LocalIndication provides FocusRingIndication, content = content)
+        } else {
+            androidx.compose.runtime.CompositionLocalProvider(LocalTv provides false, content = content)
+        }
     }
 }

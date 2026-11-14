@@ -41,11 +41,11 @@ object Palette {
 }
 
 private val Colors = darkColorScheme(
-    primary = Palette.Wine, onPrimary = Color.White, primaryContainer = Palette.WineDeep, onPrimaryContainer = Color(0xFFFFD9DE),
+    primary = Color(0xFFE23A60), onPrimary = Color.White, primaryContainer = Palette.WineDeep, onPrimaryContainer = Color(0xFFFFD9DE),
     secondary = Palette.WineSoft, secondaryContainer = Palette.WineDeep, onSecondaryContainer = Color(0xFFFFD9DE), tertiary = Palette.WineSoft,
     background = Palette.Velvet, onBackground = Palette.Text, surface = Palette.Surface, onSurface = Palette.Text,
     surfaceVariant = Palette.SurfaceHigh, onSurfaceVariant = Color(0xFFCDBFC3), surfaceContainer = Palette.Surface,
-    surfaceContainerHigh = Palette.SurfaceHigh, outline = Palette.Outline, outlineVariant = Color(0xFF33272B), error = Color(0xFFFF8A80),
+    surfaceContainerHigh = Palette.SurfaceHigh, outline = Color(0xFF8F7A81), outlineVariant = Color(0xFF33272B), error = Color(0xFFFF8A80),
 )
 
 @Composable

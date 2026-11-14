@@ -151,6 +151,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
         }
     }
     var searching by rememberSaveable(kind) { mutableStateOf(query.isNotEmpty()) }
+    BackHandler(enabled = searching && series == null && movie == null) { query = ""; searching = false }
     val chrome = LocalChromeHidden.current
     SideEffect { chrome.value = series != null || movie != null }
     DisposableEffect(Unit) { onDispose { chrome.value = false } }
@@ -180,50 +181,50 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
 
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
         Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (searching) {
-                OutlinedTextField(
-                    query, { query = it }, singleLine = true, modifier = Modifier.weight(1f),
-                    placeholder = { Text(stringResource(if (kind == Kind.LIVE) R.string.live_search_epg else R.string.live_search)) },
-                    trailingIcon = {
-                        IconButton(onClick = { query = ""; searching = false }) { Icon(Icons.Filled.Close, stringResource(R.string.action_close)) }
-                    },
-                )
-            } else {
-                val allLabel = stringResource(R.string.live_all)
-                val favLabel = stringResource(R.string.fav_title)
-                val otherLabel = stringResource(R.string.live_other)
-                val options = buildList<Pair<String, String>> {
-                    add(FAV_KEY to favLabel)
-                    add(ALL_KEY to allLabel)
-                    if (effective != null) categories.forEach { add(it.remoteId to it.name.ifBlank { otherLabel }) }
-                }
-                val current = when {
-                    favMode -> FAV_KEY
-                    category == null -> ALL_KEY
-                    else -> category!!
-                }
-                DropdownField(
-                    selected = options.firstOrNull { it.first == current }?.second ?: allLabel,
-                    options = options,
-                    onSelect = { v ->
-                        when (v) {
-                            FAV_KEY -> favMode = true
-                            ALL_KEY -> { favMode = false; category = null }
-                            else -> { favMode = false; category = v }
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                if (enabled.size > 1) {
-                    DropdownField<Long?>(
-                        selected = enabled.firstOrNull { it.id == selected }?.name ?: stringResource(R.string.live_all_accounts),
-                        options = listOf<Pair<Long?, String>>(null to stringResource(R.string.live_all_accounts)) + enabled.map { it.id to it.name },
-                        onSelect = { accountSel = it },
-                        modifier = Modifier.weight(0.7f),
-                    )
-                }
-                IconButton(onClick = { searching = true }, modifier = Modifier.focusHighlight()) { Icon(Icons.Filled.Search, stringResource(R.string.live_search)) }
+            val allLabel = stringResource(R.string.live_all)
+            val favLabel = stringResource(R.string.fav_title)
+            val otherLabel = stringResource(R.string.live_other)
+            val options = buildList<Pair<String, String>> {
+                add(FAV_KEY to favLabel)
+                add(ALL_KEY to allLabel)
+                if (effective != null) categories.forEach { add(it.remoteId to it.name.ifBlank { otherLabel }) }
             }
+            val current = when {
+                favMode -> FAV_KEY
+                category == null -> ALL_KEY
+                else -> category!!
+            }
+            DropdownField(
+                selected = options.firstOrNull { it.first == current }?.second ?: allLabel,
+                options = options,
+                onSelect = { v ->
+                    when (v) {
+                        FAV_KEY -> favMode = true
+                        ALL_KEY -> { favMode = false; category = null }
+                        else -> { favMode = false; category = v }
+                    }
+                },
+                modifier = Modifier.weight(1f),
+            )
+            if (enabled.size > 1) {
+                DropdownField<Long?>(
+                    selected = enabled.firstOrNull { it.id == selected }?.name ?: stringResource(R.string.live_all_accounts),
+                    options = listOf<Pair<Long?, String>>(null to stringResource(R.string.live_all_accounts)) + enabled.map { it.id to it.name },
+                    onSelect = { accountSel = it },
+                    modifier = Modifier.weight(0.7f),
+                )
+            }
+            IconButton(onClick = { if (searching) { query = ""; searching = false } else searching = true }, modifier = Modifier.focusHighlight()) {
+                Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, stringResource(if (searching) R.string.action_close else R.string.live_search))
+            }
+        }
+        if (searching) {
+            val searchFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+            LaunchedEffect(Unit) { runCatching { searchFocus.requestFocus() } }
+            OutlinedTextField(
+                query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).focusRequester(searchFocus),
+                placeholder = { Text(stringResource(if (kind == Kind.LIVE) R.string.live_search_epg else R.string.live_search)) },
+            )
         }
 
         val useRows = kind != Kind.LIVE && !favMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()

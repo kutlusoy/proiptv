@@ -2,6 +2,7 @@ package com.kutlusoy.proiptv.desktop
 
 import com.kutlusoy.proiptv.update.ReleaseParser
 import java.io.File
+import java.util.Date
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -80,6 +81,42 @@ class DesktopTest {
             val live = data.entries(Kind.LIVE).single()
             assertNotNull(Library(store).playable(live))
             assertNull(data.errors["m"])
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun guideIsLoadedForTheChannelsOfAnAccountAndFindsNowAndNext() {
+        val server = MockWebServer()
+        val fmt = java.text.SimpleDateFormat("yyyyMMddHHmmss Z", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+        fun t(offsetMin: Int) = fmt.format(Date(System.currentTimeMillis() + offsetMin * 60_000L))
+        server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse = when {
+                request.path!!.contains("list.m3u") -> MockResponse().setBody("#EXTM3U url-tvg=\"${server.url("/guide.xml")}\"\n#EXTINF:-1 tvg-id=\"One.DE\" group-title=\"News\",Erstes\nhttp://s/1.ts\n")
+                request.path!!.contains("guide.xml") -> MockResponse().setBody(
+                    """<?xml version="1.0"?><tv>
+                    <programme start="${t(-30)}" stop="${t(30)}" channel="one.de"><title>Tagesschau &amp;amp; Wetter</title></programme>
+                    <programme start="${t(30)}" stop="${t(90)}" channel="one.de"><title>Film</title></programme>
+                    <programme start="${t(-30)}" stop="${t(30)}" channel="other"><title>Ignored</title></programme></tv>""",
+                )
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+        server.start()
+        try {
+            val store = Store(tempDir())
+            store.update { it.copy(accounts = listOf(AccountDto(id = "m", name = "List", type = "m3u", url = server.url("/list.m3u").toString()))) }
+            val library = Library(store)
+            val data = runBlocking { library.load() }
+            val guide = runBlocking { library.loadGuide(data.entries(Kind.LIVE)) }
+            val channel = data.entries(Kind.LIVE).single()
+            val (now, next) = guide.nowNext(channel.accountId, channel.epgId, System.currentTimeMillis() / 1000)
+            assertEquals("Tagesschau & Wetter", now?.title)
+            assertEquals("Film", next?.title)
+            assertEquals(2, guide.programs.values.sumOf { it.size })
+            assertTrue(guide.updated.containsKey("m"))
+            assertEquals(1, data.status["m"]!!.channels)
         } finally {
             server.shutdown()
         }

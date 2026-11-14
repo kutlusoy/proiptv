@@ -65,6 +65,14 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     { code -> Strings.language = code; state.store.update { it.copy(language = code) } }, Modifier.widthIn(max = 320.dp).fillMaxWidth(),
                 )
             }
+            Group(t("settings_group_data")) {
+                Text(t("nav_accounts"), style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { state.reload() }, enabled = !state.loading) { Text(t("settings_refresh")) }
+                    OutlinedButton(onClick = { state.refreshGuide() }, enabled = !state.guideLoading) { Text(t("account_sync_guide")) }
+                }
+                Hint(t("settings_guide_info"))
+            }
             Group(t("settings_group_playback")) {
                 val vlc = state.engine
                 Text(if (vlc.available) "libVLC" else (vlc.error ?: "libVLC not found"), color = if (vlc.available) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error)
