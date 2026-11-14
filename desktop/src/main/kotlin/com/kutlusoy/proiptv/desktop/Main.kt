@@ -64,6 +64,7 @@ fun main() = application {
         },
         title = "ProIPTV",
         state = windowState,
+        undecorated = state.placement == WindowPlacement.Fullscreen,
         icon = painterResource("icon.png"),
         onPreviewKeyEvent = { e ->
             val c = state.controller

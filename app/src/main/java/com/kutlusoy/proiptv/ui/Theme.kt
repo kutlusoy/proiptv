@@ -26,7 +26,7 @@ object Palette {
 }
 
 private val Colors = darkColorScheme(
-    primary = Palette.Wine,
+    primary = Color(0xFFE23A60),
     onPrimary = Color.White,
     primaryContainer = Palette.WineDeep,
     onPrimaryContainer = Color(0xFFFFD9DE),
@@ -43,7 +43,7 @@ private val Colors = darkColorScheme(
     onSurfaceVariant = Color(0xFFCDBFC3),
     surfaceContainer = Palette.Surface,
     surfaceContainerHigh = Palette.SurfaceHigh,
-    outline = Palette.Outline,
+    outline = Color(0xFF8F7A81),
     outlineVariant = Color(0xFF33272B),
     error = Color(0xFFFF8A80),
 )

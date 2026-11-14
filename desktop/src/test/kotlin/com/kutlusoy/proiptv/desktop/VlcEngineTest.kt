@@ -35,6 +35,16 @@ class VlcEngineTest {
             // the test picture is colourful, a black or empty picture would mean the callbacks deliver nothing
             val nonBlack = frame.pixels.count { it.toInt() != 0 }
             assertTrue("picture is empty", nonBlack > frame.pixels.size / 10)
+            // the same conversion the screen uses: a raster image that is not black
+            val image = org.jetbrains.skia.Image.makeRaster(
+                org.jetbrains.skia.ImageInfo(frame.width, frame.height, org.jetbrains.skia.ColorType.BGRA_8888, org.jetbrains.skia.ColorAlphaType.OPAQUE),
+                frame.pixels, frame.width * 4,
+            )
+            val bitmap = org.jetbrains.skia.Bitmap()
+            assertTrue(bitmap.allocPixels(org.jetbrains.skia.ImageInfo(frame.width, frame.height, org.jetbrains.skia.ColorType.BGRA_8888, org.jetbrains.skia.ColorAlphaType.OPAQUE)))
+            assertTrue(image.readPixels(bitmap))
+            val read = bitmap.readPixels(org.jetbrains.skia.ImageInfo(frame.width, frame.height, org.jetbrains.skia.ColorType.BGRA_8888, org.jetbrains.skia.ColorAlphaType.OPAQUE), frame.width * 4)!!
+            assertTrue("image is black", read.count { it.toInt() != 0 } > read.size / 10)
         } finally {
             engine.release()
             video.delete()

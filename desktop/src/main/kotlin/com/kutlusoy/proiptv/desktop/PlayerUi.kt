@@ -97,6 +97,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun PlayerScreen(state: AppState, controller: PlayerController) {
     val engine = state.engine
@@ -110,44 +111,78 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     DisposableEffect(controller) { onDispose { engine.stop() } }
     val fullscreen = state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen
 
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
-        if (!fullscreen) {
+    var barVisible by remember { mutableStateOf(true) }
+    var lastMove by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(fullscreen) {
+        barVisible = true
+        while (fullscreen) {
+            delay(500)
+            barVisible = System.currentTimeMillis() - lastMove < 3000
+        }
+        barVisible = true
+    }
+
+    val video: @Composable (Modifier) -> Unit = { modifier ->
+        if (!engine.available) {
+            Text(engine.error ?: "libVLC not found", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp))
+        } else {
+            VideoSurface(engine, modifier, onDoubleClick = { state.toggleFullscreen() }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
+        }
+        controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+
+    if (fullscreen) {
+        // the picture fills the screen, the controls float above it and fade away when the mouse rests
+        Box(
+            Modifier.fillMaxSize().background(Color.Black).onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Move) {
+                lastMove = System.currentTimeMillis()
+                barVisible = true
+            },
+            contentAlignment = Alignment.Center,
+        ) {
+            video(Modifier.fillMaxSize())
+            if (barVisible) ControlBar(state, controller, Modifier.align(Alignment.BottomCenter), floating = true)
+        }
+    } else {
+        Column(Modifier.fillMaxSize().background(Color.Black)) {
             Row(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(controller.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = 1)
             }
+            Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
+            ControlBar(state, controller, Modifier, floating = false)
         }
-        Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black), contentAlignment = Alignment.Center) {
-            if (!engine.available) {
-                Text(engine.error ?: "libVLC not found", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp))
-            } else {
-                VideoSurface(engine, Modifier.fillMaxSize(), onDoubleClick = { state.toggleFullscreen() }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
-            }
-            controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+}
+
+@Composable
+private fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
+    Row(
+        modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        IconButton(onClick = { controller.stop() }) { Icon(Icons.Filled.Stop, t("player_stop")) }
+        IconButton(onClick = { controller.togglePause() }) {
+            Icon(if (controller.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, t(if (controller.paused) "player_play" else "player_pause"))
         }
-        Row(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            IconButton(onClick = { controller.stop() }) { Icon(Icons.Filled.Stop, t("player_stop")) }
-            IconButton(onClick = { controller.togglePause() }) {
-                Icon(if (controller.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, t(if (controller.paused) "player_play" else "player_pause"))
-            }
-            if (controller.canZap) {
-                IconButton(onClick = { controller.zap(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("player_channel_prev")) }
-                IconButton(onClick = { controller.zap(1) }) { Icon(Icons.Filled.KeyboardArrowDown, t("player_channel_next")) }
-            }
-            if (!controller.live && controller.length > 0) {
-                Text(clock(controller.position), style = MaterialTheme.typography.bodySmall)
-                Slider(
-                    value = (controller.position.toFloat() / controller.length).coerceIn(0f, 1f),
-                    onValueChange = { state.engine.seek((it * controller.length).toLong()); controller.poll() },
-                    modifier = Modifier.weight(1f),
-                )
-                Text(clock(controller.length), style = MaterialTheme.typography.bodySmall)
-            } else {
-                Box(Modifier.weight(1f))
-            }
-            Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp))
-            Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(120.dp))
-            IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, null) }
+        if (controller.canZap) {
+            IconButton(onClick = { controller.zap(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("player_channel_prev")) }
+            IconButton(onClick = { controller.zap(1) }) { Icon(Icons.Filled.KeyboardArrowDown, t("player_channel_next")) }
         }
+        if (floating) Text(controller.title, Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+        if (!controller.live && controller.length > 0) {
+            Text(clock(controller.position), style = MaterialTheme.typography.bodySmall)
+            Slider(
+                value = (controller.position.toFloat() / controller.length).coerceIn(0f, 1f),
+                onValueChange = { state.engine.seek((it * controller.length).toLong()); controller.poll() },
+                modifier = Modifier.weight(1f),
+            )
+            Text(clock(controller.length), style = MaterialTheme.typography.bodySmall)
+        } else {
+            Box(Modifier.weight(1f))
+        }
+        Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp))
+        Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(120.dp))
+        IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, null) }
     }
 }
 
