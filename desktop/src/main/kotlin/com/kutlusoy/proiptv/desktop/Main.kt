@@ -45,7 +45,12 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.kutlusoy.proiptv.net.Http
 
-fun main() = application {
+fun main() {
+    Thread.setDefaultUncaughtExceptionHandler { t, e -> Log.write("error in ${t.name}: ${e.stackTraceToString().take(1500)}") }
+    runApplication()
+}
+
+private fun runApplication() = application {
     Log.trim()
     Log.write("ProIPTV ${AppInfo.label} started")
     val store = remember { Store(Store.defaultDir()).also { Strings.init(it.config.language) } }
@@ -72,6 +77,8 @@ fun main() = application {
     }
     LaunchedEffect(state.placement) { windowState.placement = state.placement }
 
+    // AWT cannot make a shown window undecorated, so the window is created again when full screen changes (the state lives in AppState)
+    androidx.compose.runtime.key(state.placement == WindowPlacement.Fullscreen) {
     Window(
         onCloseRequest = {
             state.recordingManager.stopAll()
@@ -107,13 +114,14 @@ fun main() = application {
             }
         }
     }
+    }
 }
 
 @Composable
 private fun App(state: AppState, updater: Updater, update: UpdateState) {
     val request = state.player
     if (request != null) {
-        val controller = remember(request) { PlayerController(state, request).also { state.controller = it } }
+        val controller = remember(request) { state.controller?.takeIf { it.isFor(request) } ?: PlayerController(state, request).also { state.controller = it } }
         PlayerScreen(state, controller)
     } else {
         Row(Modifier.fillMaxSize()) {
