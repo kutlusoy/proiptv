@@ -1,5 +1,7 @@
 package com.kutlusoy.proiptv.desktop
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.sun.jna.platform.win32.Crypt32Util
 import java.io.File
 import java.util.Base64
@@ -22,12 +24,30 @@ data class AccountDto(
 )
 
 @Serializable
-data class FavoriteDto(val account: String, val kind: Int, val remoteId: String, val name: String)
+data class FavoriteDto(val account: String, val kind: Int, val remoteId: String, val name: String, val listId: String = "")
+
+/** A favorites list. Live TV, movies and series each have their own lists. */
+@Serializable
+data class FavoriteListDto(val id: String = UUID.randomUUID().toString(), val name: String, val kind: Int)
+
+@Serializable
+data class ProgressDto(
+    val account: String,
+    val kind: Int,
+    val remoteId: String,
+    val positionMs: Long = 0,
+    val durationMs: Long = 0,
+    val watched: Boolean = false,
+    val updated: Long = 0,
+) {
+    val key: String get() = "$account|$kind|$remoteId"
+}
 
 @Serializable
 data class ConfigDto(
     val accounts: List<AccountDto> = emptyList(),
     val favorites: List<FavoriteDto> = emptyList(),
+    val favoriteLists: List<FavoriteListDto> = emptyList(),
     val language: String = "",
     val autoUpdate: Boolean = true,
     val lastUpdateCheck: Long = 0,
@@ -76,6 +96,44 @@ class Store(val dir: File) {
         fun defaultDir(): File {
             val appData = System.getenv("APPDATA")
             return if (appData != null) File(appData, "ProIPTV") else File(System.getProperty("user.home"), ".proiptv")
+        }
+    }
+}
+
+/** Where the player stopped and what was watched, kept in progress.json next to the settings. */
+class ProgressStore(private val dir: File) {
+    private val file = File(dir, "progress.json")
+    private val json = Json { ignoreUnknownKeys = true }
+    private val map: MutableMap<String, ProgressDto> = runCatching { json.decodeFromString<List<ProgressDto>>(file.readText()) }
+        .getOrDefault(emptyList()).associateBy { it.key }.toMutableMap()
+
+    /** Changes with every write, so screens that read the progress update themselves. */
+    var version by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+
+    @Synchronized
+    fun get(account: String, kind: Int, remoteId: String): ProgressDto? = map["$account|$kind|$remoteId"]
+
+    @Synchronized
+    fun save(p: ProgressDto) {
+        map[p.key] = p
+        write()
+    }
+
+    @Synchronized
+    fun setWatched(account: String, kind: Int, ids: List<String>, watched: Boolean) {
+        for (id in ids) {
+            val old = map["$account|$kind|$id"]
+            map["$account|$kind|$id"] = (old ?: ProgressDto(account, kind, id)).copy(watched = watched, positionMs = if (watched) 0 else old?.positionMs ?: 0, updated = System.currentTimeMillis())
+        }
+        write()
+    }
+
+    private fun write() {
+        version++
+        runCatching {
+            dir.mkdirs()
+            File(dir, "progress.json.tmp").also { it.writeText(json.encodeToString(map.values.toList())) }.copyTo(file, overwrite = true)
         }
     }
 }

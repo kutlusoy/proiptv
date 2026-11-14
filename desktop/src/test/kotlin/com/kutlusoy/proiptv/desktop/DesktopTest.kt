@@ -121,4 +121,32 @@ class DesktopTest {
             server.shutdown()
         }
     }
+
+    private fun ep(id: String, n: Int) = com.kutlusoy.proiptv.net.XtreamEpisode(id, 1, n, "E$n", "mkv", null, null)
+
+    @Test
+    fun progressSurvivesARestartAndWatchedClearsThePosition() {
+        val dir = tempDir()
+        val store = ProgressStore(dir)
+        store.save(ProgressDto("a", 1, "7", positionMs = 60_000, durationMs = 100_000, updated = 1))
+        assertEquals(60_000L, ProgressStore(dir).get("a", 1, "7")?.positionMs)
+        store.setWatched("a", 1, listOf("7"), true)
+        val again = ProgressStore(dir).get("a", 1, "7")
+        assertEquals(true, again?.watched)
+        assertEquals(0L, again?.positionMs)
+    }
+
+    @Test
+    fun seriesOffersTheLastStartedEpisodeElseTheFirstUnwatched() {
+        val eps = listOf(ep("1", 1), ep("2", 2), ep("3", 3))
+        val none = SeriesProgress.next(eps) { null }
+        assertEquals("1", none?.episode?.id)
+        assertEquals(false, none?.continuing)
+        val watchedFirst = SeriesProgress.next(eps) { if (it == "1") ProgressDto("a", 3, "1", watched = true) else null }
+        assertEquals("2", watchedFirst?.episode?.id)
+        assertEquals(true, watchedFirst?.continuing)
+        val started = SeriesProgress.next(eps) { if (it == "2") ProgressDto("a", 3, "2", positionMs = 30_000, updated = 5) else null }
+        assertEquals("2", started?.episode?.id)
+        assertEquals(true, started?.continuing)
+    }
 }

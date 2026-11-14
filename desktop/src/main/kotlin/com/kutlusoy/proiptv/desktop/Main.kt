@@ -1,6 +1,8 @@
 package com.kutlusoy.proiptv.desktop
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
@@ -131,6 +133,34 @@ private fun App(state: AppState, updater: Updater, update: UpdateState) {
                 }
             }
         }
+    }
+    state.confirmRemove?.let { e ->
+        AlertDialog(
+            onDismissRequest = { state.confirmRemove = null },
+            text = { Text(t("fav_remove_confirm", e.name)) },
+            confirmButton = { TextButton(onClick = { state.removeFromAll(e); state.confirmRemove = null }) { Text(t("fav_remove")) } },
+            dismissButton = { TextButton(onClick = { state.confirmRemove = null }) { Text(t("action_cancel")) } },
+        )
+    }
+    state.listsFor?.let { e ->
+        AlertDialog(
+            onDismissRequest = { state.listsFor = null },
+            title = { Text(t("fav_choose_lists")) },
+            text = {
+                androidx.compose.foundation.layout.Column {
+                    state.listsOf(e.kind).forEach { list ->
+                        androidx.compose.foundation.layout.Row(
+                            Modifier.fillMaxWidth().clickable { state.setInList(e, list.id, !state.inList(e, list.id)) },
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.Checkbox(state.inList(e, list.id), onCheckedChange = null)
+                            Text(list.name, Modifier.padding(start = 8.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { state.listsFor = null }) { Text(t("fav_done")) } },
+        )
     }
     update.announce?.let { release ->
         AlertDialog(

@@ -14,7 +14,7 @@ enum class Tab(val label: String) {
 
 sealed interface PlayRequest {
     class Live(val entries: List<Entry>, val index: Int) : PlayRequest
-    class Single(val item: Playable) : PlayRequest
+    class Single(val item: Playable, val startMs: Long = 0) : PlayRequest
 }
 
 class AppState(val store: Store, val scope: CoroutineScope) {
@@ -77,16 +77,89 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         reload()
     }
 
+    val progress = ProgressStore(store.dir)
+    var favLists by mutableStateOf(store.config.favoriteLists)
+    var listsFor by mutableStateOf<Entry?>(null)
+    var confirmRemove by mutableStateOf<Entry?>(null)
+
+    init {
+        ensureDefaultLists()
+    }
+
+    /** Every area has at least one list. Favorites from older versions (without a list) go into the first list of their area. */
+    private fun ensureDefaultLists() {
+        store.update { c ->
+            var lists = c.favoriteLists
+            for (kind in 0..2) if (lists.none { it.kind == kind }) lists = lists + FavoriteListDto(name = Strings.get("fav_title"), kind = kind)
+            val favs = c.favorites.map { f -> if (f.listId.isEmpty()) f.copy(listId = lists.first { it.kind == f.kind.coerceIn(0, 2) }.id) else f }
+            c.copy(favoriteLists = lists, favorites = favs)
+        }
+        favLists = store.config.favoriteLists
+        favorites = store.config.favorites
+    }
+
+    fun listsOf(kind: Int) = favLists.filter { it.kind == kind }
+
     fun isFavorite(e: Entry) = favorites.any { it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
 
-    fun toggleFavorite(e: Entry) {
+    fun inList(e: Entry, listId: String) = favorites.any { it.listId == listId && it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
+
+    fun setInList(e: Entry, listId: String, on: Boolean) {
         store.update { c ->
-            val has = c.favorites.any { it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
-            c.copy(favorites = if (has) c.favorites.filterNot { it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
-            else c.favorites + FavoriteDto(e.accountId, e.kind, e.remoteId, e.name))
+            val rest = c.favorites.filterNot { it.listId == listId && it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
+            c.copy(favorites = if (on) rest + FavoriteDto(e.accountId, e.kind, e.remoteId, e.name, listId) else rest)
         }
         favorites = store.config.favorites
     }
+
+    /** The star: one list toggles directly (removing asks first), several lists open the list dialog. */
+    fun toggleFavorite(e: Entry) {
+        val lists = listsOf(e.kind)
+        when {
+            lists.size > 1 -> listsFor = e
+            isFavorite(e) -> confirmRemove = e
+            else -> lists.firstOrNull()?.let { setInList(e, it.id, true) }
+        }
+    }
+
+    fun removeFromAll(e: Entry) {
+        store.update { c -> c.copy(favorites = c.favorites.filterNot { it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }) }
+        favorites = store.config.favorites
+    }
+
+    fun createList(kind: Int, name: String): String {
+        val list = FavoriteListDto(name = name.trim(), kind = kind)
+        store.update { it.copy(favoriteLists = it.favoriteLists + list) }
+        favLists = store.config.favoriteLists
+        return list.id
+    }
+
+    fun renameList(id: String, name: String) {
+        store.update { c -> c.copy(favoriteLists = c.favoriteLists.map { if (it.id == id) it.copy(name = name.trim()) else it }) }
+        favLists = store.config.favoriteLists
+    }
+
+    fun deleteList(id: String) {
+        store.update { c -> c.copy(favoriteLists = c.favoriteLists.filter { it.id != id }, favorites = c.favorites.filter { it.listId != id }) }
+        favLists = store.config.favoriteLists
+        favorites = store.config.favorites
+    }
+
+    /** The order of a list is the order of its entries in the settings file. Moves one entry up or down. */
+    fun moveFavorite(listId: String, e: Entry, delta: Int) {
+        store.update { c ->
+            val inList = c.favorites.filter { it.listId == listId }
+            val i = inList.indexOfFirst { it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
+            val j = i + delta
+            if (i < 0 || j !in inList.indices) return@update c
+            val reordered = inList.toMutableList().also { java.util.Collections.swap(it, i, j) }
+            c.copy(favorites = c.favorites.filter { it.listId != listId } + reordered)
+        }
+        favorites = store.config.favorites
+    }
+
+    fun favoriteOrder(listId: String): Map<String, Int> =
+        favorites.filter { it.listId == listId }.withIndex().associate { (i, f) -> "${f.account}|${f.kind}|${f.remoteId}" to i }
 
     fun newAccountId(): String = UUID.randomUUID().toString()
 

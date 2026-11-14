@@ -2,6 +2,9 @@ package com.kutlusoy.proiptv.desktop
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.onPointerEvent
@@ -61,16 +64,36 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     val live: Boolean get() = request is PlayRequest.Live
     val canZap: Boolean get() = request is PlayRequest.Live && request.entries.size > 1
 
+    var current: Playable? = null
+        private set
+    private var lastSaved = 0L
+
     fun start() {
+        saveProgress()
         val item = when (request) {
             is PlayRequest.Single -> request.item
             is PlayRequest.Live -> state.library.playable(request.entries[index])
         }
         if (item == null) { failed = "No address"; return }
+        current = item
         title = item.title
         paused = false
         failed = null
-        engine.play(item, volume)
+        engine.play(item, volume, if (request is PlayRequest.Single) request.startMs else 0)
+    }
+
+    /** Remembers where a movie or episode stopped. Watched means that 92 percent were seen. */
+    fun saveProgress() {
+        val item = current ?: return
+        if (item.live || item.kind < 0 || item.account.isEmpty()) return
+        val pos = engine.time()
+        val len = engine.length()
+        if (len <= 0) return
+        val watched = pos.toDouble() / len > 0.92
+        val old = state.progress.get(item.account, item.kind, item.remoteId)
+        state.progress.save(
+            ProgressDto(item.account, item.kind, item.remoteId, if (watched) 0 else pos, len, watched || old?.watched == true && pos < 5000, System.currentTimeMillis()),
+        )
     }
 
     /** Plays the channel at this position of the list the player was started from. */
@@ -101,6 +124,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     fun stop() {
+        saveProgress()
         engine.stop()
         state.player = null
         state.controller = null
@@ -110,6 +134,10 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     fun poll() {
         position = engine.time()
         length = engine.length()
+        if (!live && length > 0 && System.currentTimeMillis() - lastSaved > 10_000) {
+            lastSaved = System.currentTimeMillis()
+            saveProgress()
+        }
     }
 }
 
@@ -200,6 +228,8 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
 
 @Composable
 private fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
+    var tracksOpen by remember { mutableStateOf(false) }
+    if (tracksOpen) TracksDialog(state.engine) { tracksOpen = false }
     Row(
         modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -227,7 +257,40 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         }
         Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp))
         Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(120.dp))
+        IconButton(onClick = { tracksOpen = true }) { Icon(Icons.Filled.Subtitles, t("player_tracks")) }
         IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, null) }
+    }
+}
+
+@Composable
+private fun TracksDialog(engine: VlcEngine, onClose: () -> Unit) {
+    var tracks by remember { mutableStateOf(engine.tracks()) }
+    val data = tracks
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(t("player_tracks")) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (data == null) return@Column
+                Text(t("player_audio"), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                data.audio.forEach { tr ->
+                    TrackRow(tr.name, tr.id == data.audioSelected) { engine.selectAudio(tr.id); tracks = engine.tracks() }
+                }
+                Text(t("player_subtitles"), Modifier.padding(top = 12.dp), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                data.subtitles.forEach { tr ->
+                    TrackRow(if (tr.id == -1) t("player_off") else tr.name, tr.id == data.subtitleSelected) { engine.selectSubtitle(tr.id); tracks = engine.tracks() }
+                }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
+    )
+}
+
+@Composable
+private fun TrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.RadioButton(selected = selected, onClick = onClick)
+        Text(name, Modifier.padding(start = 8.dp))
     }
 }
 
