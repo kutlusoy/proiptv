@@ -5,6 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.Forward30
+import androidx.compose.material.icons.filled.Replay30
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.onPointerEvent
@@ -67,6 +71,20 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var current: Playable? = null
         private set
     private var lastSaved = 0L
+    private var lease: com.kutlusoy.proiptv.engine.HubLease? = null
+
+    /** How far behind the live picture the player is, in ms. Only with the shared buffer. */
+    var behindMs by mutableLongStateOf(0)
+    var bufferedMs by mutableLongStateOf(0)
+    var recordingId by mutableStateOf<Long?>(null)
+    val timeShift: Boolean get() = lease != null
+
+    private fun releaseHub() {
+        lease?.close()
+        lease = null
+        behindMs = 0
+        bufferedMs = 0
+    }
 
     fun start() {
         saveProgress()
@@ -79,7 +97,63 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         title = item.title
         paused = false
         failed = null
+        releaseHub()
+        if (request is PlayRequest.Live) {
+            val entry = request.entries[index]
+            val a = state.store.config.accounts.firstOrNull { it.id == entry.accountId }
+            val live = item.copy(accountNumber = (a?.id ?: "").hashCode().toLong(), channelId = entry.remoteId, maxConnections = state.data.status[entry.accountId]?.info?.maxConnections)
+            current = live
+            recordingId = state.recordingManager.isRecording(live.account, live.channelId)
+            if (state.store.config.timeshift && !item.url.contains(".m3u8", ignoreCase = true)) {
+                try {
+                    val l = state.hubs.acquire(live.accountNumber, live.channelId, live.title, live.maxConnections, com.kutlusoy.proiptv.net.Upstream.opener(live.url, live.userAgent))
+                    lease = l
+                    engine.playReader(l.hub.reader(), live.title, volume)
+                    return
+                } catch (e: com.kutlusoy.proiptv.engine.BudgetExceeded) {
+                    failed = Strings.get("player_no_connection", e.limit, e.openTitles.joinToString())
+                    return
+                }
+            }
+        }
         engine.play(item, volume, if (request is PlayRequest.Single) request.startMs else 0)
+    }
+
+    /** Goes back (negative) or forward in the buffered live picture. */
+    fun shift(deltaMs: Long) {
+        val l = lease ?: return
+        val buffer = l.hub.buffer
+        val now = System.currentTimeMillis()
+        val target = (buffer.timeAtOffset(engine.readerPosition) + deltaMs).coerceIn(buffer.oldestTime(), now)
+        val offset = if (target >= now - 1500) buffer.end else buffer.offsetAtTime(target)
+        engine.playReader(l.hub.reader(offset), title, volume)
+        paused = false
+    }
+
+    fun goLive() {
+        val l = lease ?: return
+        engine.playReader(l.hub.reader(l.hub.buffer.end), title, volume)
+        paused = false
+    }
+
+    /** Records the current channel. stopAfterMs null means until it is stopped. Returns an error text or null. */
+    fun record(stopAfterMs: Long?): String? {
+        val item = current ?: return null
+        return try {
+            recordingId = state.recordingManager.start(item, stopAfterMs?.let { System.currentTimeMillis() + it })
+            null
+        } catch (e: com.kutlusoy.proiptv.engine.BudgetExceeded) {
+            Strings.get("player_no_connection", e.limit, e.openTitles.joinToString())
+        } catch (e: NotEnoughSpace) {
+            Strings.get("player_no_space")
+        } catch (e: Exception) {
+            e.message ?: "error"
+        }
+    }
+
+    fun stopRecording() {
+        recordingId?.let { state.recordingManager.stop(it) }
+        recordingId = null
     }
 
     /** Remembers where a movie or episode stopped. Watched means that 92 percent were seen. */
@@ -126,6 +200,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     fun stop() {
         saveProgress()
         engine.stop()
+        releaseHub()
         state.player = null
         state.controller = null
         if (state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) state.toggleFullscreen()
@@ -134,6 +209,13 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     fun poll() {
         position = engine.time()
         length = engine.length()
+        lease?.let { l ->
+            val buffer = l.hub.buffer
+            val now = System.currentTimeMillis()
+            behindMs = (now - buffer.timeAtOffset(engine.readerPosition)).coerceAtLeast(0)
+            bufferedMs = now - buffer.oldestTime()
+        }
+        recordingId?.let { id -> if (state.recordingStore.get(id)?.status != RecStatus.RECORDING) recordingId = null }
         if (!live && length > 0 && System.currentTimeMillis() - lastSaved > 10_000) {
             lastSaved = System.currentTimeMillis()
             saveProgress()
@@ -229,6 +311,16 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
 @Composable
 private fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
     var tracksOpen by remember { mutableStateOf(false) }
+    var recordOpen by remember { mutableStateOf(false) }
+    var recordError by remember { mutableStateOf<String?>(null) }
+    if (recordOpen) RecordDialog(state, controller, onError = { recordError = it }) { recordOpen = false }
+    recordError?.let { msg ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { recordError = null },
+            text = { Text(msg) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { recordError = null }) { Text(t("action_close")) } },
+        )
+    }
     if (tracksOpen) TracksDialog(state.engine) { tracksOpen = false }
     Row(
         modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
@@ -242,6 +334,19 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         if (controller.canZap) {
             IconButton(onClick = { controller.zap(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("player_channel_prev")) }
             IconButton(onClick = { controller.zap(1) }) { Icon(Icons.Filled.KeyboardArrowDown, t("player_channel_next")) }
+        }
+        if (controller.live && controller.timeShift) {
+            IconButton(enabled = controller.bufferedMs > 5_000, onClick = { controller.shift(-30_000) }) { Icon(Icons.Filled.Replay30, t("player_back_30")) }
+            IconButton(enabled = controller.behindMs > 3_000, onClick = { controller.shift(30_000) }) { Icon(Icons.Filled.Forward30, t("player_forward_30")) }
+            if (controller.behindMs > 3_000) {
+                androidx.compose.material3.TextButton(onClick = { controller.goLive() }) { Text("${t("player_live")}  -${clock(controller.behindMs)}") }
+            }
+        }
+        if (controller.live) {
+            val recording = controller.recordingId != null
+            IconButton(onClick = { if (recording) controller.stopRecording() else recordOpen = true }) {
+                Icon(Icons.Filled.FiberManualRecord, t(if (recording) "rec_stop" else "rec_record"), tint = if (recording) Color(0xFFE53935) else LocalContentColor.current)
+            }
         }
         if (floating) Text(controller.title, Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
         if (!controller.live && controller.length > 0) {
@@ -260,6 +365,32 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         IconButton(onClick = { tracksOpen = true }) { Icon(Icons.Filled.Subtitles, t("player_tracks")) }
         IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, null) }
     }
+}
+
+@Composable
+private fun RecordDialog(state: AppState, controller: PlayerController, onError: (String?) -> Unit, onClose: () -> Unit) {
+    val item = controller.current
+    val entry = controller.entries.getOrNull(controller.index)
+    val now = state.guide.nowNext(item?.account ?: "", entry?.epgId, System.currentTimeMillis() / 1000).first
+    fun go(ms: Long?) { onClose(); onError(controller.record(ms)) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(t("rec_record")) },
+        text = {
+            Column {
+                if (now != null) RecordChoice(t("rec_until_program_end")) { go(((now.end * 1000) - System.currentTimeMillis() + 60_000).coerceAtLeast(60_000)) }
+                listOf(30, 60, 120).forEach { m -> RecordChoice(t("rec_minutes", m)) { go(m * 60_000L) } }
+                RecordChoice(t("rec_until_stopped")) { go(null) }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_cancel")) } },
+    )
+}
+
+@Composable
+private fun RecordChoice(text: String, onClick: () -> Unit) {
+    Text(text, Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp))
 }
 
 @Composable

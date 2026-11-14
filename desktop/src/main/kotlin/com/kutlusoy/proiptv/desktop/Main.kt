@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
@@ -71,6 +72,8 @@ fun main() = application {
 
     Window(
         onCloseRequest = {
+            state.recordingManager.stopAll()
+            state.hubs.closeAll()
             state.engine.release()
             Http.client.dispatcher.executorService.shutdown()
             exitApplication()
@@ -130,6 +133,7 @@ private fun App(state: AppState, updater: Updater, update: UpdateState) {
                     Tab.SERIES -> BrowseScreen(state, Kind.SERIES)
                     Tab.EPG -> EpgScreen(state)
                     Tab.DOWNLOADS -> DownloadsScreen(state)
+                    Tab.RECORDINGS -> RecordingsScreen(state)
                     Tab.ACCOUNTS -> AccountsScreen(state)
                     Tab.SETTINGS -> SettingsScreen(state, updater, update)
                 }
@@ -181,6 +185,7 @@ private fun icon(tab: Tab) = when (tab) {
     Tab.SERIES -> Icons.Filled.VideoLibrary
     Tab.EPG -> Icons.Filled.Event
     Tab.DOWNLOADS -> Icons.Filled.Download
+    Tab.RECORDINGS -> Icons.Filled.FiberManualRecord
     Tab.ACCOUNTS -> Icons.Filled.Person
     Tab.SETTINGS -> Icons.Filled.Settings
 }

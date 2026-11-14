@@ -186,6 +186,8 @@
     <string name="epg_empty">Keine Sendungen gefunden. Das Programm wird mit dem Konto-Abgleich geladen.</string>
     <string name="live_search_epg">Sender und laufende Sendungen suchen</string>
     <string name="player_channel_next">Nächster Sender</string>
+    <string name="player_back_30">30 Sekunden zurück</string>
+    <string name="player_forward_30">30 Sekunden vor</string>
     <string name="player_channel_prev">Vorheriger Sender</string>
     <string name="settings_group_general">Allgemein</string>
     <string name="settings_group_playback">Wiedergabe und Aufnahme</string>

@@ -53,6 +53,8 @@ data class ConfigDto(
     val lastUpdateCheck: Long = 0,
     val lastUpdateNoticeDay: Long = -1,
     val volume: Int = 100,
+    val timeshift: Boolean = true,
+    val bufferMb: Int = 512,
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */

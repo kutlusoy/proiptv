@@ -9,7 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 enum class Tab(val label: String) {
-    LIVE("nav_live"), MOVIES("nav_movies"), SERIES("nav_series"), EPG("nav_epg"), DOWNLOADS("nav_downloads"), ACCOUNTS("nav_accounts"), SETTINGS("nav_settings"),
+    LIVE("nav_live"), MOVIES("nav_movies"), SERIES("nav_series"), EPG("nav_epg"), DOWNLOADS("nav_downloads"), RECORDINGS("nav_recordings"), ACCOUNTS("nav_accounts"), SETTINGS("nav_settings"),
 }
 
 sealed interface PlayRequest {
@@ -160,6 +160,12 @@ class AppState(val store: Store, val scope: CoroutineScope) {
 
     fun favoriteOrder(listId: String): Map<String, Int> =
         favorites.filter { it.listId == listId }.withIndex().associate { (i, f) -> "${f.account}|${f.kind}|${f.remoteId}" to i }
+
+    val hubs = com.kutlusoy.proiptv.engine.EngineManager(
+        java.io.File(System.getProperty("java.io.tmpdir"), "proiptv-timeshift"), scope, capacity = { store.config.bufferMb.coerceIn(64, 4096) * 1024L * 1024L },
+    )
+    val recordingStore = RecordingStore(store.dir)
+    val recordingManager = RecordingManager(recordingStore, hubs, scope, DownloadManager.mediaDir("Recordings"))
 
     val downloads = DownloadStore(store.dir)
     val downloadManager = DownloadManager(downloads, scope, com.kutlusoy.proiptv.net.Http.client, DownloadManager.mediaDir("Downloads"), ::downloadSource)

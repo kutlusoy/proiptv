@@ -186,6 +186,8 @@
     <string name="epg_empty">No se encontraron programas. La guía se carga con la sincronización de la cuenta.</string>
     <string name="live_search_epg">Buscar canales y programas en emisión</string>
     <string name="player_channel_next">Canal siguiente</string>
+    <string name="player_back_30">Retroceder 30 segundos</string>
+    <string name="player_forward_30">Avanzar 30 segundos</string>
     <string name="player_channel_prev">Canal anterior</string>
     <string name="settings_group_general">General</string>
     <string name="settings_group_playback">Reproducción y grabación</string>

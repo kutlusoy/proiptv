@@ -186,6 +186,8 @@
     <string name="epg_empty">Nessun programma trovato. La guida viene caricata con la sincronizzazione dell’account.</string>
     <string name="live_search_epg">Cerca canali e programmi in onda</string>
     <string name="player_channel_next">Canale successivo</string>
+    <string name="player_back_30">Indietro di 30 secondi</string>
+    <string name="player_forward_30">Avanti di 30 secondi</string>
     <string name="player_channel_prev">Canale precedente</string>
     <string name="settings_group_general">Generale</string>
     <string name="settings_group_playback">Riproduzione e registrazione</string>

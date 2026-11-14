@@ -186,6 +186,8 @@
     <string name="epg_empty">Program bulunamadı. Rehber, hesap eşitlemesiyle birlikte yüklenir.</string>
     <string name="live_search_epg">Kanalları ve yayındaki programları ara</string>
     <string name="player_channel_next">Sonraki kanal</string>
+    <string name="player_back_30">30 saniye geri</string>
+    <string name="player_forward_30">30 saniye ileri</string>
     <string name="player_channel_prev">Önceki kanal</string>
     <string name="settings_group_general">Genel</string>
     <string name="settings_group_playback">Oynatma ve kayıt</string>
