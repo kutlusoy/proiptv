@@ -113,6 +113,7 @@ private fun AppRoot(vm: MainViewModel) {
     val scope = rememberCoroutineScope()
     val chromeHidden = remember { mutableStateOf(false) }
     var confirmExit by remember { mutableStateOf(false) }
+    var railFocus by rememberSaveable { mutableStateOf(true) }
     if (confirmExit) {
         val activity = androidx.activity.compose.LocalActivity.current
         androidx.compose.material3.AlertDialog(
@@ -152,7 +153,7 @@ private fun AppRoot(vm: MainViewModel) {
     if (tv) {
         CompositionLocalProvider(LocalChromeHidden provides chromeHidden) {
             Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                if (!chromeHidden.value) TvRail(tab, exit) { tab = it }
+                if (!chromeHidden.value) TvRail(tab, exit, railFocus, { railFocus = false }) { tab = it }
                 Box(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 36.dp, vertical = 24.dp)) { content() }
             }
         }
@@ -226,9 +227,14 @@ private fun AppRoot(vm: MainViewModel) {
 }
 
 @Composable
-private fun TvRail(selected: Tab, exit: () -> Unit, onSelect: (Tab) -> Unit) {
+private fun TvRail(selected: Tab, exit: () -> Unit, takeFocus: Boolean, onFocusTaken: () -> Unit, onSelect: (Tab) -> Unit) {
     val first = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+    LaunchedEffect(Unit) {
+        if (takeFocus) {
+            runCatching { first.requestFocus() }
+            onFocusTaken()
+        }
+    }
     Column(Modifier.width(250.dp).fillMaxHeight().background(Palette.Surface).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 14.dp, vertical = 16.dp)) {
         Text("ProIPTV", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Palette.WineSoft, modifier = Modifier.padding(start = 10.dp))
         Text(stringResource(R.string.main_version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(start = 10.dp, bottom = 10.dp))
