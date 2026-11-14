@@ -77,6 +77,17 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                 val vlc = state.engine
                 Text(if (vlc.available) "libVLC" else (vlc.error ?: "libVLC not found"), color = if (vlc.available) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error)
                 Hint("LGPL 2.1, loaded as a separate library")
+                var ts by remember { mutableStateOf(state.store.config.timeshift) }
+                var mb by remember { mutableStateOf(state.store.config.bufferMb) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("settings_timeshift"), Modifier.weight(1f))
+                    Switch(checked = ts, onCheckedChange = { ts = it; state.store.update { c -> c.copy(timeshift = it) } })
+                }
+                if (ts) {
+                    Text(t("settings_buffer"), style = MaterialTheme.typography.labelLarge)
+                    DropdownField("$mb MB", listOf(128, 256, 512, 1024, 2048).map { it to "$it MB" }, { mb = it; state.store.update { c -> c.copy(bufferMb = it) } }, Modifier.widthIn(max = 320.dp).fillMaxWidth())
+                    Hint(t("settings_buffer_hint"))
+                }
             }
             Group(t("settings_about")) {
                 Text("ProIPTV " + t("main_version", AppInfo.label))

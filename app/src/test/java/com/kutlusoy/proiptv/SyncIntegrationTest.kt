@@ -416,7 +416,7 @@ class SyncIntegrationTest {
         val migrated = android.database.sqlite.SQLiteDatabase.create(null)
         migrated.execSQL(createV4)
         migrated.execSQL("INSERT INTO progress (accountId, kind, remoteId, positionMs, durationMs, updated) VALUES (1, 3, 'e', 5, 10, 1)")
-        for (sql in AppDatabase.MIGRATION_4_5_SQL) migrated.execSQL(sql)
+        for (sql in AppDatabase.MIGRATION_4_5_SQL + AppDatabase.MIGRATION_8_9_SQL) migrated.execSQL(sql)
         migrated.rawQuery("SELECT watched FROM progress", null).use {
             assertTrue(it.moveToFirst())
             assertEquals(0, it.getInt(0))

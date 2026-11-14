@@ -50,4 +50,39 @@ class VlcEngineTest {
             video.delete()
         }
     }
+
+    @Test
+    fun pictureArrivesWhenTheStreamComesFromTheSharedBuffer() {
+        assumeTrue(System.getenv("PROIPTV_VLC_DIR") != null)
+        val video = File.createTempFile("proiptv", ".ts")
+        val made = runCatching {
+            ProcessBuilder("ffmpeg", "-y", "-f", "lavfi", "-i", "testsrc=size=320x180:rate=10:duration=4", "-pix_fmt", "yuv420p", "-c:v", "mpeg2video", "-f", "mpegts", video.absolutePath)
+                .redirectErrorStream(true).start().also { it.inputStream.readBytes() }.waitFor() == 0
+        }.getOrDefault(false)
+        assumeTrue(made)
+        val engine = VlcEngine()
+        assumeTrue("libVLC not available: ${engine.error}", engine.available)
+        val bufferFile = File.createTempFile("proiptv", ".buf")
+        val buffer = com.kutlusoy.proiptv.engine.RingBuffer(bufferFile, 8L * 1024 * 1024)
+        try {
+            val bytes = video.readBytes()
+            buffer.write(bytes, 0, bytes.size)
+            engine.playReader(com.kutlusoy.proiptv.engine.HubReader(buffer, 0), "test", 0)
+            var frame: Frame? = null
+            val end = System.currentTimeMillis() + 10_000
+            while (frame == null && System.currentTimeMillis() < end) {
+                Thread.sleep(100)
+                frame = engine.frame.get()
+            }
+            assertTrue("no picture arrived", frame != null)
+            assertEquals(320, frame!!.width)
+            assertTrue("picture is empty", frame.pixels.count { it.toInt() != 0 } > frame.pixels.size / 10)
+        } finally {
+            engine.stop()
+            buffer.close()
+            engine.release()
+            video.delete()
+            bufferFile.delete()
+        }
+    }
 }

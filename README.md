@@ -19,7 +19,7 @@ Version 0.0.1 is the first runnable version. It works end to end and is tested w
 - **Live TV** with groups, search, now and next, zapping with the remote control, number keys, guide per channel and **catch-up**
 - **Favorites for movies and series** as well as channels, and **watched marks** (by hand and per season)
 - **Movies and series** with category rows, a film-style **info page** (picture, story, cast, resume) before playing, seasons as a dropdown and episode lists with progress
-- **Windows version** (setup, not portable, libVLC player, in-app update), built with every CI run, test release and release; first version with accounts, live TV, movies, series and favorites, unsigned for now
+- **Windows version** (setup, not portable, libVLC player, in-app update), built with every CI run, test release and release; with start page, live TV, guide, movies, series, favorites, downloads and recording, unsigned for now
 - **Update check** in the settings (manual and once a day in the background with one notification per day), verified by checksum before the Android installer is called
 - **EPG screen** to search and filter the guide of all channels, jump to the channel, and a live search that also finds running shows
 - **Downloads for offline use** of movies and series (with seasons and episodes), played from the device
@@ -40,7 +40,7 @@ Not yet: multiview, parental PIN, Stalker portal, HDHomeRun, Enigma2, TVHeadend,
 | Platform | Download | Player | State |
 |---|---|---|---|
 | Android (phone, tablet, Android TV) | `ProIPTV-<version>.apk` (and `.aab` for Google Play) from the release page | Media3 with the own stream hub | full feature set, see State |
-| Windows 10 / 11 (64 bit) | `ProIPTV-<version>-windows-x64-setup.exe` from the release page, a normal installer (no portable version), updates itself | libVLC (bundled, LGPL) | accounts with status, live TV with guide (EPG), movies, series, favorites, channel list in the player. No recording, time shift, downloads or track menu yet. The installer is not signed yet, SmartScreen may warn |
+| Windows 10 / 11 (64 bit) | `ProIPTV-<version>-windows-x64-setup.exe` from the release page, a normal installer (no portable version), updates itself | libVLC (bundled, LGPL) | start page, accounts with status, live TV with guide (EPG), movies, series, several favorites lists, resume and watched marks, downloads, recording, pause and rewind live TV, audio and subtitle menu. No scheduled recordings yet. The installer is not signed yet, SmartScreen may warn |
 | macOS, Linux | not available yet | | possible with the same code base, see [the Windows document](doc/guideline-windows-version.md) section 10 |
 
 Every CI run, every test release and every release also builds the Windows installer; the release and test release workflows publish it next to the APK with the same `SHA256SUMS.txt`.

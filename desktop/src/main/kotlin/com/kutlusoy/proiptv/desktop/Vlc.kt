@@ -1,5 +1,6 @@
 package com.kutlusoy.proiptv.desktop
 
+import com.kutlusoy.proiptv.engine.HubReader
 import com.sun.jna.Callback
 import com.sun.jna.Library
 import com.sun.jna.Memory
@@ -15,6 +16,10 @@ fun interface UnlockCallback : Callback { fun callback(opaque: Pointer?, picture
 fun interface DisplayCallback : Callback { fun callback(opaque: Pointer?, picture: Pointer?) }
 fun interface FormatCallback : Callback { fun callback(opaque: Pointer?, chroma: Pointer?, width: Pointer?, height: Pointer?, pitches: Pointer?, lines: Pointer?): Int }
 fun interface CleanupCallback : Callback { fun callback(opaque: Pointer?) }
+fun interface MediaOpenCallback : Callback { fun callback(opaque: Pointer?, data: Pointer?, size: Pointer?): Int }
+fun interface MediaReadCallback : Callback { fun callback(opaque: Pointer?, buffer: Pointer?, length: Long): Long }
+fun interface MediaSeekCallback : Callback { fun callback(opaque: Pointer?, offset: Long): Int }
+fun interface MediaCloseCallback : Callback { fun callback(opaque: Pointer?) }
 
 /** The small part of the libVLC C interface that the player needs. libVLC is LGPL and is loaded as a separate DLL (never vlcj, which is GPL). */
 interface LibVlc : Library {
@@ -22,6 +27,7 @@ interface LibVlc : Library {
     fun libvlc_release(instance: Pointer)
     fun libvlc_errmsg(): String?
     fun libvlc_media_new_location(instance: Pointer, mrl: String): Pointer?
+    fun libvlc_media_new_callbacks(instance: Pointer, open: MediaOpenCallback, read: MediaReadCallback, seek: MediaSeekCallback, close: MediaCloseCallback, opaque: Pointer?): Pointer?
     fun libvlc_media_add_option(media: Pointer, option: String)
     fun libvlc_media_release(media: Pointer)
     fun libvlc_media_player_new(instance: Pointer): Pointer?
@@ -105,6 +111,35 @@ class VlcEngine {
     }
     private val cleanupCb = CleanupCallback { }
 
+    @Volatile
+    private var streamReader: HubReader? = null
+
+    @Volatile
+    private var streamStop = false
+    private val mediaOpenCb = MediaOpenCallback { _, data, size ->
+        data?.setPointer(0, Pointer.NULL)
+        size?.setLong(0, -1L)
+        0
+    }
+    private val mediaReadCb = MediaReadCallback { _, buffer, length ->
+        val reader = streamReader
+        if (reader == null || buffer == null) 0L else {
+            val tmp = ByteArray(minOf(length, 64L * 1024).toInt())
+            var result = 0L
+            while (!streamStop) {
+                val n = reader.read(tmp, 0, tmp.size, 500)
+                if (n > 0) { buffer.write(0, tmp, 0, n); result = n.toLong(); break }
+                if (n < 0) break
+            }
+            result
+        }
+    }
+    private val mediaSeekCb = MediaSeekCallback { _, _ -> -1 }
+    private val mediaCloseCb = MediaCloseCallback { }
+
+    /** The position of the reader in the buffer, for the time shift display. */
+    val readerPosition: Long get() = streamReader?.position ?: 0
+
     private inline fun safe(block: () -> Unit) {
         try { block() } catch (e: Throwable) { Log.write("video callback failed: $e") }
     }
@@ -153,6 +188,8 @@ class VlcEngine {
         val i = instance ?: return
         val p = player ?: return
         frame.set(null)
+        streamStop = true
+        streamReader = null
         val media = l.libvlc_media_new_location(i, item.url) ?: run { error = l.libvlc_errmsg(); return }
         item.userAgent?.takeIf { it.isNotBlank() }?.let { l.libvlc_media_add_option(media, ":http-user-agent=$it") }
         if (startMs > 0) l.libvlc_media_add_option(media, ":start-time=${startMs / 1000.0}")
@@ -164,8 +201,33 @@ class VlcEngine {
         if (result != 0) Log.write("play failed: ${l.libvlc_errmsg()}")
     }
 
+    /** Plays what a reader delivers (the shared stream buffer): one connection can then show the channel and record it, and the buffer allows to go back in time. */
+    fun playReader(reader: HubReader, title: String, volume: Int) {
+        val l = lib ?: return
+        val i = instance ?: return
+        val p = player ?: return
+        frame.set(null)
+        streamStop = true
+        l.libvlc_media_player_stop(p)
+        streamStop = false
+        streamReader = reader
+        val media = l.libvlc_media_new_callbacks(i, mediaOpenCb, mediaReadCb, mediaSeekCb, mediaCloseCb, null) ?: run { error = l.libvlc_errmsg(); return }
+        l.libvlc_media_player_set_media(p, media)
+        l.libvlc_media_release(media)
+        l.libvlc_audio_set_volume(p, volume)
+        val result = l.libvlc_media_player_play(p)
+        Log.write("play stream $title result=$result")
+        if (result != 0) Log.write("play failed: ${l.libvlc_errmsg()}")
+    }
+
     fun pause(paused: Boolean) { val l = lib ?: return; player?.let { l.libvlc_media_player_set_pause(it, if (paused) 1 else 0) } }
-    fun stop() { val l = lib ?: return; player?.let { l.libvlc_media_player_stop(it) }; frame.set(null) }
+    fun stop() {
+        val l = lib ?: return
+        streamStop = true
+        player?.let { l.libvlc_media_player_stop(it) }
+        streamReader = null
+        frame.set(null)
+    }
     fun isPlaying(): Boolean { val l = lib ?: return false; return player?.let { l.libvlc_media_player_is_playing(it) == 1 } ?: false }
     fun time(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_time(it) } ?: 0 }
     fun length(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_length(it) } ?: 0 }

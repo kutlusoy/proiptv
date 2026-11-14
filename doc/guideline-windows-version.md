@@ -18,7 +18,14 @@ What the app can do on Windows today:
 - player: a menu button with the list of channels that the player was started from (the channel keeps playing), channel up and down
 - accounts with the same information as on Android (status, expiry date and days left, connections, counts, last sync, guide update, errors) in collapsible cards, and buttons to refresh the lists and the guide by hand (also in the settings)
 
-Not in the Windows version yet (the Android app has them): recording, time shift and the stream hub, downloads, audio and subtitle track menu, several favorites lists, watched marks and resume, TV style navigation. They need the shared engine (section 5) and come step by step.
+- start page with rows: continue watching, the own favorites lists and the first movies and series; one search over live, movies and series
+- several favorites lists per area, sorted by hand, with the list dialog of the star
+- watched marks and resume for movies and episodes (resume, restart, mark as watched, season as watched, "continue S x E y")
+- audio and subtitle choice in the player
+- downloads of movies and episodes (resumable, one at a time, in the Videos folder under `ProIPTV\Downloads`), played from the disk
+- the shared stream buffer of the engine (one connection per channel): pause and rewind live TV (30 seconds steps, back to live), recording (until stopped, 30, 60 or 120 minutes, until the program ends) into `Videos\ProIPTV\Recordings` and the Recordings tab. The buffer size is in the settings. Channels with an HLS address (`.m3u8`) play directly, without buffer and recording.
+
+Not in the Windows version yet (the Android app has them): scheduled recordings of future programs, TV style navigation.
 
 How it is built (differs from the plan below): the desktop app is the Gradle module `desktop`. Instead of a full Kotlin Multiplatform refactor the module compiles the Android-free source files of the app directly (`parse`, Xtream client, stream URLs, update logic, see `syncShared` in `desktop/build.gradle`), so there is one copy of them. The installer is built with Inno Setup instead of an MSI, because it can update silently and runs without administrator rights (per user installation). libVLC 3.0.21 is downloaded in the build, checked against a pinned SHA-256 and reduced to the plugins in `desktop/vlc/plugins.txt` (GPL only plugins are left out, the build fails if a listed plugin is missing).
 

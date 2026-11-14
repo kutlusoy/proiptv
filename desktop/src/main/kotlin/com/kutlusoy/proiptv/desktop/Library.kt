@@ -53,6 +53,7 @@ data class Playable(
     val accountNumber: Long = 0,
     val channelId: String = "",
     val maxConnections: Int? = null,
+    val seriesRemoteId: String = "",
 )
 
 data class AccountStatus(val info: XtreamInfo?, val channels: Int, val movies: Int, val series: Int, val loadedAt: Long)
@@ -162,7 +163,7 @@ class Library(private val store: Store) {
     fun episodePlayable(series: Entry, ep: XtreamEpisode): Playable? {
         val a = store.config.accounts.firstOrNull { it.id == series.accountId } ?: return null
         val url = StreamUrls.episode(a.url, a.username, Secrets.unprotect(a.password), ep.id, ep.ext)
-        return Playable("${series.name} S${ep.season}E${ep.number}", url, a.userAgent, false, a.id, Kind.EPISODE, ep.id)
+        return Playable("${series.name} S${ep.season}E${ep.number}", url, a.userAgent, false, a.id, Kind.EPISODE, ep.id, seriesRemoteId = series.remoteId)
     }
 
     /** Checks the login of an account before it is saved. */

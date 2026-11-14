@@ -39,6 +39,7 @@ data class ProgressDto(
     val durationMs: Long = 0,
     val watched: Boolean = false,
     val updated: Long = 0,
+    val seriesId: String = "",
 ) {
     val key: String get() = "$account|$kind|$remoteId"
 }
@@ -53,6 +54,8 @@ data class ConfigDto(
     val lastUpdateCheck: Long = 0,
     val lastUpdateNoticeDay: Long = -1,
     val volume: Int = 100,
+    val timeshift: Boolean = true,
+    val bufferMb: Int = 512,
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */
@@ -113,6 +116,9 @@ class ProgressStore(private val dir: File) {
 
     @Synchronized
     fun get(account: String, kind: Int, remoteId: String): ProgressDto? = map["$account|$kind|$remoteId"]
+
+    @Synchronized
+    fun all(): List<ProgressDto> = map.values.toList()
 
     @Synchronized
     fun save(p: ProgressDto) {

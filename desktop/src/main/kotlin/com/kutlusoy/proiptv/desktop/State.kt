@@ -9,7 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 enum class Tab(val label: String) {
-    LIVE("nav_live"), MOVIES("nav_movies"), SERIES("nav_series"), EPG("nav_epg"), ACCOUNTS("nav_accounts"), SETTINGS("nav_settings"),
+    HOME("nav_home"), LIVE("nav_live"), MOVIES("nav_movies"), SERIES("nav_series"), EPG("nav_epg"), DOWNLOADS("nav_downloads"), RECORDINGS("nav_recordings"), ACCOUNTS("nav_accounts"), SETTINGS("nav_settings"),
 }
 
 sealed interface PlayRequest {
@@ -21,7 +21,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     val library = Library(store)
     val engine by lazy { VlcEngine() }
 
-    var tab by mutableStateOf(Tab.LIVE)
+    var tab by mutableStateOf(Tab.HOME)
     var data by mutableStateOf(LibraryData())
     var loading by mutableStateOf(false)
     var guide by mutableStateOf(Guide())
@@ -160,6 +160,54 @@ class AppState(val store: Store, val scope: CoroutineScope) {
 
     fun favoriteOrder(listId: String): Map<String, Int> =
         favorites.filter { it.listId == listId }.withIndex().associate { (i, f) -> "${f.account}|${f.kind}|${f.remoteId}" to i }
+
+    val hubs = com.kutlusoy.proiptv.engine.EngineManager(
+        java.io.File(System.getProperty("java.io.tmpdir"), "proiptv-timeshift"), scope, capacity = { store.config.bufferMb.coerceIn(64, 4096) * 1024L * 1024L },
+    )
+    val recordingStore = RecordingStore(store.dir)
+    val recordingManager = RecordingManager(recordingStore, hubs, scope, DownloadManager.mediaDir("Recordings"))
+
+    val downloads = DownloadStore(store.dir)
+    val downloadManager = DownloadManager(downloads, scope, com.kutlusoy.proiptv.net.Http.client, DownloadManager.mediaDir("Downloads"), ::downloadSource)
+
+    init {
+        downloadManager.resume()
+    }
+
+    private fun downloadSource(d: DownloadDto): Pair<String, String?>? {
+        val a = store.config.accounts.firstOrNull { it.id == d.account } ?: return null
+        val pass = Secrets.unprotect(a.password)
+        val url = when (d.kind) {
+            Kind.EPISODE -> com.kutlusoy.proiptv.net.StreamUrls.episode(a.url, a.username, pass, d.remoteId, d.ext)
+            Kind.MOVIE -> data.entries(Kind.MOVIE).firstOrNull { it.accountId == d.account && it.remoteId == d.remoteId }?.url
+                ?: com.kutlusoy.proiptv.net.StreamUrls.movie(a.url, a.username, pass, d.remoteId, d.ext.ifBlank { "mp4" })
+            else -> return null
+        }
+        return url to a.userAgent
+    }
+
+    fun downloadMovie(e: Entry) = downloadManager.enqueue(
+        listOf(DownloadDto(0, e.accountId, Kind.MOVIE, e.remoteId, e.name, e.logo, e.ext.ifBlank { "mp4" })),
+    )
+
+    fun downloadEpisodes(series: Entry, episodes: List<com.kutlusoy.proiptv.net.XtreamEpisode>) = downloadManager.enqueue(
+        episodes.map {
+            DownloadDto(0, series.accountId, Kind.EPISODE, it.id, "${series.name} S${it.season}E${it.number}", it.image ?: series.logo, it.ext.ifBlank { "mp4" },
+                seriesId = series.remoteId, seriesName = series.name, season = it.season, episode = it.number)
+        },
+    )
+
+    /** The finished download of an item, so it plays from the disk. */
+    fun downloadOf(account: String, kind: Int, remoteId: String): DownloadDto? {
+        downloads.version
+        return downloads.all().firstOrNull { it.account == account && it.kind == kind && it.remoteId == remoteId }
+    }
+
+    fun localPlayable(d: DownloadDto): Playable? {
+        val f = downloadManager.fileOf(d)
+        if (d.status != DlStatus.DONE || !f.exists()) return null
+        return Playable(d.title, f.toURI().toString().replaceFirst("file:/", "file:///"), null, false, d.account, d.kind, d.remoteId)
+    }
 
     fun newAccountId(): String = UUID.randomUUID().toString()
 

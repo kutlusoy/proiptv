@@ -24,6 +24,7 @@ data class PlayTarget(
     val accountId: Long,
     val kind: Int,
     val remoteId: String,
+    val seriesRemoteId: String = "",
 )
 
 class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: SyncManager) {
@@ -139,7 +140,7 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         val account = db.accounts().get(series.accountId) ?: return@withContext null
         val url = StreamUrls.episode(account.url, account.username, secrets.decrypt(account.password), episode.id, episode.ext)
         val title = "${series.name} S${episode.season}E${episode.number}"
-        PlayTarget(url, account.userAgent, title, false, series.accountId, Kind.EPISODE, episode.id)
+        PlayTarget(url, account.userAgent, title, false, series.accountId, Kind.EPISODE, episode.id, series.remoteId)
     }
 
     suspend fun downloadSource(d: Download): Pair<String, String?>? = withContext(Dispatchers.IO) {
@@ -162,7 +163,7 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         db.progress().save(
             Progress(
                 t.accountId, t.kind, t.remoteId, if (finished) 0 else positionMs, durationMs, System.currentTimeMillis(),
-                watched = finished || previous?.watched == true,
+                watched = finished || previous?.watched == true, seriesRemoteId = t.seriesRemoteId,
             ),
         )
     }

@@ -49,6 +49,10 @@
     <string name="live_other">Other</string>
     <string name="live_all_accounts">All accounts</string>
     <string name="live_search">Search</string>
+    <string name="nav_home">Home</string>
+    <string name="home_continue">Continue watching</string>
+    <string name="home_search">Search channels, movies and series</string>
+    <string name="home_no_results">Nothing found</string>
     <string name="live_no_results">Nothing found.</string>
     <string name="fav_title">Favorites</string>
     <string name="fav_add">Add to favorites</string>
@@ -187,6 +191,8 @@
     <string name="epg_empty">No shows found. The guide is loaded together with the account sync.</string>
     <string name="live_search_epg">Search channels and running shows</string>
     <string name="player_channel_next">Next channel</string>
+    <string name="player_back_30">Back 30 seconds</string>
+    <string name="player_forward_30">Forward 30 seconds</string>
     <string name="player_channel_prev">Previous channel</string>
     <string name="settings_group_general">General</string>
     <string name="settings_group_playback">Playback and recording</string>
