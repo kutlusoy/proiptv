@@ -7,4 +7,10 @@
     <string name="home_continue">Continuar a assistir</string>
     <string name="home_search">Pesquisar canais, filmes e séries</string>
     <string name="home_no_results">Nada encontrado</string>
+    <string name="dl_pause">Pausar</string>
+    <string name="dl_resume">Retomar</string>
+    <string name="dl_stop">Parar e remover</string>
+    <string name="dl_paused">Em pausa</string>
+    <string name="dl_open_folder">Abrir pasta</string>
+    <string name="epg_to_channel">Ir para o canal</string>
 </resources>

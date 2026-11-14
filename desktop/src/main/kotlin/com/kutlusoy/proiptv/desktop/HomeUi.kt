@@ -76,7 +76,7 @@ fun HomeScreen(state: AppState) {
                 Text(row.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(row.entries, key = { it.key }) { e ->
-                        PosterCard(e, row.progress[e.key]) { open(state, e, row.entries) }
+                        PosterCard(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
                     }
                 }
             }
@@ -96,7 +96,7 @@ private fun open(state: AppState, e: Entry, siblings: List<Entry>) {
 }
 
 @Composable
-private fun PosterCard(e: Entry, progress: Float?, onClick: () -> Unit) {
+private fun PosterCard(e: Entry, progress: Float?, account: String?, onClick: () -> Unit) {
     val hover = remember { MutableInteractionSource() }
     val hovered by hover.collectIsHoveredAsState()
     val wide = e.kind == Kind.LIVE
@@ -106,6 +106,7 @@ private fun PosterCard(e: Entry, progress: Float?, onClick: () -> Unit) {
             if (progress != null) LinearProgressIndicator(progress = { progress }, Modifier.align(Alignment.BottomCenter).fillMaxWidth())
         }
         Text(TitleParser.parse(e.name).title.ifBlank { e.name }, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        account?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
 }
 

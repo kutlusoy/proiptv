@@ -24,6 +24,7 @@ object DlStatus {
     const val RUNNING = 1
     const val DONE = 2
     const val FAILED = 3
+    const val PAUSED = 4
 }
 
 @Serializable
@@ -111,6 +112,9 @@ class DownloadManager(
     private var running: Job? = null
     private var currentId = -1L
 
+    @Volatile
+    private var currentCall: okhttp3.Call? = null
+
     fun fileOf(d: DownloadDto): File = File(dir, "${d.id}.${d.ext.ifBlank { "mp4" }}")
 
     fun enqueue(list: List<DownloadDto>) {
@@ -123,9 +127,23 @@ class DownloadManager(
         start()
     }
 
+    /** Stops the transfer of one download. The part that was loaded stays, Resume continues there. */
+    fun pause(id: Long) {
+        val d = store.get(id) ?: return
+        if (d.status == DlStatus.DONE || d.status == DlStatus.FAILED) return
+        store.update(id) { it.copy(status = DlStatus.PAUSED) }
+        if (currentId == id) currentCall?.cancel()
+    }
+
+    fun resumePaused(id: Long) {
+        store.update(id) { it.copy(status = DlStatus.QUEUED, error = null) }
+        start()
+    }
+
+    /** Cancels a download and removes it with the part that was loaded. */
     fun delete(id: Long) {
         scope.launch(Dispatchers.IO) {
-            if (currentId == id) { running?.cancel(); running?.join() }
+            if (currentId == id) { currentCall?.cancel(); running?.cancel(); running?.join() }
             store.get(id)?.let { fileOf(it).delete() }
             store.remove(id)
         }
@@ -167,6 +185,9 @@ class DownloadManager(
         } catch (e: NoSpace) {
             store.update(d.id) { it.copy(status = DlStatus.FAILED, error = ERR_SPACE) }
         } catch (e: Exception) {
+            // a pause or a cancel ends the transfer with an exception as well, that is no failure
+            val now = store.get(d.id) ?: return
+            if (now.status == DlStatus.PAUSED) return
             store.update(d.id) { it.copy(status = DlStatus.FAILED, error = e.message?.take(120) ?: ERR_NETWORK) }
         }
     }
@@ -179,7 +200,9 @@ class DownloadManager(
             .header("User-Agent", userAgent?.takeIf { it.isNotBlank() } ?: "ProIPTV")
             .apply { if (offset > 0) header("Range", "bytes=$offset-") }
             .build()
-        client.newCall(request).execute().use { response ->
+        val call = client.newCall(request)
+        currentCall = call
+        call.execute().use { response ->
             if (response.code == 416 && offset > 0) return
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             val resumed = response.code == 206

@@ -86,6 +86,9 @@ fun <T> DropdownField(
 /** The first selection field of the screen. Right on the star of a list row jumps there, so one does not scroll to the top. */
 val LocalTopFocus = androidx.compose.runtime.compositionLocalOf<androidx.compose.ui.focus.FocusRequester?> { null }
 
+/** Account names by id, filled only while more than one account is switched on, so lists can show where an entry comes from. */
+val LocalAccountNames = androidx.compose.runtime.compositionLocalOf<Map<Long, String>> { emptyMap() }
+
 val LocalChromeHidden = androidx.compose.runtime.compositionLocalOf<androidx.compose.runtime.MutableState<Boolean>> {
     androidx.compose.runtime.mutableStateOf(false)
 }

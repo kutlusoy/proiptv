@@ -229,4 +229,10 @@
     <string name="home_continue">İzlemeye devam et</string>
     <string name="home_search">Kanal, film ve dizi ara</string>
     <string name="home_no_results">Sonuç bulunamadı</string>
+    <string name="dl_pause">Duraklat</string>
+    <string name="dl_resume">Devam et</string>
+    <string name="dl_stop">Durdur ve kaldır</string>
+    <string name="dl_paused">Duraklatıldı</string>
+    <string name="dl_open_folder">Klasörü aç</string>
+    <string name="epg_to_channel">Kanala git</string>
 </resources>

@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.Forward30
@@ -314,6 +315,8 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
 private fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
     var tracksOpen by remember { mutableStateOf(false) }
     var recordOpen by remember { mutableStateOf(false) }
+    var guideOpen by remember { mutableStateOf(false) }
+    if (guideOpen) GuideDialog(state, controller) { guideOpen = false }
     var recordError by remember { mutableStateOf<String?>(null) }
     if (recordOpen) RecordDialog(state, controller, onError = { recordError = it }) { recordOpen = false }
     recordError?.let { msg ->
@@ -345,6 +348,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             }
         }
         if (controller.live) {
+            IconButton(onClick = { guideOpen = true }) { Icon(Icons.Filled.Event, t("player_guide")) }
             val recording = controller.recordingId != null
             IconButton(onClick = { if (recording) controller.stopRecording() else recordOpen = true }) {
                 Icon(Icons.Filled.FiberManualRecord, t(if (recording) "rec_stop" else "rec_record"), tint = if (recording) Color(0xFFE53935) else LocalContentColor.current)
@@ -387,6 +391,45 @@ private fun RecordDialog(state: AppState, controller: PlayerController, onError:
         },
         confirmButton = {},
         dismissButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_cancel")) } },
+    )
+}
+
+/** The shows of the channel that is playing: now, next and the following hours. A running show can be recorded, a later one is planned. */
+@Composable
+private fun GuideDialog(state: AppState, controller: PlayerController, onClose: () -> Unit) {
+    val entry = controller.entries.getOrNull(controller.index)
+    val now = System.currentTimeMillis() / 1000
+    val programs = entry?.epgId?.let { state.guide.programs[Guide.key(entry.accountId, it)] }.orEmpty().filter { it.end > now }.take(40)
+    var message by remember { mutableStateOf<String?>(null) }
+    val format = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(t("player_guide")) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (programs.isEmpty()) Text(t("epg_none"))
+                programs.forEach { p ->
+                    val running = p.start <= now
+                    Column(
+                        Modifier.fillMaxWidth().clickable {
+                            val item = entry?.let { state.livePlayable(it) } ?: return@clickable
+                            message = if (running) {
+                                controller.record(p.end * 1000 + 60_000 - System.currentTimeMillis()) ?: Strings.get("rec_status_recording")
+                            } else {
+                                state.recordingManager.schedule(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000)
+                                Strings.get("rec_scheduled")
+                            }
+                        }.padding(vertical = 6.dp),
+                    ) {
+                        Text(p.title, fontWeight = if (running) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal)
+                        Text(format.format(java.util.Date(p.start * 1000)) + " - " + format.format(java.util.Date(p.end * 1000)), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Text(t("player_record_hint"), Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                message?.let { Text(it, Modifier.padding(top = 6.dp), color = Palette.WineSoft) }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
     )
 }
 

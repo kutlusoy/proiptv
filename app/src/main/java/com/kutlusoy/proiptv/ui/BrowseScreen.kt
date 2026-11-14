@@ -314,6 +314,7 @@ fun ChannelRow(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (info.country.isNotEmpty()) Badge(info.country)
+                    LocalAccountNames.current[accountId]?.let { Badge(it) }
                     Text(info.title, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (available) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
                     if (info.year > 0) Badge(info.year.toString())
                 }
@@ -374,7 +375,7 @@ private fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Bool
         }
         val info = remember(item.name) { TitleParser.parse(item.name) }
         Text(info.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp))
-        val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "").filter { it.isNotEmpty() }.joinToString("  ")
+        val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "", LocalAccountNames.current[item.accountId] ?: "").filter { it.isNotEmpty() }.joinToString("  ")
         if (tags.isNotEmpty()) Text(tags, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f), modifier = Modifier.padding(start = 2.dp))
     }
 }

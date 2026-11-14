@@ -60,7 +60,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-private class Card(val key: String, val title: String, val logo: String?, val live: Boolean, val progress: Float? = null, val open: () -> Unit)
+private class Card(val key: String, val title: String, val logo: String?, val live: Boolean, val progress: Float? = null, val account: Long = -1, val open: () -> Unit)
 
 private class Row(val title: String, val cards: List<Card>)
 
@@ -105,7 +105,7 @@ fun HomeScreen(vm: MainViewModel) {
         }
     }
 
-    fun itemCard(item: Item, progress: Float? = null) = Card("${item.accountId}|${item.kind}|${item.remoteId}", TitleParser.parse(item.name).title.ifBlank { item.name }, item.logo, false, progress) { openItem(item) }
+    fun itemCard(item: Item, progress: Float? = null) = Card("${item.accountId}|${item.kind}|${item.remoteId}", TitleParser.parse(item.name).title.ifBlank { item.name }, item.logo, false, progress, item.accountId) { openItem(item) }
 
     val continueRow by vm.repo.db.progress().continueWatching().collectAsState(initial = emptyList())
     val continueCards by produceState(emptyList<Card>(), continueRow, enabled) {
@@ -139,7 +139,7 @@ fun HomeScreen(vm: MainViewModel) {
             if (items.isEmpty()) null else Row(
                 "$name \u00B7 ${area.getValue(kind)}",
                 items.mapIndexed { i, item ->
-                    if (kind == Kind.LIVE) Card("${item.accountId}|0|${item.remoteId}", item.name, item.logo, true) {
+                    if (kind == Kind.LIVE) Card("${item.accountId}|0|${item.remoteId}", item.name, item.logo, true, null, item.accountId) {
                         vm.player.value = PlayRequest.Zap(Source.Browse(Kind.LIVE, listOf(account), cat, ""), i)
                     } else itemCard(item)
                 },
@@ -159,7 +159,7 @@ fun HomeScreen(vm: MainViewModel) {
         value = listOf(Kind.LIVE, Kind.MOVIE, Kind.SERIES).mapNotNull { kind ->
             val hits = db.items().search(kind, ids, q, 40)
             if (hits.isEmpty()) null else Row(area.getValue(kind), hits.map { item ->
-                if (kind == Kind.LIVE) Card("${item.accountId}|0|${item.remoteId}", item.name, item.logo, true) {
+                if (kind == Kind.LIVE) Card("${item.accountId}|0|${item.remoteId}", item.name, item.logo, true, null, item.accountId) {
                     vm.player.value = PlayRequest.Zap(Source.Browse(Kind.LIVE, ids, null, q), hits.indexOf(item).coerceAtLeast(0))
                 } else itemCard(item)
             })
@@ -175,7 +175,7 @@ fun HomeScreen(vm: MainViewModel) {
                 Row(
                     "★ ${list.name} · ${area.getValue(list.kind)}",
                     favs.mapIndexed { i, f ->
-                        Card("${list.id}|${f.accountId}|${f.kind}|${f.remoteId}", TitleParser.parse(f.name).title.ifBlank { f.name }, f.logo, f.kind == Kind.LIVE) {
+                        Card("${list.id}|${f.accountId}|${f.kind}|${f.remoteId}", TitleParser.parse(f.name).title.ifBlank { f.name }, f.logo, f.kind == Kind.LIVE, null, f.accountId) {
                             if (f.kind == Kind.LIVE) vm.player.value = PlayRequest.Zap(Source.Favs(list.id), i)
                             else f.itemId?.let { id -> scope.launch { db.items().get(id)?.let { openItem(it) } } }
                         }
@@ -224,5 +224,6 @@ private fun HomeCard(card: Card, requester: FocusRequester? = null) {
             card.progress?.let { LinearProgressIndicator(progress = { it }, Modifier.align(Alignment.BottomCenter).fillMaxWidth()) }
         }
         Text(card.title, Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+        LocalAccountNames.current[card.account]?.let { Text(it, Modifier.padding(start = 2.dp), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)) }
     }
 }

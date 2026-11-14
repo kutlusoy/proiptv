@@ -25,7 +25,10 @@ What the app can do on Windows today:
 - downloads of movies and episodes (resumable, one at a time, in the Videos folder under `ProIPTV\Downloads`), played from the disk
 - the shared stream buffer of the engine (one connection per channel): pause and rewind live TV (30 seconds steps, back to live), recording (until stopped, 30, 60 or 120 minutes, until the program ends) into `Videos\ProIPTV\Recordings` and the Recordings tab. The buffer size is in the settings. Channels with an HLS address (`.m3u8`) play directly, without buffer and recording.
 
-Not in the Windows version yet (the Android app has them): scheduled recordings of future programs, TV style navigation.
+- program guide as a timeline (channels one below the other, shows side by side by time, red line for now, details with record and go to channel), the guide of the running channel in the player, planned recordings of later shows (they start while the app is running)
+- downloads can be paused, resumed and stopped, and a button opens the download folder
+
+Not in the Windows version yet (the Android app has them): TV style navigation.
 
 How it is built (differs from the plan below): the desktop app is the Gradle module `desktop`. Instead of a full Kotlin Multiplatform refactor the module compiles the Android-free source files of the app directly (`parse`, Xtream client, stream URLs, update logic, see `syncShared` in `desktop/build.gradle`), so there is one copy of them. The installer is built with Inno Setup instead of an MSI, because it can update silently and runs without administrator rights (per user installation). libVLC 3.0.21 is downloaded in the build, checked against a pinned SHA-256 and reduced to the plugins in `desktop/vlc/plugins.txt` (GPL only plugins are left out, the build fails if a listed plugin is missing).
 

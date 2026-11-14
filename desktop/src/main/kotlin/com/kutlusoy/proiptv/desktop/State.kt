@@ -98,6 +98,9 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         favorites = store.config.favorites
     }
 
+    /** The name of the account when more than one is switched on, so lists and cards say where an entry comes from. */
+    fun accountLabel(id: String): String? = if (accounts.count { it.enabled } > 1) accounts.firstOrNull { it.id == id }?.name else null
+
     fun listsOf(kind: Int) = favLists.filter { it.kind == kind }
 
     fun isFavorite(e: Entry) = favorites.any { it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
@@ -207,6 +210,24 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         val f = downloadManager.fileOf(d)
         if (d.status != DlStatus.DONE || !f.exists()) return null
         return Playable(d.title, f.toURI().toString().replaceFirst("file:/", "file:///"), null, false, d.account, d.kind, d.remoteId)
+    }
+
+    /** Called every few seconds: starts planned recordings when their time has come (the program has to be running). */
+    fun checkScheduled() {
+        if (recordingStore.all().none { it.status == RecStatus.SCHEDULED }) return
+        recordingManager.startDue(System.currentTimeMillis()) { r ->
+            val entry = data.entries(Kind.LIVE).firstOrNull { it.accountId == r.account && it.remoteId == r.channelRemoteId } ?: return@startDue null
+            val item = library.playable(entry) ?: return@startDue null
+            val a = store.config.accounts.firstOrNull { it.id == r.account }
+            item.copy(accountNumber = (a?.id ?: "").hashCode().toLong(), channelId = entry.remoteId, maxConnections = data.status[r.account]?.info?.maxConnections)
+        }
+    }
+
+    /** The live item of a channel as the engine needs it (connection budget, hub key). */
+    fun livePlayable(entry: Entry): Playable? {
+        val item = library.playable(entry) ?: return null
+        val a = store.config.accounts.firstOrNull { it.id == entry.accountId }
+        return item.copy(accountNumber = (a?.id ?: "").hashCode().toLong(), channelId = entry.remoteId, maxConnections = data.status[entry.accountId]?.info?.maxConnections)
     }
 
     fun newAccountId(): String = UUID.randomUUID().toString()

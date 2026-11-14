@@ -78,8 +78,10 @@ fun BrowseScreen(state: AppState, kind: Int) {
         if (state.store.config.lastCategory[kind.toString()] != category) state.store.update { c -> c.copy(lastCategory = c.lastCategory + (kind.toString() to category)) }
     }
     var query by remember(kind) { mutableStateOf("") }
-    val categories = data.categories(kind)
-    val all = data.entries(kind)
+    var accountFilter by remember(kind) { mutableStateOf<String?>(null) }
+    val activeAccount = accountFilter?.takeIf { id -> enabled.any { it.id == id } }
+    val categories = data.categories(kind).filter { activeAccount == null || it.accountId == activeAccount }
+    val all = data.entries(kind).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
     val q = query.trim()
     val shown = remember(all, category, q, state.favorites, state.guide, state.tick / 60) {
         all.asSequence()
@@ -117,7 +119,15 @@ fun BrowseScreen(state: AppState, kind: Int) {
             val options = buildList<Pair<String, String>> {
                 lists.forEach { add("$FAV_PREFIX${it.id}" to if (lists.size == 1) t("fav_title") else "\u2605 ${it.name}") }
                 add(ALL_KEY to t("live_all"))
-                categories.forEach { add("${it.accountId}|${it.id}" to it.name.ifBlank { t("live_other") }) }
+                categories.forEach { add("${it.accountId}|${it.id}" to ((state.accountLabel(it.accountId)?.let { n -> "$n \u00B7 " } ?: "") + it.name.ifBlank { t("live_other") })) }
+            }
+            if (enabled.size > 1) {
+                DropdownField(
+                    enabled.firstOrNull { it.id == activeAccount }?.name ?: t("live_all_accounts"),
+                    listOf<Pair<String?, String>>(null to t("live_all_accounts")) + enabled.map { it.id to it.name },
+                    { accountFilter = it; if (!category.startsWith(FAV_PREFIX) && category != ALL_KEY) category = ALL_KEY },
+                    Modifier.weight(0.3f).widthIn(min = 140.dp, max = 260.dp),
+                )
             }
             DropdownField(options.firstOrNull { it.first == category }?.second ?: t("live_all"), options, { category = it }, Modifier.weight(0.45f).widthIn(min = 160.dp, max = 360.dp))
             OutlinedTextField(
@@ -194,6 +204,7 @@ private fun ChannelRow(state: AppState, e: Entry, onMove: ((Int) -> Unit)? = nul
     ) {
         Logo(e.logo, Modifier.size(width = 64.dp, height = 40.dp))
         if (info.country.isNotEmpty()) Badge(info.country)
+        state.accountLabel(e.accountId)?.let { Badge(it) }
         val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
         Column(Modifier.weight(1f)) {
             Text(info.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -233,7 +244,7 @@ private fun Poster(state: AppState, e: Entry, onClick: () -> Unit) {
             if (state.isFavorite(e)) Icon(Icons.Filled.Star, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = Color(0xFFFFC107))
         }
         Text(info.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
-        val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "").filter { it.isNotEmpty() }.joinToString("  ")
+        val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "", state.accountLabel(e.accountId) ?: "").filter { it.isNotEmpty() }.joinToString("  ")
         if (tags.isNotEmpty()) Text(tags, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f))
     }
 }
