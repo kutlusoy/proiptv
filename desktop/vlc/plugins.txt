@@ -80,6 +80,7 @@ video_output/libdirect3d11_plugin.dll
 video_output/libdirect3d9_plugin.dll
 video_output/libdirectdraw_plugin.dll
 video_output/libwingdi_plugin.dll
+video_output/libvmem_plugin.dll
 video_output/libwinhibit_plugin.dll
 d3d11/libdirect3d11_filters_plugin.dll
 d3d9/libdirect3d9_filters_plugin.dll
