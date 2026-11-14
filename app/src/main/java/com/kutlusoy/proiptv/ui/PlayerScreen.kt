@@ -571,14 +571,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 Text("\u25CF REC", Modifier.background(Color(0xAA000000)).padding(8.dp), color = Color(0xFFFF5252))
             }
         }
-        if (listOpen && request is PlayRequest.Zap) {
-            Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { listOpen = false })
-            ChannelPanel(
-                vm, request.source, count, index,
-                onPick = { i -> index = i; listOpen = false; overlay = false },
-                modifier = Modifier.align(Alignment.CenterStart),
-            )
-        }
         if (digits.isNotEmpty()) {
             Text(digits, Modifier.align(Alignment.TopEnd).padding(24.dp).background(Color(0xAA000000)).padding(12.dp), style = MaterialTheme.typography.displaySmall, color = Color.White)
         }
@@ -683,6 +675,14 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     }
                 }
             }
+        }
+        if (listOpen && request is PlayRequest.Zap) {
+            Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { listOpen = false })
+            ChannelPanel(
+                vm, request.source, count, index,
+                onPick = { i -> index = i; listOpen = false; overlay = false },
+                modifier = Modifier.align(Alignment.CenterStart),
+            )
         }
     }
 
@@ -942,7 +942,7 @@ private fun ChannelPanel(vm: MainViewModel, source: Source, count: Int, selected
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     androidx.compose.foundation.lazy.LazyColumn(
-        modifier.fillMaxHeight().width(320.dp).background(Color(0xEE000000)).statusBarsPadding().navigationBarsPadding(),
+        modifier.fillMaxHeight().width(320.dp).background(Palette.Velvet).statusBarsPadding().navigationBarsPadding(),
         state = state,
     ) {
         items(count, key = { it }) { i ->
