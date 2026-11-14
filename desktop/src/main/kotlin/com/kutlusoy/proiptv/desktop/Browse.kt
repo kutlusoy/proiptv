@@ -83,7 +83,8 @@ fun BrowseScreen(state: AppState, kind: Int) {
     androidx.compose.runtime.LaunchedEffect(category) {
         if (state.store.config.lastCategory[kind.toString()] != category) state.store.update { c -> c.copy(lastCategory = c.lastCategory + (kind.toString() to category)) }
     }
-    var query by remember(kind) { mutableStateOf("") }
+    var query by remember(kind) { mutableStateOf(state.browseQuery[kind] ?: "") }
+    androidx.compose.runtime.LaunchedEffect(query) { state.browseQuery[kind] = query }
     var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
     androidx.compose.runtime.LaunchedEffect(accountFilter) {
         // the chosen account is kept, so the list is the same after the player was closed
@@ -93,6 +94,15 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val categories = data.categories(kind).filter { activeAccount == null || it.accountId == activeAccount }
     val all = data.entries(kind).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
     val q = query.trim()
+    val scrollKey = "$kind|$activeAccount|$category|$q"
+    val listState = remember(scrollKey) { state.scrollMemory["$scrollKey|l"].let { m -> androidx.compose.foundation.lazy.LazyListState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
+    val gridState = remember(scrollKey) { state.scrollMemory["$scrollKey|g"].let { m -> androidx.compose.foundation.lazy.grid.LazyGridState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
+    androidx.compose.runtime.LaunchedEffect(scrollKey) {
+        androidx.compose.runtime.snapshotFlow { intArrayOf(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) }.collect { state.scrollMemory["$scrollKey|l"] = it }
+    }
+    androidx.compose.runtime.LaunchedEffect(scrollKey) {
+        androidx.compose.runtime.snapshotFlow { intArrayOf(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset) }.collect { state.scrollMemory["$scrollKey|g"] = it }
+    }
     val shown = remember(all, category, q, state.favorites, state.guide, state.tick / 60) {
         all.asSequence()
             .filter { e ->
@@ -169,7 +179,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
         else if (shown.isEmpty()) Text(t("live_no_results"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(8.dp))
 
         if (kind == Kind.LIVE || inFavorites) {
-            LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            LazyColumn(Modifier.fillMaxSize(), state = listState, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 itemsIndexed(shown, key = { _, e -> e.key }) { index, e ->
                     ChannelRow(
                         state, e,
@@ -181,7 +191,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 }
             }
         } else {
-            LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), state = gridState, contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(shown, key = { it.key }) { e ->
                     Poster(state, e) { if (kind == Kind.SERIES) state.series = e else state.movie = e }
                 }

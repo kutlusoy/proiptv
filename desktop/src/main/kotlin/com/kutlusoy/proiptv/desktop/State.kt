@@ -35,6 +35,10 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     var movie by mutableStateOf<Entry?>(null)
     var controller by mutableStateOf<PlayerController?>(null)
 
+    /** What a list showed when the player was opened, so it looks the same after the player was closed: the search text per area and the scroll position per list view. */
+    val browseQuery = HashMap<Int, String>()
+    val scrollMemory = HashMap<String, IntArray>()
+
     fun reload() {
         if (loading) return
         loading = true

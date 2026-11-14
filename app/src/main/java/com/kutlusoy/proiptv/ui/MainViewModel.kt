@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
+import androidx.paging.cachedIn
 import androidx.paging.PagingConfig
 import com.kutlusoy.proiptv.ProIptvApp
 import com.kutlusoy.proiptv.R
@@ -175,10 +176,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         db.items().countFlow(accountId, Kind.SERIES),
     ) { a, b, c -> Triple(a, b, c) }
 
-    fun pager(kind: Int, ids: List<Long>, category: String?, query: String) =
-        Pager(PagingConfig(pageSize = 60, enablePlaceholders = false)) {
+    // the loaded pages of the last list per area are kept, so the list is the same (and at the same place) after the player was closed
+    private val pagers = HashMap<Int, Pair<List<Any?>, kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>>>>()
+
+    fun pager(kind: Int, ids: List<Long>, category: String?, query: String): kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>> {
+        val key = listOf(kind, ids, category, query)
+        pagers[kind]?.takeIf { it.first == key }?.let { return it.second }
+        val flow = Pager(PagingConfig(pageSize = 60, enablePlaceholders = false)) {
             db.items().paging(kind, ids, category, query, null, null)
-        }.flow
+        }.flow.cachedIn(viewModelScope)
+        pagers[kind] = key to flow
+        return flow
+    }
 
 
     fun favoriteRows(listId: Long, kind: Int) = db.favorites().rows(listId, kind)
