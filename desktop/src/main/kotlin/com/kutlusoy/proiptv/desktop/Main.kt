@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
@@ -128,6 +129,7 @@ private fun App(state: AppState, updater: Updater, update: UpdateState) {
                     Tab.MOVIES -> BrowseScreen(state, Kind.MOVIE)
                     Tab.SERIES -> BrowseScreen(state, Kind.SERIES)
                     Tab.EPG -> EpgScreen(state)
+                    Tab.DOWNLOADS -> DownloadsScreen(state)
                     Tab.ACCOUNTS -> AccountsScreen(state)
                     Tab.SETTINGS -> SettingsScreen(state, updater, update)
                 }
@@ -178,6 +180,7 @@ private fun icon(tab: Tab) = when (tab) {
     Tab.MOVIES -> Icons.Filled.Movie
     Tab.SERIES -> Icons.Filled.VideoLibrary
     Tab.EPG -> Icons.Filled.Event
+    Tab.DOWNLOADS -> Icons.Filled.Download
     Tab.ACCOUNTS -> Icons.Filled.Person
     Tab.SETTINGS -> Icons.Filled.Settings
 }

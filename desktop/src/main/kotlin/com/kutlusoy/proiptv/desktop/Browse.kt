@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -252,8 +253,10 @@ private fun MovieDetail(state: AppState, e: Entry) {
     val saved = state.progress.let { it.version; it.get(e.accountId, Kind.MOVIE, e.remoteId) }
     val resume = saved?.takeIf { it.positionMs > 5_000 }
     fun play(startMs: Long) {
-        state.library.playable(e)?.let { state.player = PlayRequest.Single(it, startMs) }
+        val local = state.downloadOf(e.accountId, Kind.MOVIE, e.remoteId)?.let { state.localPlayable(it) }
+        (local ?: state.library.playable(e))?.let { state.player = PlayRequest.Single(it, startMs) }
     }
+    val download = state.downloadOf(e.accountId, Kind.MOVIE, e.remoteId)
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         DetailHeader(state, e) { state.movie = null }
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -265,6 +268,10 @@ private fun MovieDetail(state: AppState, e: Entry) {
                         Text(if (resume != null) t("detail_resume", clock(resume.positionMs)) else t("detail_play"), Modifier.padding(start = 6.dp))
                     }
                     if (resume != null) androidx.compose.material3.OutlinedButton(onClick = { play(0) }) { Text(t("detail_restart")) }
+                    androidx.compose.material3.OutlinedButton(enabled = download == null, onClick = { state.downloadMovie(e) }) {
+                        Icon(Icons.Filled.Download, null)
+                        Text(t(if (download?.status == DlStatus.DONE) "dl_downloaded" else if (download != null) "dl_running" else "dl_download"), Modifier.padding(start = 6.dp))
+                    }
                     val watched = saved?.watched == true
                     androidx.compose.material3.OutlinedButton(onClick = { state.progress.setWatched(e.accountId, Kind.MOVIE, listOf(e.remoteId), !watched) }) {
                         Text(t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"))
@@ -291,7 +298,8 @@ private fun SeriesDetail(state: AppState, e: Entry) {
     fun progressOf(id: String) = state.progress.get(e.accountId, Kind.EPISODE, id)
     val next = remember(list, version) { SeriesProgress.next(list, ::progressOf) }
     fun play(ep: XtreamEpisode, startMs: Long = 0) {
-        state.library.episodePlayable(e, ep)?.let { state.player = PlayRequest.Single(it, startMs) }
+        val local = state.downloadOf(e.accountId, Kind.EPISODE, ep.id)?.let { state.localPlayable(it) }
+        (local ?: state.library.episodePlayable(e, ep))?.let { state.player = PlayRequest.Single(it, startMs) }
     }
     var menu by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -313,6 +321,10 @@ private fun SeriesDetail(state: AppState, e: Entry) {
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, t("action_more")) }
                     androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(t("dl_season")) },
+                            onClick = { menu = false; state.downloadEpisodes(e, seasonEpisodes) },
+                        )
                         androidx.compose.material3.DropdownMenuItem(
                             text = { Text(t(if (allWatched) "detail_season_unwatched" else "detail_season_watched")) },
                             onClick = { menu = false; state.progress.setWatched(e.accountId, Kind.EPISODE, seasonEpisodes.map { it.id }, !allWatched) },
@@ -341,6 +353,10 @@ private fun SeriesDetail(state: AppState, e: Entry) {
                     Column(Modifier.weight(1f)) {
                         Text("${ep.number}. ${ep.title}", fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         ep.plot?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.75f)) }
+                    }
+                    val dl = state.downloadOf(e.accountId, Kind.EPISODE, ep.id)
+                    IconButton(enabled = dl == null, onClick = { state.downloadEpisodes(e, listOf(ep)) }) {
+                        Icon(Icons.Filled.Download, t("dl_download"), tint = if (dl?.status == DlStatus.DONE) Palette.WineSoft else Color.White.copy(alpha = if (dl == null) 0.8f else 0.4f))
                     }
                     IconButton(onClick = { state.progress.setWatched(e.accountId, Kind.EPISODE, listOf(ep.id), !watched) }) {
                         Icon(
