@@ -87,7 +87,7 @@ class VlcEngine {
                 val bytes = ByteArray(frameBytes)
                 mem.read(0, bytes, 0, frameBytes)
                 val n = versions.incrementAndGet()
-                if (n == 1L || n % 500 == 0L) Log.write("picture $n arrived (${frameWidth}x$frameHeight)")
+                if (n == 1L) Log.write("picture $n arrived (${frameWidth}x$frameHeight)")
                 frame.set(Frame(frameWidth, frameHeight, bytes, n))
             }
         }
@@ -156,7 +156,7 @@ class VlcEngine {
             }
             val name = if (System.getProperty("os.name").lowercase().contains("win")) "libvlc" else "vlc"
             val loaded = Native.load(name, LibVlc::class.java)
-            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=none", "--file-logging", "--logfile=${File(Store.defaultDir(), "vlc.log").also { it.delete() }.absolutePath}", "--log-verbose=2")
+            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=none", "--file-logging", "--logfile=${File(Store.defaultDir(), "vlc.log").also { it.delete() }.absolutePath}", "--log-verbose=${if (System.getenv("PROIPTV_VLC_VERBOSE") != null) 2 else 1}")
             val inst = loaded.libvlc_new(args.size, args)
             if (inst == null) {
                 error = loaded.libvlc_errmsg() ?: "libvlc_new failed"
