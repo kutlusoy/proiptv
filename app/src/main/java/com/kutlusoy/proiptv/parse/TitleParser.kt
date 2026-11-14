@@ -24,7 +24,8 @@ object TitleParser {
     }
 
     fun parse(raw: String): TitleInfo {
-        var rest = raw.trim()
+        val text = raw.decodeEntities()
+        var rest = text.trim()
         val country = country(rest)
         if (country.isNotEmpty()) rest = PREFIX.replaceFirst(rest, "")
         var year = 0
@@ -40,7 +41,7 @@ object TitleParser {
             }
         }
         val title = rest.replace(Regex("""\s{2,}"""), " ").trim().trim('-', '–', '|', ':', ' ')
-        return TitleInfo(title.ifEmpty { raw.trim() }, country, year)
+        return TitleInfo(title.ifEmpty { text.trim() }, country, year)
     }
 
     fun parse(raw: String, group: String): TitleInfo {

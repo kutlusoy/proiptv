@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -107,6 +108,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.kutlusoy.proiptv.ProIptvApp
 import com.kutlusoy.proiptv.R
+import com.kutlusoy.proiptv.parse.decodeEntities
 import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.PlayTarget
@@ -567,15 +569,15 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 color = Color.White, style = MaterialTheme.typography.titleLarge,
             )
         }
-        AnimatedVisibility(overlay, Modifier.align(Alignment.Center).offset(y = 28.dp)) {
+        Fade(overlay, Modifier.align(Alignment.Center).offset(y = 58.dp)) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 val canSeek = active?.live == false || hubActive
-                Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.then(if (!canSeek) Modifier.focusRequester(first) else Modifier))
+                Row(horizontalArrangement = Arrangement.spacedBy(22.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.then(if (!canSeek) Modifier.focusRequester(first) else Modifier), diameter = 52.dp)
                     if (canSeek) {
                         RoundControl(
                             if (playing) PlayerGlyph.PAUSE else PlayerGlyph.PLAY, stringResource(if (playing) R.string.player_pause else R.string.player_play),
-                            { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, Modifier.focusRequester(first),
+                            { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, Modifier.focusRequester(first), diameter = 52.dp,
                         )
                     }
                 }
@@ -590,32 +592,53 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             }
         }
         if (zapping) {
-            AnimatedVisibility(overlay, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) {
+            Fade(overlay, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     RoundControl(PlayerGlyph.UP, stringResource(R.string.player_channel_prev), { zap(-1); touched++ }, diameter = 56.dp)
                     RoundControl(PlayerGlyph.DOWN, stringResource(R.string.player_channel_next), { zap(1); touched++ }, diameter = 56.dp)
                 }
             }
         }
-        AnimatedVisibility(overlay, Modifier.align(Alignment.TopEnd)) {
-            OutlinedButton(onClick = { moreDialog = true }, modifier = Modifier.statusBarsPadding().padding(16.dp).background(Color(0x99000000), CircleShape).focusHighlight()) {
-                Text(stringResource(R.string.player_more), color = Color.White)
+        Fade(overlay, Modifier.align(Alignment.TopEnd)) {
+            Row(Modifier.statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                val i = item
+                if (zapping && i != null) {
+                    val fav = Triple(i.accountId, i.kind, i.remoteId) in favKeys
+                    RoundControl(
+                        PlayerGlyph.STAR_ON.takeIf { fav } ?: PlayerGlyph.STAR_OFF,
+                        stringResource(if (fav) R.string.fav_remove else R.string.fav_add),
+                        {
+                            if (favLists.size <= 1) {
+                                val list = favLists.firstOrNull()
+                                if (list != null) {
+                                    if (fav) removeFavDialog = true else vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, true) }
+                                }
+                            } else {
+                                listsDialog = true
+                            }
+                        },
+                        diameter = 44.dp,
+                    )
+                }
+                OutlinedButton(onClick = { moreDialog = true }, modifier = Modifier.background(Color(0x99000000), CircleShape).focusHighlight()) {
+                    Text(stringResource(R.string.player_more), color = Color.White)
+                }
             }
         }
-        AnimatedVisibility(overlay, Modifier.align(Alignment.BottomCenter)) {
+        Fade(overlay, Modifier.align(Alignment.BottomCenter)) {
             Column(
                 Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000)))).navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(active?.title ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(active?.title?.decodeEntities() ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (active?.live == true) {
                     nowNext.first?.let { now ->
                         val total = (now.end - now.start).coerceAtLeast(1)
                         val done = ((System.currentTimeMillis() / 1000 - now.start).toFloat() / total).coerceIn(0f, 1f)
-                        Text("${stringResource(R.string.player_now)}: ${now.title}", color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${stringResource(R.string.player_now)}: ${now.title.decodeEntities()}", color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         LinearProgressIndicator(progress = { done }, Modifier.fillMaxWidth())
                     }
-                    nowNext.second?.let { Text("${stringResource(R.string.player_next)}: ${it.title}", color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    nowNext.second?.let { Text("${stringResource(R.string.player_next)}: ${it.title.decodeEntities()}", color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 if (hubActive) {
                     Text(
@@ -625,29 +648,17 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val i = item
-                    if (zapping && i != null) {
-                        val fav = Triple(i.accountId, i.kind, i.remoteId) in favKeys
-                        OutlinedButton(
-                            onClick = {
-                                if (favLists.size <= 1) {
-                                    val list = favLists.firstOrNull() ?: return@OutlinedButton
-                                    if (fav) removeFavDialog = true else vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, true) }
-                                } else {
-                                    listsDialog = true
-                                }
-                            },
-                            modifier = Modifier.focusHighlight(),
-                        ) { Text(stringResource(if (fav) R.string.fav_remove else R.string.fav_add), maxLines = 1) }
-                    }
                     if (zapping && i?.epgId != null) {
                         OutlinedButton(onClick = { guideDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_guide)) }
                     }
                     if (hubActive) {
                         OutlinedButton(onClick = { goLive() }, enabled = behindMs >= LIVE_THRESHOLD_MS, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_live)) }
-                        OutlinedButton(
-                            onClick = { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
-                            modifier = Modifier.focusHighlight(),
-                        ) { Text(stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record)) }
+                        RoundControl(
+                            if (recordingHere != null) PlayerGlyph.REC_STOP else PlayerGlyph.REC,
+                            stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record),
+                            { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
+                            diameter = 44.dp,
+                        )
                     }
                 }
             }
@@ -694,7 +705,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 guideDialog = false
                 scope.launch {
                     val now = System.currentTimeMillis()
-                    val title = "${i.name}: ${p.title}"
+                    val title = "${i.name}: ${p.title.decodeEntities()}"
                     val endMs = p.end * 1000 + END_PAD_MS
                     if (p.start * 1000 <= now) {
                         startRecording(endMs, title)
@@ -826,7 +837,7 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 )
-                                Text(p.title, maxLines = 2, overflow = TextOverflow.Ellipsis, color = if (!past && !current) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface)
+                                Text(p.title.decodeEntities(), maxLines = 2, overflow = TextOverflow.Ellipsis, color = if (!past && !current) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -847,7 +858,15 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
 
 private const val SKIP_MS = 10_000L
 
-private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN }
+@Composable
+private fun Fade(visible: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val alpha by androidx.compose.animation.core.animateFloatAsState(if (visible) 1f else 0f, androidx.compose.animation.core.tween(140), label = "fade")
+    if (visible || alpha > 0.01f) {
+        Box(modifier.graphicsLayer { this.alpha = alpha }) { content() }
+    }
+}
+
+private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN, REC, REC_STOP, STAR_ON, STAR_OFF }
 
 @Composable
 private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, diameter: androidx.compose.ui.unit.Dp = 76.dp) {
@@ -860,7 +879,7 @@ private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () ->
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.size(30.dp)) {
+        Canvas(Modifier.size(diameter * 0.4f)) {
             val w = size.width
             val h = size.height
             when (glyph) {
@@ -868,6 +887,24 @@ private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () ->
                 PlayerGlyph.PAUSE -> {
                     drawRect(Color.White, Offset(w * 0.08f, 0f), Size(w * 0.28f, h))
                     drawRect(Color.White, Offset(w * 0.64f, 0f), Size(w * 0.28f, h))
+                }
+                PlayerGlyph.REC -> drawCircle(Color(0xFFFF3B30), radius = w / 2)
+                PlayerGlyph.REC_STOP -> drawRoundRect(Color(0xFFFF3B30), Offset(w * 0.06f, h * 0.06f), Size(w * 0.88f, h * 0.88f), androidx.compose.ui.geometry.CornerRadius(w * 0.12f))
+                PlayerGlyph.STAR_ON, PlayerGlyph.STAR_OFF -> {
+                    val cx = w / 2
+                    val cy = h / 2
+                    val star = Path().apply {
+                        for (k in 0 until 10) {
+                            val r = if (k % 2 == 0) w / 2 else w / 4.4f
+                            val a = Math.PI / 5 * k - Math.PI / 2
+                            val x = cx + (r * Math.cos(a)).toFloat()
+                            val y = cy + (r * Math.sin(a)).toFloat()
+                            if (k == 0) moveTo(x, y) else lineTo(x, y)
+                        }
+                        close()
+                    }
+                    if (glyph == PlayerGlyph.STAR_ON) drawPath(star, Color(0xFFFFC107))
+                    else drawPath(star, Color.White, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.09f))
                 }
                 PlayerGlyph.UP -> drawPath(Path().apply { moveTo(w / 2, 0f); lineTo(w, h * 0.85f); lineTo(0f, h * 0.85f); close() }, Color.White)
                 PlayerGlyph.DOWN -> drawPath(Path().apply { moveTo(0f, h * 0.15f); lineTo(w, h * 0.15f); lineTo(w / 2, h); close() }, Color.White)

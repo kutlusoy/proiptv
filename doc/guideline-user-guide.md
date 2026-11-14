@@ -189,11 +189,11 @@ When you close the app and open it again, it continues with the same area (Live 
 
 While watching live TV you can switch channels in the order of the list you started from: **up** and **down** on the remote control or the keyboard, the two arrow buttons at the right edge of the screen, or a swipe with the finger (swipe up for the next channel, swipe down for the previous one).
 
-Double tap on the left half of the picture jumps 10 seconds back, double tap on the right half 10 seconds forward (movies and episodes). A single tap shows or hides the controls.
+Double tap on the left half of the picture jumps 10 seconds back, double tap on the right half 10 seconds forward (movies and episodes). A single tap shows or hides the controls. Recording is the red **REC** button at the bottom, it turns into a red square while a recording runs.
 
 ## Android TV and TV boxes
 
-When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has big **Stop** and **Play/Pause** buttons in the middle (Stop ends playback and returns to the list) and a **More** button in the upper right corner for audio and subtitles, screen rotation and picture size. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
+When the app runs on Android TV or a TV box it switches to the TV layout by itself: the menu is a fixed column on the left (press left to reach it), texts and posters are larger, there is a safe margin around the picture, and the rotate button of the player is hidden. The menu has an **Exit** entry that closes the app, and the player has big **Stop** and **Play/Pause** buttons in the middle (Stop ends playback and returns to the list) and a **star** (favorite) and a **More** button in the upper right corner for audio and subtitles, screen rotation and picture size. Everything can be used with the remote control: arrow keys to move, OK to open, long OK on a poster for favorites, Back to go one step back. If your device is detected wrongly, choose **Settings, Interface** and select TV or Touch by hand.
 
 ## 6. Favorites and manual order
 

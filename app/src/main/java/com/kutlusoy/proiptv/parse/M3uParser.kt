@@ -65,9 +65,9 @@ object M3uParser {
         val title = if (comma >= 0) line.substring(comma + 1).trim() else ""
         val name = title.ifEmpty { attrs["tvg-name"] ?: "" }
         return M3uEntry(
-            name = name,
+            name = name.decodeEntities(),
             url = "",
-            group = attrs["group-title"]?.trim().orEmpty(),
+            group = attrs["group-title"]?.trim().orEmpty().decodeEntities(),
             tvgId = attrs["tvg-id"]?.takeIf { it.isNotBlank() },
             logo = attrs["tvg-logo"]?.takeIf { it.isNotBlank() },
             number = attrs["tvg-chno"]?.toIntOrNull(),

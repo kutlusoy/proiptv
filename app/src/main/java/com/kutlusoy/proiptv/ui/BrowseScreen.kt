@@ -88,6 +88,7 @@ import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.kutlusoy.proiptv.R
+import com.kutlusoy.proiptv.parse.decodeEntities
 import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.Program
@@ -338,7 +339,7 @@ private fun NowPlaying(vm: MainViewModel, accountId: Long, epgId: String?) {
     val now = pair.first ?: return
     val total = (now.end - now.start).coerceAtLeast(1)
     val done = ((System.currentTimeMillis() / 1000 - now.start).toFloat() / total).coerceIn(0f, 1f)
-    Text(now.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f))
+    Text(now.title.decodeEntities(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f))
     LinearProgressIndicator(progress = { done }, modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
 }
 
