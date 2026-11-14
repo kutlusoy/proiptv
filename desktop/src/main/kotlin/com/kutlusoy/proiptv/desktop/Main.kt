@@ -41,7 +41,8 @@ fun main() = application {
     val state = remember { AppState(store, scope) }
     val updater = remember { Updater() }
     val update = remember { UpdateState(updater, scope, store) }
-    val windowState = rememberWindowState(size = DpSize(1280.dp, 800.dp))
+    val screen = remember { java.awt.Toolkit.getDefaultToolkit().screenSize }
+    val windowState = rememberWindowState(size = DpSize(minOf(1280, (screen.width * 0.9).toInt()).dp, minOf(800, (screen.height * 0.88).toInt()).dp))
 
     LaunchedEffect(Unit) {
         state.reload()
@@ -74,7 +75,7 @@ fun main() = application {
             }
         },
     ) {
-        window.minimumSize = java.awt.Dimension(900, 600)
+        window.minimumSize = java.awt.Dimension(640, 420)
         ProIptvTheme {
             Surface(Modifier.fillMaxSize()) {
                 App(state, updater, update)
