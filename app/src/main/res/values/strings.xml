@@ -223,4 +223,5 @@
     <string name="remote_no_network">No network address found. Connect the device to your Wi-Fi or network cable.</string>
     <string name="remote_failed">The setup page could not be started.</string>
     <string name="remote_added">Account added: %1$s</string>
+    <string name="exit_confirm">Close ProIPTV?</string>
 </resources>

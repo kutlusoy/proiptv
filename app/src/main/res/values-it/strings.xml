@@ -222,4 +222,5 @@
     <string name="remote_no_network">Nessun indirizzo di rete trovato. Collega il dispositivo al Wi-Fi o a un cavo di rete.</string>
     <string name="remote_failed">Impossibile avviare la pagina di configurazione.</string>
     <string name="remote_added">Account aggiunto: %1$s</string>
+    <string name="exit_confirm">Uscire da ProIPTV?</string>
 </resources>

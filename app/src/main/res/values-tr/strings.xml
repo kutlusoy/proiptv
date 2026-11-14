@@ -222,4 +222,5 @@
     <string name="remote_no_network">Ağ adresi bulunamadı. Cihazı Wi-Fi ağınıza veya ağ kablosuna bağlayın.</string>
     <string name="remote_failed">Kurulum sayfası başlatılamadı.</string>
     <string name="remote_added">Hesap eklendi: %1$s</string>
+    <string name="exit_confirm">ProIPTV kapatılsın mı?</string>
 </resources>

@@ -222,4 +222,5 @@
     <string name="remote_no_network">Keine Netzwerkadresse gefunden. Verbinde das Gerät mit deinem WLAN oder Netzwerkkabel.</string>
     <string name="remote_failed">Die Einrichtungsseite konnte nicht gestartet werden.</string>
     <string name="remote_added">Konto hinzugefügt: %1$s</string>
+    <string name="exit_confirm">ProIPTV beenden?</string>
 </resources>
