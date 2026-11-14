@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -62,7 +62,7 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                 Text(t("settings_language"), style = MaterialTheme.typography.labelLarge)
                 DropdownField(
                     Strings.languages.firstOrNull { it.first == Strings.language }?.second ?: "English", Strings.languages,
-                    { code -> Strings.language = code; state.store.update { it.copy(language = code) } }, Modifier.width(320.dp),
+                    { code -> Strings.language = code; state.store.update { it.copy(language = code) } }, Modifier.widthIn(max = 320.dp).fillMaxWidth(),
                 )
             }
             Group(t("settings_group_playback")) {
