@@ -72,6 +72,7 @@ class VlcEngine {
     val frame = AtomicReference<Frame?>(null)
     private val versions = AtomicLong()
     private var buffer: Memory? = null
+    private val retired = ArrayDeque<Memory>()
     private var frameWidth = 0
     private var frameHeight = 0
     private var frameBytes = 0
@@ -101,6 +102,8 @@ class VlcEngine {
             frameWidth = w
             frameHeight = h
             frameBytes = w * h * 4
+            // the old buffer stays referenced for a while: libVLC may still write one last picture into it, freeing it would crash the program
+            buffer?.let { retired.addLast(it); while (retired.size > 4) retired.removeFirst() }
             buffer = Memory(frameBytes.toLong() + 64)
             Log.write("video format ${w}x$h")
             1
