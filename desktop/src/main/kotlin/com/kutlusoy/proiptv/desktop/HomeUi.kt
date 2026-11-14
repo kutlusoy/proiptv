@@ -126,6 +126,16 @@ private fun homeRows(state: AppState): List<HomeRow> {
     }
     if (continuing.isNotEmpty()) rows += HomeRow(Strings.get("home_continue"), -1, continuing.take(30), bars)
     val areas = listOf(Kind.LIVE to "nav_live", Kind.MOVIE to "nav_movies", Kind.SERIES to "nav_series")
+    // the category that was open last in each area, so the place where one stopped is one click away
+    for ((kind, label) in listOf(Kind.MOVIE, Kind.SERIES, Kind.LIVE).map { k -> areas.first { it.first == k } }) {
+        val saved = state.store.config.lastCategory[kind.toString()] ?: continue
+        if (!saved.contains('|') || saved.startsWith("fav:")) continue
+        val account = saved.substringBefore('|')
+        val cat = saved.substringAfter('|')
+        val name = data.categories(kind).firstOrNull { it.accountId == account && it.id == cat }?.name ?: continue
+        val entries = data.entries(kind).filter { it.accountId == account && it.categoryId == cat }
+        if (entries.isNotEmpty()) rows += HomeRow("${name.ifBlank { Strings.get("live_other") }} \u00B7 ${Strings.get(label)}", kind, entries.take(40))
+    }
     for ((kind, label) in areas) {
         val all = data.entries(kind).associateBy { it.key }
         for (list in state.listsOf(kind)) {

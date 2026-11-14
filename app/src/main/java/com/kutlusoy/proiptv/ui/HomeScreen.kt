@@ -15,6 +15,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -60,6 +66,7 @@ private class Row(val title: String, val cards: List<Card>)
 
 /** The start page: continue watching, the own lists and the first titles in rows, and one search over everything. */
 @Composable
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 fun HomeScreen(vm: MainViewModel) {
     val accounts by vm.accounts.collectAsState()
     val enabled = accounts.filter { it.enabled }
@@ -122,6 +129,24 @@ fun HomeScreen(vm: MainViewModel) {
     val continueTitle = stringResource(R.string.home_continue)
     val area = labels.mapValues { stringResource(it.value) }
 
+    val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
+    val lastRows by produceState(emptyList<Row>(), enabled, movie, series) {
+        value = listOf(Kind.MOVIE, Kind.SERIES, Kind.LIVE).mapNotNull { kind ->
+            val (account, cat) = prefs.lastCategory(kind) ?: return@mapNotNull null
+            if (enabled.none { it.id == account }) return@mapNotNull null
+            val name = db.items().categories(account, kind).first().firstOrNull { it.remoteId == cat }?.name ?: return@mapNotNull null
+            val items = db.items().first(kind, account, cat, 40)
+            if (items.isEmpty()) null else Row(
+                "$name \u00B7 ${area.getValue(kind)}",
+                items.mapIndexed { i, item ->
+                    if (kind == Kind.LIVE) Card("${item.accountId}|0|${item.remoteId}", item.name, item.logo, true) {
+                        vm.player.value = PlayRequest.Zap(Source.Browse(Kind.LIVE, listOf(account), cat, ""), i)
+                    } else itemCard(item)
+                },
+            )
+        }
+    }
+
     val firstRows by produceState(emptyList<Row>(), enabled) {
         value = listOf(Kind.MOVIE, Kind.SERIES).mapNotNull { kind ->
             val top = db.items().top(kind, ids, 30)
@@ -143,6 +168,7 @@ fun HomeScreen(vm: MainViewModel) {
 
     val rows = if (q.length >= 2) found else buildList {
         if (continueCards.isNotEmpty()) add(Row(continueTitle, continueCards))
+        addAll(lastRows)
         for ((list, favs) in listRows) {
             if (favs.isEmpty()) continue
             add(
@@ -160,7 +186,10 @@ fun HomeScreen(vm: MainViewModel) {
         addAll(firstRows)
     }
 
-    Column(Modifier.fillMaxSize()) {
+    val firstCard = remember { FocusRequester() }
+    val hasCards = rows.isNotEmpty()
+    // coming from the menu the focus lands on the first title, the search field is reached with Up
+    Column(Modifier.fillMaxSize().focusProperties { enter = { if (hasCards) firstCard else FocusRequester.Default } }.focusGroup()) {
         OutlinedTextField(
             query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             placeholder = { Text(stringResource(R.string.home_search)) },
@@ -169,10 +198,10 @@ fun HomeScreen(vm: MainViewModel) {
         )
         if (q.length >= 2 && rows.isEmpty()) Text(stringResource(R.string.home_no_results), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
-            items(rows) { row ->
+            itemsIndexed(rows) { rowIndex, row ->
                 Text(row.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp)) {
-                    items(row.cards, key = { it.key }) { HomeCard(it) }
+                    itemsIndexed(row.cards, key = { _, c -> c.key }) { i, card -> HomeCard(card, if (rowIndex == 0 && i == 0) firstCard else null) }
                 }
             }
         }
@@ -180,13 +209,14 @@ fun HomeScreen(vm: MainViewModel) {
 }
 
 @Composable
-private fun HomeCard(card: Card) {
+private fun HomeCard(card: Card, requester: FocusRequester? = null) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "home")
     Column(
         Modifier.width(if (card.live) 170.dp else 130.dp).graphicsLayer { scaleX = scale; scaleY = scale }
             .onFocusChanged { focused = it.hasFocus }
             .focusHighlight()
+            .then(if (requester != null) Modifier.focusRequester(requester) else Modifier)
             .clickable(onClick = card.open),
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (card.live) 16f / 9f else 0.68f).clip(RoundedCornerShape(8.dp))) {
