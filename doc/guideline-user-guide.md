@@ -183,6 +183,8 @@ When the app runs on Android TV or a TV box it switches to the TV layout by itse
 
 ## 6. Favorites and manual order
 
+Live TV, Movies and Series each have their own favorites lists. A list that you create in Live TV does not show up in Movies or Series. Existing lists were split by area when the app was updated, so nothing is lost.
+
 1. Live TV, in the dropdown choose **Favorites**.
 2. The dropdown on top of the favorites chooses your list. The three dots menu next to it has **New list** ("Sport", "Kids"), **Rename** and **Delete** for the selected list.
 3. **Change the order:** touch the favorite and hold, then drag it to the new place. With the remote control hold **OK** on the favorite until the row is highlighted, move it with **up** and **down**, and press **OK** again to fix the position. This works for channels, movies and series.

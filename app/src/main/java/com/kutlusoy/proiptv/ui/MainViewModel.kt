@@ -74,7 +74,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val recordings = db.recordings().all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
-        viewModelScope.launch { repo.ensureDefaultList(app.getString(R.string.fav_title)) }
+        viewModelScope.launch { repo.ensureDefaultLists(app.getString(R.string.fav_title)) }
     }
 
     fun run(block: suspend () -> Unit) {

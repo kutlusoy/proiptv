@@ -121,7 +121,8 @@ private const val ALL_KEY = "__all"
 @Composable
 fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val accounts by vm.accounts.collectAsState()
-    val favLists by vm.favLists.collectAsState()
+    val allFavLists by vm.favLists.collectAsState()
+    val favLists = allFavLists.filter { it.kind == kind }
     val favKeys by vm.favKeys.collectAsState()
     val enabled = accounts.filter { it.enabled }
     val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
@@ -399,7 +400,8 @@ private fun CategoryRow(
 
 @Composable
 private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onSelect: (Long) -> Unit, onOpen: (Item) -> Unit) {
-    val lists by vm.favLists.collectAsState()
+    val allLists by vm.favLists.collectAsState()
+    val lists = allLists.filter { it.kind == kind }
     val listId = selectedList?.takeIf { id -> lists.any { it.id == id } } ?: lists.firstOrNull()?.id
     var newDialog by remember { mutableStateOf(false) }
     var renameDialog by remember { mutableStateOf(false) }
@@ -535,7 +537,7 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
         }
     }
 
-    if (newDialog) NameDialog(null, { newDialog = false }) { name -> vm.run { onSelect(vm.repo.createList(name)) }; newDialog = false }
+    if (newDialog) NameDialog(null, { newDialog = false }) { name -> vm.run { onSelect(vm.repo.createList(name, kind)) }; newDialog = false }
     if (renameDialog && current != null) NameDialog(current.name, { renameDialog = false }) { name -> vm.run { vm.repo.renameList(current.id, name) }; renameDialog = false }
 }
 
@@ -553,7 +555,8 @@ private fun NameDialog(initial: String?, onDismiss: () -> Unit, onSave: (String)
 
 @Composable
 internal fun ListsDialog(vm: MainViewModel, item: Item, onDismiss: () -> Unit) {
-    val lists by vm.favLists.collectAsState()
+    val allLists by vm.favLists.collectAsState()
+    val lists = allLists.filter { it.kind == item.kind }
     var member by remember { mutableStateOf<Set<Long>>(emptySet()) }
     LaunchedEffect(item.id) { member = vm.repo.listsOf(item.accountId, item.kind, item.remoteId).toSet() }
     AlertDialog(

@@ -107,6 +107,7 @@ import androidx.media3.ui.PlayerView
 import com.kutlusoy.proiptv.ProIptvApp
 import com.kutlusoy.proiptv.R
 import com.kutlusoy.proiptv.data.Item
+import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.PlayTarget
 import com.kutlusoy.proiptv.data.Program
 import com.kutlusoy.proiptv.engine.BudgetExceeded
@@ -229,7 +230,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val tried = remember { mutableSetOf<Long>() }
     val activeRecs by app.recordings.active.collectAsState()
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    val favLists by vm.favLists.collectAsState()
+    val allFavLists by vm.favLists.collectAsState()
+    val favLists = allFavLists.filter { it.kind == (item?.kind ?: Kind.LIVE) }
     val favKeys by vm.favKeys.collectAsState()
     val root = remember { FocusRequester() }
     val first = remember { FocusRequester() }

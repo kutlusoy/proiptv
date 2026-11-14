@@ -131,9 +131,11 @@ abstract class ScreenshotBase(private val folder: String, private val tv: Boolea
                 Item(accountId = account, kind = Kind.SERIES, remoteId = "${70 + i}", name = t, categoryRemoteId = "${20 + i % 2}", logo = img("p${(i + 3) % 12}.png"), ord = i)
             },
         )
-        val list = db.favorites().insertList(FavoriteList(name = "Favoriten"))
+        val list = db.favorites().insertList(FavoriteList(name = "Favoriten", kind = Kind.LIVE))
+        val movieList = db.favorites().insertList(FavoriteList(name = "Favoriten", kind = Kind.MOVIE))
+        val seriesList = db.favorites().insertList(FavoriteList(name = "Favoriten", kind = Kind.SERIES))
         listOf(Triple(Kind.LIVE, "10", "Erstes Programm HD"), Triple(Kind.LIVE, "12", "Sport Live 1"), Triple(Kind.LIVE, "14", "Kino Premiere"), Triple(Kind.MOVIE, "50", "Der letzte Zug"), Triple(Kind.SERIES, "70", "Hafenlichter"))
-            .forEachIndexed { i, f -> db.favorites().add(Favorite(list, account, f.first, f.second, f.third, (i + 1) * 1000.0)) }
+            .forEachIndexed { i, f -> db.favorites().add(Favorite(when (f.first) { Kind.MOVIE -> movieList; Kind.SERIES -> seriesList; else -> list }, account, f.first, f.second, f.third, (i + 1) * 1000.0)) }
         db.progress().save(Progress(account, Kind.EPISODE, "101", 0, 2_700_000, now - 86_400_000, watched = true))
         db.progress().save(Progress(account, Kind.EPISODE, "102", 0, 2_700_000, now - 80_000_000, watched = true))
         db.progress().save(Progress(account, Kind.EPISODE, "103", 1_200_000, 2_700_000, now - 60_000_000))

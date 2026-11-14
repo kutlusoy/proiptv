@@ -103,6 +103,7 @@ data class FavoriteList(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val ord: Int = 0,
+    val kind: Int = 0,
 )
 
 @Entity(

@@ -147,8 +147,8 @@ interface FavoriteDao {
     @Query("SELECT * FROM favorite_lists ORDER BY ord, id")
     fun lists(): Flow<List<FavoriteList>>
 
-    @Query("SELECT COUNT(*) FROM favorite_lists")
-    suspend fun listCount(): Int
+    @Query("SELECT DISTINCT kind FROM favorite_lists")
+    suspend fun listKinds(): List<Int>
 
     @Insert
     suspend fun insertList(list: FavoriteList): Long
