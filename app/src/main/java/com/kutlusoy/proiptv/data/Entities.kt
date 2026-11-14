@@ -175,6 +175,7 @@ object DlStatus {
     const val RUNNING = 1
     const val DONE = 2
     const val FAILED = 3
+    const val PAUSED = 4
 }
 
 @Entity(tableName = "downloads", indices = [Index(value = ["accountId", "kind", "remoteId"], unique = true)])

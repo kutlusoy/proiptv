@@ -168,6 +168,14 @@ interface ProgramDao {
             "ORDER BY p.start, i.accountId, i.ord LIMIT 400",
     )
     fun guide(ids: List<Long>, cat: String?, from: Long, to: Long, q: String): Flow<List<GuideRow>>
+
+    @Query(
+        "SELECT i.* FROM items i WHERE i.kind = 0 AND i.accountId IN (:ids) AND (:cat IS NULL OR i.categoryRemoteId = :cat) " +
+            "AND i.epgId IS NOT NULL AND i.epgId <> '' AND EXISTS (SELECT 1 FROM programs p WHERE p.accountId = i.accountId AND p.epgId = i.epgId " +
+            "AND p.`end` > :from AND (:q = '' OR i.name LIKE '%' || :q || '%' OR p.title LIKE '%' || :q || '%')) " +
+            "ORDER BY i.accountId, i.ord LIMIT 300",
+    )
+    fun guideChannels(ids: List<Long>, cat: String?, q: String, from: Long): Flow<List<Item>>
 }
 
 @Dao

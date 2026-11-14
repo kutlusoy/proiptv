@@ -66,6 +66,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun retryDownload(id: Long) = downloadManager.retry(id)
 
+    fun pauseDownload(id: Long) = downloadManager.pause(id)
+
     fun deleteDownload(id: Long) = downloadManager.delete(id)
 
     fun localTarget(d: Download): PlayTarget? {
@@ -131,6 +133,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun categories(accountId: Long, kind: Int) = db.items().categories(accountId, kind)
+
+    fun guideChannels(ids: List<Long>, category: String?, query: String, from: Long) = db.programs().guideChannels(ids, category, query, from)
 
     fun guide(ids: List<Long>, category: String?, from: Long, to: Long, query: String) = db.programs().guide(ids, category, from, to, query)
 

@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,6 +51,16 @@ class DownloadManager(
         scope.launch {
             dao.setStatus(id, DlStatus.QUEUED, null)
             start()
+        }
+    }
+
+    /** Stops the transfer of one download. What was loaded stays, Resume continues there. */
+    fun pause(id: Long) {
+        scope.launch {
+            val d = dao.get(id) ?: return@launch
+            if (d.status == DlStatus.DONE || d.status == DlStatus.FAILED) return@launch
+            dao.setStatus(id, DlStatus.PAUSED, null)
+            if (currentId == id) running?.cancel()
         }
     }
 
@@ -138,7 +149,7 @@ class DownloadManager(
                         if (now - lastReport >= REPORT_MS) {
                             lastReport = now
                             dao.setProgress(d.id, written, total)
-                            if (!scope.isActive) throw CancellationException()
+                            kotlin.coroutines.coroutineContext.ensureActive()
                         }
                     }
                 }

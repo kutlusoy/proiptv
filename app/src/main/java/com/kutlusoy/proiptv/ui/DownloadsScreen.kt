@@ -134,6 +134,11 @@ private fun DownloadRow(vm: MainViewModel, d: Download, title: String, onDelete:
                     LinearProgressIndicator(progress = { if (d.total > 0) (d.bytes.toFloat() / d.total).coerceIn(0f, 1f) else 0f }, Modifier.fillMaxWidth())
                 }
                 DlStatus.QUEUED -> Text(stringResource(R.string.dl_queued), style = MaterialTheme.typography.bodySmall, color = dim)
+                DlStatus.PAUSED -> {
+                    val percent = if (d.total > 0) (d.bytes * 100 / d.total).toInt() else 0
+                    Text("${stringResource(R.string.dl_paused)} $percent %  ${Formatter.formatShortFileSize(ctx, d.bytes)}", style = MaterialTheme.typography.bodySmall, color = dim)
+                    LinearProgressIndicator(progress = { if (d.total > 0) (d.bytes.toFloat() / d.total).coerceIn(0f, 1f) else 0f }, Modifier.fillMaxWidth())
+                }
                 else -> Text(
                     stringResource(R.string.dl_failed) + ": " + stringResource(
                         when (d.error) {
@@ -152,7 +157,17 @@ private fun DownloadRow(vm: MainViewModel, d: Download, title: String, onDelete:
                 if (d.status == DlStatus.FAILED) {
                     OutlinedButton(onClick = { vm.retryDownload(d.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.dl_retry)) }
                 }
-                OutlinedButton(onClick = onDelete, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
+                if (d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED) {
+                    OutlinedButton(onClick = { vm.pauseDownload(d.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.dl_pause)) }
+                }
+                if (d.status == DlStatus.PAUSED) {
+                    OutlinedButton(onClick = { vm.retryDownload(d.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.dl_resume)) }
+                }
+                if (d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED || d.status == DlStatus.PAUSED) {
+                    OutlinedButton(onClick = { vm.deleteDownload(d.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.dl_stop)) }
+                } else {
+                    OutlinedButton(onClick = onDelete, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
+                }
             }
         }
     }
