@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -294,32 +295,35 @@ fun ChannelRow(
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val info = remember(name) { TitleParser.parse(name) }
-    Row(
-        rowModifier.fillMaxWidth()
-            .then(if (selected) Modifier.background(Palette.WineDeep.copy(alpha = 0.7f), RoundedCornerShape(10.dp)) else Modifier)
-            .focusHighlight()
-            .then(
-                if (onLongClick != null) Modifier.combinedClickable(enabled = available, onClick = onClick, onLongClick = onLongClick)
-                else Modifier.clickable(enabled = available, onClick = onClick),
-            )
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (tall) Logo(logo, Modifier.size(width = 48.dp, height = 70.dp), ContentScale.Crop) else Logo(logo, Modifier.size(width = 64.dp, height = 40.dp))
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (info.country.isNotEmpty()) Badge(info.country)
-                Text(info.title, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (available) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
-                if (info.year > 0) Badge(info.year.toString())
+    // the star is its own target next to the row, so a TV remote reaches it with Right
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            rowModifier.weight(1f)
+                .then(if (selected) Modifier.background(Palette.WineDeep.copy(alpha = 0.7f), RoundedCornerShape(10.dp)) else Modifier)
+                .focusHighlight()
+                .then(
+                    if (onLongClick != null) Modifier.combinedClickable(enabled = available, onClick = onClick, onLongClick = onLongClick)
+                    else Modifier.clickable(enabled = available, onClick = onClick),
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (tall) Logo(logo, Modifier.size(width = 48.dp, height = 70.dp), ContentScale.Crop) else Logo(logo, Modifier.size(width = 64.dp, height = 40.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (info.country.isNotEmpty()) Badge(info.country)
+                    Text(info.title, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (available) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                    if (info.year > 0) Badge(info.year.toString())
+                }
+                if (!available) {
+                    Text(stringResource(R.string.fav_unavailable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                } else {
+                    NowPlaying(vm, accountId, epgId)
+                }
             }
-            if (!available) {
-                Text(stringResource(R.string.fav_unavailable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
-            } else {
-                NowPlaying(vm, accountId, epgId)
-            }
+            trailing()
         }
-        trailing()
         IconButton(onClick = onStar, modifier = Modifier.focusHighlight()) {
             Icon(Icons.Filled.Star, stringResource(if (favorite) R.string.fav_remove else R.string.fav_add), tint = if (favorite) StarOn else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f))
         }
@@ -412,12 +416,16 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, onS
     Column(Modifier.fillMaxSize()) {
         var menu by remember { mutableStateOf(false) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            DropdownField(
-                selected = current?.name.orEmpty(),
-                options = lists.map { it.id to it.name },
-                onSelect = onSelect,
-                modifier = Modifier.weight(1f),
-            )
+            if (lists.size > 1) {
+                DropdownField(
+                    selected = current?.name.orEmpty(),
+                    options = lists.map { it.id to it.name },
+                    onSelect = onSelect,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.focusHighlight()) { Icon(Icons.Filled.MoreVert, stringResource(R.string.action_more)) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
