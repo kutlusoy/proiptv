@@ -102,7 +102,9 @@ class MainActivity : AppCompatActivity() {
 @Composable
 private fun AppRoot(vm: MainViewModel) {
     val request by vm.player.collectAsState()
-    var tab by rememberSaveable { mutableStateOf(Tab.LIVE) }
+    val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
+    var tab by rememberSaveable { mutableStateOf(Tab.values().firstOrNull { it.name == prefs.lastTab } ?: Tab.LIVE) }
+    LaunchedEffect(tab) { prefs.lastTab = tab.name }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()

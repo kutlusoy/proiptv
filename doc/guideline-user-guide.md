@@ -162,6 +162,10 @@ If the app is closed by the system or the stream stays down for a long time, the
 
 The app retries three times. If the channel still fails, it looks for the same channel (same guide ID or same name) in your enabled accounts, first in the same account, and switches to it with a short message "Switched to ...". This only happens while you zap in a list, not for movies, episodes or recordings.
 
+## The app remembers where you were
+
+When you close the app and open it again, it continues with the same area (Live TV, Movies, ...), the same group or favorites list and the same account selection.
+
 ## Downloads for offline use
 
 1. Open a movie: the button **Download** under the title saves it on the device. For a series open the series, then use the download symbol next to an episode, or the three dots menu next to the season selector and **Download season**.
@@ -180,8 +184,8 @@ When the app runs on Android TV or a TV box it switches to the TV layout by itse
 ## 6. Favorites and manual order
 
 1. Live TV, in the dropdown choose **Favorites**.
-2. The dropdown on top of the favorites chooses your list. The three dots menu next to it has **New list** ("Sport", "Kids"), **Sort**, **Rename** and **Delete** for the selected list.
-3. Choose **Sort** in the three dots menu: every channel gets an arrow up and an arrow down. Move a channel with them (works with touch and with the remote control), then press **Done**.
+2. The dropdown on top of the favorites chooses your list. The three dots menu next to it has **New list** ("Sport", "Kids"), **Rename** and **Delete** for the selected list.
+3. **Change the order:** touch the favorite and hold, then drag it to the new place. With the remote control hold **OK** on the favorite until the row is highlighted, move it with **up** and **down**, and press **OK** again to fix the position. This works for channels, movies and series.
 4. Channels that the provider removed stay in the list, greyed out, so your order is not lost. They return when the provider adds them again.
 
 With more than one list the star opens a dialog where you tick the lists of the channel. With one list the star toggles it directly.

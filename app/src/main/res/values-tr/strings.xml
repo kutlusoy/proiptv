@@ -174,4 +174,7 @@
     <string name="dl_err_source">kaynak kullanılamıyor</string>
     <string name="dl_err_network">ağ hatası</string>
     <string name="dl_episodes">%1$d bölüm, %2$d sezon</string>
+    <string name="fav_hint_touch">Bir favoriye basılı tutun, sonra yeni yerine sürükleyin.</string>
+    <string name="fav_moving">Taşınıyor: yukarı/aşağı hareket ettirir, Tamam burada bırakır.</string>
+    <string name="fav_hint_tv">Bir favoride Tamam tuşuna uzun basın, sonra yukarı/aşağı ile taşıyın. Bırakmak için tekrar Tamam.</string>
 </resources>
