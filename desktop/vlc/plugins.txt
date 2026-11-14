@@ -2,6 +2,7 @@
 # Only what IPTV playback needs. Plugins that are GPL only (a52, dca, libmpeg2, faad, mad, x264, x265, zvbi, dvdnav, dvdread, postproc) are NOT shipped.
 # The build fails when a listed file is missing, so a new VLC version is noticed and the list is checked again.
 access/libfilesystem_plugin.dll
+access/libimem_plugin.dll
 access/libhttp_plugin.dll
 access/libhttps_plugin.dll
 access/libtcp_plugin.dll

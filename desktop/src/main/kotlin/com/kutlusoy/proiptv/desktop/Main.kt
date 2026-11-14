@@ -66,6 +66,7 @@ fun main() = application {
         while (true) {
             kotlinx.coroutines.delay(60_000)
             state.tick = System.currentTimeMillis() / 1000
+            Log.trimPlayerLog()
             if (++minutes % 360 == 0) state.refreshGuide()
         }
     }
