@@ -174,7 +174,10 @@ fun EpgScreen(vm: MainViewModel) {
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Logo(channel.logo, Modifier.size(width = if (tv) 44.dp else 32.dp, height = 30.dp))
-                        Text(TitleParser.parse(channel.name).title.ifBlank { channel.name }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+                        Column {
+                            Text(TitleParser.parse(channel.name).title.ifBlank { channel.name }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+                            LocalAccountNames.current[channel.accountId]?.let { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)) }
+                        }
                     }
                     Box(Modifier.weight(1f).fillMaxHeight().horizontalScroll(scroll)) {
                         Box(Modifier.width(hourWidth * SPAN_HOURS).fillMaxHeight()) {

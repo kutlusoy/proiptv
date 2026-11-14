@@ -98,6 +98,9 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         favorites = store.config.favorites
     }
 
+    /** The name of the account when more than one is switched on, so lists and cards say where an entry comes from. */
+    fun accountLabel(id: String): String? = if (accounts.count { it.enabled } > 1) accounts.firstOrNull { it.id == id }?.name else null
+
     fun listsOf(kind: Int) = favLists.filter { it.kind == kind }
 
     fun isFavorite(e: Entry) = favorites.any { it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }

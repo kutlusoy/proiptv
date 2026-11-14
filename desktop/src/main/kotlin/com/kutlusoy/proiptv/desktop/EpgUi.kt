@@ -121,7 +121,7 @@ fun EpgScreen(state: AppState) {
                 items(channels, key = { it.key }) { e ->
                     val programs = state.guide.programs[Guide.key(e.accountId, e.epgId ?: "")].orEmpty()
                     Row(Modifier.fillMaxWidth().height(ROW_HEIGHT)) {
-                        ChannelCell(e) {
+                        ChannelCell(e, state.accountLabel(e.accountId)) {
                             val index = channels.indexOfFirst { it.key == e.key }.coerceAtLeast(0)
                             state.player = PlayRequest.Live(channels, index)
                         }
@@ -160,13 +160,16 @@ fun EpgScreen(state: AppState) {
 private fun clockOf(secs: Long): String = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(secs * 1000))
 
 @Composable
-private fun ChannelCell(e: Entry, onClick: () -> Unit) {
+private fun ChannelCell(e: Entry, account: String?, onClick: () -> Unit) {
     Row(
         Modifier.width(CHANNEL_WIDTH).fillMaxHeight().padding(vertical = 2.dp).clip(RoundedCornerShape(6.dp)).background(Palette.Surface).clickable(onClick = onClick).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Logo(e.logo, Modifier.size(width = 44.dp, height = 32.dp))
-        Text(TitleParser.parse(e.name).title.ifBlank { e.name }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+        Column {
+            Text(TitleParser.parse(e.name).title.ifBlank { e.name }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+            account?.let { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f)) }
+        }
     }
 }
 
