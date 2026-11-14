@@ -75,6 +75,12 @@ private fun runApplication() = application {
             if (++minutes % 360 == 0) state.refreshGuide()
         }
     }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(15_000)
+            state.checkScheduled()
+        }
+    }
     LaunchedEffect(state.placement) { windowState.placement = state.placement }
 
     // AWT cannot make a shown window undecorated, so the window is created again when full screen changes (the state lives in AppState)

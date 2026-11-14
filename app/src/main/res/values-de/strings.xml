@@ -234,4 +234,5 @@
     <string name="dl_stop">Stoppen und entfernen</string>
     <string name="dl_paused">Pausiert</string>
     <string name="dl_open_folder">Ordner öffnen</string>
+    <string name="epg_to_channel">Zum Sender</string>
 </resources>

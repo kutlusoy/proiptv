@@ -12,4 +12,5 @@
     <string name="dl_stop">Остановить и удалить</string>
     <string name="dl_paused">На паузе</string>
     <string name="dl_open_folder">Открыть папку</string>
+    <string name="epg_to_channel">Перейти к каналу</string>
 </resources>

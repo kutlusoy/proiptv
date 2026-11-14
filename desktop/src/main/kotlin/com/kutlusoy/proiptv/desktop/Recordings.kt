@@ -53,6 +53,8 @@ object RecStatus {
     const val RECORDING = 0
     const val DONE = 1
     const val INTERRUPTED = 2
+    const val SCHEDULED = 3
+    const val MISSED = 4
 }
 
 @Serializable
@@ -68,6 +70,7 @@ data class RecordingDto(
     val status: Int = RecStatus.RECORDING,
     val channelRemoteId: String = "",
     val note: String? = null,
+    val plannedStart: Long? = null,
 )
 
 class RecordingStore(private val dir: File) {
@@ -172,6 +175,28 @@ class RecordingManager(
         }
     }
 
+    /** Plans a recording of a later show. It starts when the program is running at that time (see startDue). */
+    fun schedule(item: Playable, startMs: Long, endMs: Long): Long =
+        store.add(RecordingDto(0, item.account, item.title, startMs, null, endMs, "", 0, RecStatus.SCHEDULED, item.channelId, plannedStart = startMs))
+
+    /** Starts the planned recordings whose time has come. [resolve] gives the live item of a channel. */
+    fun startDue(now: Long, resolve: (RecordingDto) -> Playable?) {
+        for (r in store.all().filter { it.status == RecStatus.SCHEDULED }) {
+            val start = r.plannedStart ?: continue
+            if (start > now) continue
+            val end = r.plannedEnd ?: continue
+            if (end <= now) { store.update(r.id) { it.copy(status = RecStatus.MISSED, note = "ended") }; continue }
+            val item = resolve(r)
+            if (item == null) { store.update(r.id) { it.copy(status = RecStatus.MISSED, note = "channel") }; continue }
+            try {
+                store.remove(r.id)
+                start(item, end)
+            } catch (e: Exception) {
+                store.add(r.copy(status = RecStatus.MISSED, note = if (e is NotEnoughSpace) "space" else "budget"))
+            }
+        }
+    }
+
     /** Bytes written so far by a running recording. */
     fun liveBytes(id: Long): Long = running[id]?.recorder?.bytes ?: 0
 
@@ -193,8 +218,9 @@ fun RecordingsScreen(state: AppState) {
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         items(all, key = { it.id }) { r ->
             val active = r.status == RecStatus.RECORDING
+            val playable = r.status == RecStatus.DONE || r.status == RecStatus.INTERRUPTED
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(enabled = !active) {
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(enabled = playable) {
                     state.player = PlayRequest.Single(Playable(r.title, File(r.path).toURI().toString().replaceFirst("file:/", "file:///"), null, false))
                 }.padding(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
@@ -203,14 +229,14 @@ fun RecordingsScreen(state: AppState) {
                     Text(r.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val bytes = if (active) state.recordingManager.liveBytes(r.id) else r.bytes
                     Text(
-                        "${format.format(Date(r.startedAt))} · " + t(when (r.status) { RecStatus.RECORDING -> "rec_status_recording"; RecStatus.DONE -> "rec_status_done"; else -> "rec_status_interrupted" }) +
+                        "${format.format(Date(r.startedAt))} · " + t(when (r.status) { RecStatus.RECORDING -> "rec_status_recording"; RecStatus.DONE -> "rec_status_done"; RecStatus.SCHEDULED -> "rec_status_scheduled"; RecStatus.MISSED -> "rec_status_missed"; else -> "rec_status_interrupted" }) +
                             " · ${sizeText(bytes)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (r.status == RecStatus.INTERRUPTED) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.75f),
+                        color = if (r.status == RecStatus.INTERRUPTED || r.status == RecStatus.MISSED) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.75f),
                     )
                 }
                 if (active) IconButton(onClick = { state.recordingManager.stop(r.id) }) { Icon(Icons.Filled.Stop, t("rec_stop")) }
-                else Icon(Icons.Filled.PlayArrow, t("rec_play"))
+                else if (playable) Icon(Icons.Filled.PlayArrow, t("rec_play"))
                 IconButton(onClick = { deleting = r }) { Icon(Icons.Filled.Delete, t("action_delete")) }
             }
         }

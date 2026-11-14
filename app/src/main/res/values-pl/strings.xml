@@ -12,4 +12,5 @@
     <string name="dl_stop">Zatrzymaj i usuń</string>
     <string name="dl_paused">Wstrzymano</string>
     <string name="dl_open_folder">Otwórz folder</string>
+    <string name="epg_to_channel">Przejdź do kanału</string>
 </resources>

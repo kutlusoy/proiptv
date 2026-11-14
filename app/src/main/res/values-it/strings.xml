@@ -234,4 +234,5 @@
     <string name="dl_stop">Interrompi e rimuovi</string>
     <string name="dl_paused">In pausa</string>
     <string name="dl_open_folder">Apri cartella</string>
+    <string name="epg_to_channel">Vai al canale</string>
 </resources>
