@@ -39,4 +39,16 @@ class Prefs(context: Context) {
             .putLong("favlist_$kind", favList ?: -1L)
             .apply()
     }
+
+    var autoUpdate: Boolean
+        get() = sp.getBoolean("auto_update", true)
+        set(value) = sp.edit().putBoolean("auto_update", value).apply()
+
+    var lastUpdateCheck: Long
+        get() = sp.getLong("update_check", 0L)
+        set(value) = sp.edit().putLong("update_check", value).apply()
+
+    var lastUpdateNotifyDay: Long
+        get() = sp.getLong("update_notify_day", -1L)
+        set(value) = sp.edit().putLong("update_notify_day", value).apply()
 }

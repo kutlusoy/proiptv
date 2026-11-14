@@ -26,6 +26,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+sealed interface UpdateUi {
+    data object Idle : UpdateUi
+    data object Checking : UpdateUi
+    data class UpToDate(val version: String) : UpdateUi
+    data class Available(val release: com.kutlusoy.proiptv.update.ReleaseInfo) : UpdateUi
+    data class Working(val phase: com.kutlusoy.proiptv.update.UpdateManager.Phase, val percent: Int) : UpdateUi
+    data class Error(val code: com.kutlusoy.proiptv.update.UpdateException.Code, val detail: String?) : UpdateUi
+}
+
 sealed interface PlayRequest {
     data class Zap(val source: Source, val index: Int) : PlayRequest
     data class Single(val target: PlayTarget, val fromStart: Boolean = false) : PlayRequest
@@ -74,7 +83,47 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val recordings = db.recordings().all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
+        viewModelScope.launch {
+            com.kutlusoy.proiptv.update.UpdateEvents.installFailure.collect {
+                updateUi.value = UpdateUi.Error(com.kutlusoy.proiptv.update.UpdateException.Code.INSTALL_FAILED, it)
+            }
+        }
         viewModelScope.launch { repo.ensureDefaultLists(app.getString(R.string.fav_title)) }
+    }
+
+    val updateUi = MutableStateFlow<UpdateUi>(UpdateUi.Idle)
+    private val updates = com.kutlusoy.proiptv.update.UpdateManager(app)
+
+    fun checkUpdate() {
+        if (updateUi.value is UpdateUi.Checking || updateUi.value is UpdateUi.Working) return
+        updateUi.value = UpdateUi.Checking
+        viewModelScope.launch {
+            val prefs = (getApplication<Application>() as ProIptvApp).prefs
+            updateUi.value = try {
+                when (val r = updates.check()) {
+                    is com.kutlusoy.proiptv.update.UpdateManager.CheckResult.Available -> UpdateUi.Available(r.release)
+                    is com.kutlusoy.proiptv.update.UpdateManager.CheckResult.UpToDate -> UpdateUi.UpToDate(r.version)
+                }.also { prefs.lastUpdateCheck = System.currentTimeMillis() }
+            } catch (e: com.kutlusoy.proiptv.update.UpdateException) {
+                UpdateUi.Error(e.code, e.message)
+            } catch (e: Exception) {
+                UpdateUi.Error(com.kutlusoy.proiptv.update.UpdateException.Code.NETWORK, e.message)
+            }
+        }
+    }
+
+    fun installUpdate(release: com.kutlusoy.proiptv.update.ReleaseInfo) {
+        if (updateUi.value is UpdateUi.Working) return
+        updateUi.value = UpdateUi.Working(com.kutlusoy.proiptv.update.UpdateManager.Phase.VERIFYING, 0)
+        viewModelScope.launch {
+            try {
+                updates.downloadAndInstall(release) { phase, percent -> updateUi.value = UpdateUi.Working(phase, percent) }
+            } catch (e: com.kutlusoy.proiptv.update.UpdateException) {
+                updateUi.value = UpdateUi.Error(e.code, e.message)
+            } catch (e: Exception) {
+                updateUi.value = UpdateUi.Error(com.kutlusoy.proiptv.update.UpdateException.Code.INSTALL_FAILED, e.message)
+            }
+        }
     }
 
     fun run(block: suspend () -> Unit) {

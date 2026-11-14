@@ -38,7 +38,7 @@ jobs:
         run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Build the debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug -PtestBuild=${{ github.run_number }} --stacktrace
 
       - name: Collect files
         run: |
