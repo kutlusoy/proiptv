@@ -6,6 +6,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
@@ -60,6 +64,7 @@ fun AccountsScreen(vm: MainViewModel) {
     val sync by vm.syncState.collectAsState()
     var editing by remember { mutableStateOf<Account?>(null) }
     var adding by remember { mutableStateOf(false) }
+    var phone by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<Account?>(null) }
     var expandedId by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -74,6 +79,9 @@ fun AccountsScreen(vm: MainViewModel) {
                 Button(onClick = { adding = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.accounts_add)) }
             }
         }
+        item {
+            OutlinedButton(onClick = { phone = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.accounts_phone)) }
+        }
         if (accounts.isEmpty()) {
             item { Text(stringResource(R.string.accounts_empty), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)) }
         }
@@ -83,6 +91,10 @@ fun AccountsScreen(vm: MainViewModel) {
         }
     }
 
+    if (phone) {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        RemoteSetupDialog(vm, onAdded = { name -> phone = false; android.widget.Toast.makeText(ctx, ctx.getString(R.string.remote_added, name), android.widget.Toast.LENGTH_LONG).show() }, onDismiss = { phone = false })
+    }
     if (adding) {
         AccountDialog(vm, null, onDismiss = { adding = false }) { account, password ->
             vm.run { vm.repo.saveAccount(account, password) }
@@ -218,8 +230,25 @@ private fun AccountDialog(vm: MainViewModel, initial: Account?, onDismiss: () ->
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch { url = vm.importPlaylist(uri) }
     }
+    val tv = LocalTv.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val next = KeyboardOptions(imeAction = ImeAction.Next)
+    val done = KeyboardOptions(imeAction = ImeAction.Done)
+    val moveDown = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }, onDone = { focusManager.moveFocus(FocusDirection.Down) })
     val xtream = type == AccountType.XTREAM
     val valid = name.isNotBlank() && url.isNotBlank() && (!xtream || (user.isNotBlank() || url.contains("username=")))
+
+    fun save() {
+        val base = initial ?: Account(name = name, type = type, url = url)
+        onSave(
+            base.copy(
+                name = name.trim(), type = type, url = url.trim(), username = user.trim(),
+                epgUrl = epg.trim().ifBlank { null }, userAgent = agent.trim().ifBlank { null },
+                liveFormat = format, useVod = vod, useSeries = series,
+            ),
+            password,
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -232,18 +261,19 @@ private fun AccountDialog(vm: MainViewModel, initial: Account?, onDismiss: () ->
                         FilterChip(selected = !xtream, onClick = { type = AccountType.M3U }, label = { Text(stringResource(R.string.account_type_m3u)) })
                     }
                 }
-                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.account_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.account_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = next, keyboardActions = moveDown)
                 OutlinedTextField(
-                    url, { url = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    url, { url = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = next, keyboardActions = moveDown,
                     label = { Text(stringResource(if (xtream) R.string.account_server else R.string.account_playlist_url)) },
                 )
                 if (!xtream) {
                     OutlinedButton(onClick = { picker.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.account_choose_file)) }
                 } else {
-                    OutlinedTextField(user, { user = it }, label = { Text(stringResource(R.string.account_username)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(user, { user = it }, label = { Text(stringResource(R.string.account_username)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = next, keyboardActions = moveDown)
                     OutlinedTextField(
                         password, { password = it }, label = { Text(stringResource(R.string.account_password)) }, singleLine = true,
                         visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password, imeAction = ImeAction.Next), keyboardActions = moveDown,
                         supportingText = if (initial != null) ({ Text(stringResource(R.string.account_password_keep)) }) else null,
                     )
                     val auto = stringResource(R.string.option_auto)
@@ -263,26 +293,17 @@ private fun AccountDialog(vm: MainViewModel, initial: Account?, onDismiss: () ->
                         Switch(series, { series = it })
                     }
                 }
-                OutlinedTextField(epg, { epg = it }, label = { Text(stringResource(R.string.account_epg_url)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(agent, { agent = it }, label = { Text(stringResource(R.string.account_user_agent)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(epg, { epg = it }, label = { Text(stringResource(R.string.account_epg_url)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = next, keyboardActions = moveDown)
+                OutlinedTextField(agent, { agent = it }, label = { Text(stringResource(R.string.account_user_agent)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = done, keyboardActions = moveDown)
+                if (tv) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                        androidx.compose.material3.Button(enabled = valid, onClick = { save() }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_save)) }
+                        OutlinedButton(onClick = onDismiss, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_cancel)) }
+                    }
+                }
             }
         },
-        confirmButton = {
-            TextButton(
-                enabled = valid,
-                onClick = {
-                    val base = initial ?: Account(name = name, type = type, url = url)
-                    onSave(
-                        base.copy(
-                            name = name.trim(), type = type, url = url.trim(), username = user.trim(),
-                            epgUrl = epg.trim().ifBlank { null }, userAgent = agent.trim().ifBlank { null },
-                            liveFormat = format, useVod = vod, useSeries = series,
-                        ),
-                        password,
-                    )
-                },
-            ) { Text(stringResource(R.string.action_save)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+        confirmButton = { if (!tv) TextButton(enabled = valid, onClick = { save() }) { Text(stringResource(R.string.action_save)) } },
+        dismissButton = { if (!tv) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

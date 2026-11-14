@@ -216,4 +216,10 @@
     <string name="update_err_storage">Nicht genug Speicher.</string>
     <string name="update_err_install">Installation fehlgeschlagen: %1$s</string>
     <string name="player_channel_list">Senderliste</string>
+    <string name="accounts_phone">Mit dem Handy einrichten (QR-Code)</string>
+    <string name="remote_title">Mit dem Handy einrichten</string>
+    <string name="remote_hint">Scanne den Code mit der Kamera deines Handys. Handy und Fernseher müssen im selben WLAN sein. Die Seite läuft nur, solange dieses Fenster offen ist.</string>
+    <string name="remote_no_network">Keine Netzwerkadresse gefunden. Verbinde das Gerät mit deinem WLAN oder Netzwerkkabel.</string>
+    <string name="remote_failed">Die Einrichtungsseite konnte nicht gestartet werden.</string>
+    <string name="remote_added">Konto hinzugefügt: %1$s</string>
 </resources>

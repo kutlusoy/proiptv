@@ -216,4 +216,10 @@
     <string name="update_err_storage">Spazio insufficiente.</string>
     <string name="update_err_install">Installazione non riuscita: %1$s</string>
     <string name="player_channel_list">Elenco canali</string>
+    <string name="accounts_phone">Configura con il telefono (codice QR)</string>
+    <string name="remote_title">Configura con il telefono</string>
+    <string name="remote_hint">Scansiona il codice con la fotocamera del telefono. Telefono e TV devono essere nella stessa rete Wi-Fi. La pagina funziona solo finché questa finestra è aperta.</string>
+    <string name="remote_no_network">Nessun indirizzo di rete trovato. Collega il dispositivo al Wi-Fi o a un cavo di rete.</string>
+    <string name="remote_failed">Impossibile avviare la pagina di configurazione.</string>
+    <string name="remote_added">Account aggiunto: %1$s</string>
 </resources>

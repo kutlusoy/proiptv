@@ -216,4 +216,10 @@
     <string name="update_err_storage">Espacio insuficiente.</string>
     <string name="update_err_install">Error de instalación: %1$s</string>
     <string name="player_channel_list">Lista de canales</string>
+    <string name="accounts_phone">Configurar con el móvil (código QR)</string>
+    <string name="remote_title">Configurar con el móvil</string>
+    <string name="remote_hint">Escanea el código con la cámara del móvil. El móvil y el televisor deben estar en la misma red Wi-Fi. La página solo funciona mientras esta ventana esté abierta.</string>
+    <string name="remote_no_network">No se encontró ninguna dirección de red. Conecta el dispositivo a tu Wi-Fi o a un cable de red.</string>
+    <string name="remote_failed">No se pudo iniciar la página de configuración.</string>
+    <string name="remote_added">Cuenta añadida: %1$s</string>
 </resources>

@@ -216,4 +216,10 @@
     <string name="update_err_storage">Yeterli alan yok.</string>
     <string name="update_err_install">Yükleme başarısız: %1$s</string>
     <string name="player_channel_list">Kanal listesi</string>
+    <string name="accounts_phone">Telefonla kur (QR kod)</string>
+    <string name="remote_title">Telefonla kurulum</string>
+    <string name="remote_hint">Kodu telefonunuzun kamerasıyla okutun. Telefon ve TV aynı Wi-Fi ağında olmalıdır. Sayfa yalnızca bu pencere açıkken çalışır.</string>
+    <string name="remote_no_network">Ağ adresi bulunamadı. Cihazı Wi-Fi ağınıza veya ağ kablosuna bağlayın.</string>
+    <string name="remote_failed">Kurulum sayfası başlatılamadı.</string>
+    <string name="remote_added">Hesap eklendi: %1$s</string>
 </resources>
