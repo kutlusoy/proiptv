@@ -166,6 +166,14 @@ The app retries three times. If the channel still fails, it looks for the same c
 
 The menu entry **EPG** lists shows of all channels of the selected group and account. Use the dropdowns on top for the group and the account, the field below for a search in show titles and channel names, and the third dropdown for the time range: **Now on air**, **Next 3 hours** or **Next 12 hours**. A tap on an entry starts the channel; up and down while playing then follows the order of the list you came from. Shows that run right now are bold and have a progress bar. The guide itself is loaded with the account sync, see section 4.
 
+## Settings and updates
+
+The settings are grouped: **General** (language, interface), **Playback and recording** (pause and rewind, buffer size), **Accounts and data** (refresh, backup and restore), **About**, and at the very bottom **Update**.
+
+- **Check for updates:** the button asks GitHub for the newest release. If there is a newer version, **Download and install** appears. The app downloads the file, checks its SHA-256 checksum against `SHA256SUMS.txt` of the release, and only then hands it to Android. Android installs it only if it was signed with the same key, and asks you to confirm. The first time Android may ask to allow installing from this app.
+- **Check every day:** the switch is on by default. A check runs in the background once a day, only with a network connection, and you get **one notification per day at most**, and only when a newer version exists. Turn the switch off to stop the background check completely.
+- Test builds from the workflow `Test release` follow the newest test release (`test-<number>`), release builds follow the newest release.
+
 ## The app remembers where you were
 
 When you close the app and open it again, it continues with the same area (Live TV, Movies, ...), the same group or favorites list and the same account selection.
@@ -178,6 +186,8 @@ When you close the app and open it again, it continues with the same area (Live 
 4. Only movies and episodes can be saved, no live TV. The download uses one connection of the account while it runs.
 
 ## Gestures in the player
+
+While watching live TV you can switch channels in the order of the list you started from: **up** and **down** on the remote control or the keyboard, the two arrow buttons at the right edge of the screen, or a swipe with the finger (swipe up for the next channel, swipe down for the previous one).
 
 Double tap on the left half of the picture jumps 10 seconds back, double tap on the right half 10 seconds forward (movies and episodes). A single tap shows or hides the controls.
 

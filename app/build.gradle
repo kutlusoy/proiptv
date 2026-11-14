@@ -33,6 +33,7 @@ android {
         targetSdk rootProject.ext.targetSdkVersion
         versionCode computedVersionCode
         versionName versionText
+        buildConfigField 'int', 'TEST_BUILD', (project.findProperty('testBuild') ?: '0').toString()
     }
 
     signingConfigs {
