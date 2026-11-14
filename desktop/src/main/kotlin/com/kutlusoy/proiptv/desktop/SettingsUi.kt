@@ -1,5 +1,6 @@
 package com.kutlusoy.proiptv.desktop
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -73,6 +74,11 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                 Text("ProIPTV " + t("main_version", AppInfo.label))
                 Hint(t("settings_license"))
                 Hint("github.com/kutlusoy/proiptv")
+                Text("Ali Kutlusoy")
+                Text(
+                    "kutlusoy.dev@gmail.com", color = Palette.WineSoft,
+                    modifier = Modifier.clickable { runCatching { java.awt.Desktop.getDesktop().mail(java.net.URI("mailto:kutlusoy.dev@gmail.com")) } },
+                )
             }
             UpdateGroup(state, updater, update)
         }
