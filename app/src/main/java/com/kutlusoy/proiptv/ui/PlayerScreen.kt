@@ -453,7 +453,15 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
 
-    BackHandler { if (listOpen) listOpen = false else onClose() }
+    val tvBack = LocalTv.current && request is PlayRequest.Zap
+    BackHandler {
+        when {
+            listOpen -> listOpen = false
+            // on a TV the first Back shows the channel list, the second one leaves the player
+            tvBack -> { overlay = true; listOpen = true }
+            else -> onClose()
+        }
+    }
 
     fun shiftBy(deltaMs: Long) {
         val hub = holder.lease?.hub ?: return
