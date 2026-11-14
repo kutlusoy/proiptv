@@ -72,8 +72,8 @@ class ParsersTest {
         assertEquals("m3u8", StreamUrls.liveFormat("m3u8", "ts"))
         assertEquals("http://h/timeshift/u/p/65/2025-01-01:12-00/7.ts", StreamUrls.xtreamCatchup("http://h", "u", "p", "7", 1735732800L, 65))
         val item = Item(accountId = 1, kind = 0, remoteId = "x", name = "n", url = "http://x/live.ts", catchupSource = "?s=\${start}&e=\${end}")
-        assertEquals("http://x/live.ts?s=100&e=200", StreamUrls.m3uCatchup(item, 100, 200, 300))
-        assertNotNull(StreamUrls.m3uCatchup(item.copy(catchupSource = null), 100, 200, 300))
-        assertTrue(StreamUrls.m3uCatchup(item.copy(catchupSource = null), 100, 200, 300)!!.contains("utc=100"))
+        assertEquals("http://x/live.ts?s=100&e=200", StreamUrls.m3uCatchup(item.url, item.catchupSource, 100, 200, 300))
+        assertNotNull(StreamUrls.m3uCatchup(item.url, null, 100, 200, 300))
+        assertTrue(StreamUrls.m3uCatchup(item.url, null, 100, 200, 300)!!.contains("utc=100"))
     }
 }

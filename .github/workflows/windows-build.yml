@@ -1,0 +1,79 @@
+name: Windows build
+
+# Builds the Windows setup (not portable) of ProIPTV. Called by CI, by Test release and by Release.
+# The setup is not signed yet, Windows SmartScreen may warn. See doc/guideline-windows-version.md.
+
+on:
+  workflow_call:
+    inputs:
+      kind:
+        description: ci, test or release. Decides the channel of the in-app update and the name of the file.
+        required: true
+        type: string
+
+jobs:
+  windows:
+    name: Windows setup
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Names
+        shell: bash
+        run: |
+          version=$(tr -d '[:space:]' < app/version.txt)
+          short=${GITHUB_SHA::7}
+          case "${{ inputs.kind }}" in
+            release) base="ProIPTV-$version"; channel=release; build=0 ;;
+            test) base="ProIPTV-$version-test${{ github.run_number }}-$short"; channel=test; build=${{ github.run_number }} ;;
+            *) base="ProIPTV-$version-dev-$short"; channel=dev; build=0 ;;
+          esac
+          {
+            echo "VERSION=$version"
+            echo "BASE=$base"
+            echo "CHANNEL=$channel"
+            echo "TEST_BUILD=$build"
+          } >> "$GITHUB_ENV"
+
+      - name: Test and build the app folder
+        shell: bash
+        run: ./gradlew :desktop:test :desktop:createDistributable "-Pchannel=$CHANNEL" "-PtestBuild=$TEST_BUILD" --stacktrace
+
+      - name: Add libVLC
+        shell: pwsh
+        run: ./tools/bundle-vlc.ps1 -AppDir "desktop/build/compose/binaries/main/app/ProIPTV"
+
+      - name: Build the setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $root = (Get-Location).Path
+          & $iscc "/DAppVersion=$env:VERSION" "/DOutputName=$env:BASE-windows-x64-setup" "/DSourceDir=$root\desktop\build\compose\binaries\main\app\ProIPTV" "/DIconFile=$root\design\ProIPTV.ico" "/DLicenseFile=$root\LICENSE" "/O$root\dist" "desktop\installer\ProIPTV.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+          Get-ChildItem dist
+
+      - name: Check the setup
+        shell: bash
+        run: |
+          file="dist/$BASE-windows-x64-setup.exe"
+          test -s "$file"
+          size=$(stat -c %s "$file")
+          echo "Setup size: $size bytes"
+          [ "$size" -gt 50000000 ]
+          (cd dist && sha256sum "./$BASE-windows-x64-setup.exe" | tee "$BASE-windows-x64-setup.exe.sha256")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup
+          path: |
+            dist/*-windows-x64-setup.exe
+            dist/*.sha256
+          if-no-files-found: error

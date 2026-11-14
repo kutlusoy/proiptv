@@ -1,0 +1,102 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'org.jetbrains.compose'
+}
+
+def versionText = rootProject.file('app/version.txt').text.trim()
+def channel = (project.findProperty('channel') ?: 'dev').toString()
+def testBuild = (project.findProperty('testBuild') ?: '0').toString()
+
+kotlin {
+    jvmToolchain(17)
+}
+
+// Code that does not depend on Android is compiled from the app module, so there is one copy of the parsers, the Xtream client and the update logic
+def sharedRoot = rootProject.file('app/src/main/java/com/kutlusoy/proiptv')
+def sharedDir = layout.buildDirectory.dir('generated/shared')
+def stringsDir = layout.buildDirectory.dir('generated/strings')
+def infoDir = layout.buildDirectory.dir('generated/appinfo')
+
+tasks.register('syncShared', Copy) {
+    from(sharedRoot) {
+        include 'parse/Entities.kt', 'parse/M3uParser.kt', 'parse/TitleParser.kt', 'parse/XmltvParser.kt'
+        include 'net/Http.kt', 'net/XtreamApi.kt', 'net/XtreamUrl.kt', 'net/StreamUrls.kt'
+        include 'update/Release.kt', 'update/UpdateDownloader.kt'
+    }
+    into sharedDir
+}
+
+tasks.register('syncStrings', Copy) {
+    from(rootProject.file('app/src/main/res')) {
+        include 'values*/strings.xml'
+    }
+    into stringsDir.map { it.dir('strings') }
+}
+
+tasks.register('writeAppInfo') {
+    def out = infoDir.map { it.file('appinfo.properties') }
+    inputs.property('version', versionText)
+    inputs.property('channel', channel)
+    inputs.property('testBuild', testBuild)
+    outputs.file(out)
+    doLast {
+        def f = out.get().asFile
+        f.parentFile.mkdirs()
+        f.text = "version=${versionText}\nchannel=${channel}\ntestBuild=${testBuild}\n"
+    }
+}
+
+sourceSets {
+    main {
+        kotlin.srcDir(sharedDir)
+        resources.srcDir(stringsDir)
+        resources.srcDir(infoDir)
+    }
+}
+
+tasks.named('compileKotlin') { dependsOn 'syncShared' }
+tasks.named('processResources') { dependsOn 'syncStrings', 'writeAppInfo' }
+
+dependencies {
+    implementation compose.desktop.currentOs
+    implementation compose.material3
+    implementation compose.materialIconsExtended
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'net.java.dev.jna:jna:5.17.0'
+    implementation 'net.java.dev.jna:jna-platform:5.17.0'
+    implementation 'net.sf.kxml:kxml2:2.3.0'
+    implementation 'io.coil-kt.coil3:coil-compose:3.3.0'
+    implementation 'io.coil-kt.coil3:coil-network-okhttp:3.3.0'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
+}
+
+test {
+    useJUnit()
+}
+
+compose.desktop {
+    application {
+        mainClass = 'com.kutlusoy.proiptv.desktop.MainKt'
+        nativeDistributions {
+            targetFormats(TargetFormat.AppImage)
+            packageName = 'ProIPTV'
+            packageVersion = versionText.replaceAll(/-.*$/, '')
+            vendor = 'Ali Kutlusoy'
+            description = 'IPTV player'
+            copyright = 'MIT License'
+            windows {
+                iconFile.set(rootProject.file('design/ProIPTV.ico'))
+                menuGroup = 'ProIPTV'
+            }
+        }
+    }
+}

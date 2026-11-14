@@ -1,6 +1,5 @@
 package com.kutlusoy.proiptv.net
 
-import com.kutlusoy.proiptv.data.Item
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -28,9 +27,8 @@ object StreamUrls {
         return "$server/timeshift/$user/$pass/$minutes/${fmt.format(Date(startSecs * 1000))}/$id.ts"
     }
 
-    fun m3uCatchup(item: Item, startSecs: Long, endSecs: Long, nowSecs: Long): String? {
-        val base = item.url ?: return null
-        val source = item.catchupSource
+    fun m3uCatchup(base: String?, source: String?, startSecs: Long, endSecs: Long, nowSecs: Long): String? {
+        if (base == null) return null
         fun fill(template: String): String = template
             .replace("\${start}", startSecs.toString()).replace("{utc}", startSecs.toString())
             .replace("\${end}", endSecs.toString()).replace("{utcend}", endSecs.toString())
