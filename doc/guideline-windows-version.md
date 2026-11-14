@@ -14,7 +14,11 @@ What the app can do on Windows today:
 - 11 languages, taken from the same `strings.xml` files as the Android app
 - update check by hand and once a day in the background (one notice per day at most), downloads the newest setup, checks the SHA-256 against `SHA256SUMS.txt` and starts the installer silently, which closes the app, installs and starts the new version. Test builds follow the newest test release, normal builds the newest release.
 
-Not in the Windows version yet (the Android app has them): program guide (EPG) and EPG search, recording, time shift and the stream hub, downloads, audio and subtitle track menu, several favorites lists, watched marks and resume, TV style navigation. They need the shared engine (section 5) and come step by step.
+- program guide: the XMLTV guide of each account (Xtream, M3U header or the entered guide address) is loaded after the lists and every 6 hours, shows what runs now in the channel list, the live search also finds running shows, and the **EPG** screen lists the shows by group, search and time range; a click starts the channel
+- player: a menu button with the list of channels that the player was started from (the channel keeps playing), channel up and down
+- accounts with the same information as on Android (status, expiry date and days left, connections, counts, last sync, guide update, errors) in collapsible cards, and buttons to refresh the lists and the guide by hand (also in the settings)
+
+Not in the Windows version yet (the Android app has them): recording, time shift and the stream hub, downloads, audio and subtitle track menu, several favorites lists, watched marks and resume, TV style navigation. They need the shared engine (section 5) and come step by step.
 
 How it is built (differs from the plan below): the desktop app is the Gradle module `desktop`. Instead of a full Kotlin Multiplatform refactor the module compiles the Android-free source files of the app directly (`parse`, Xtream client, stream URLs, update logic, see `syncShared` in `desktop/build.gradle`), so there is one copy of them. The installer is built with Inno Setup instead of an MSI, because it can update silently and runs without administrator rights (per user installation). libVLC 3.0.21 is downloaded in the build, checked against a pinned SHA-256 and reduced to the plugins in `desktop/vlc/plugins.txt` (GPL only plugins are left out, the build fails if a listed plugin is missing).
 

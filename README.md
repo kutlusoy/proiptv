@@ -40,7 +40,7 @@ Not yet: multiview, parental PIN, Stalker portal, HDHomeRun, Enigma2, TVHeadend,
 | Platform | Download | Player | State |
 |---|---|---|---|
 | Android (phone, tablet, Android TV) | `ProIPTV-<version>.apk` (and `.aab` for Google Play) from the release page | Media3 with the own stream hub | full feature set, see State |
-| Windows 10 / 11 (64 bit) | `ProIPTV-<version>-windows-x64-setup.exe` from the release page, a normal installer (no portable version), updates itself | libVLC (bundled, LGPL) | first version: accounts, live TV, movies, series, favorites. No guide (EPG), recording, time shift, downloads or track menu yet. The installer is not signed yet, SmartScreen may warn |
+| Windows 10 / 11 (64 bit) | `ProIPTV-<version>-windows-x64-setup.exe` from the release page, a normal installer (no portable version), updates itself | libVLC (bundled, LGPL) | accounts with status, live TV with guide (EPG), movies, series, favorites, channel list in the player. No recording, time shift, downloads or track menu yet. The installer is not signed yet, SmartScreen may warn |
 | macOS, Linux | not available yet | | possible with the same code base, see [the Windows document](doc/guideline-windows-version.md) section 10 |
 
 Every CI run, every test release and every release also builds the Windows installer; the release and test release workflows publish it next to the APK with the same `SHA256SUMS.txt`.

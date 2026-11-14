@@ -4,6 +4,10 @@ import com.kutlusoy.proiptv.net.Http
 import com.kutlusoy.proiptv.net.StreamUrls
 import com.kutlusoy.proiptv.net.XtreamApi
 import com.kutlusoy.proiptv.net.XtreamEpisode
+import com.kutlusoy.proiptv.net.XtreamInfo
+import com.kutlusoy.proiptv.net.maybeGunzip
+import com.kutlusoy.proiptv.parse.XmltvParser
+import com.kutlusoy.proiptv.parse.XmltvProgram
 import com.kutlusoy.proiptv.net.XtreamUrl
 import com.kutlusoy.proiptv.net.str
 import com.kutlusoy.proiptv.parse.M3uParser
@@ -29,6 +33,7 @@ data class Entry(
     val ext: String,
     val url: String?,
     val rating: String?,
+    val epgId: String? = null,
 ) {
     val key: String get() = "$accountId|$kind|$remoteId"
 }
@@ -37,10 +42,13 @@ data class Category(val accountId: String, val id: String, val name: String)
 
 data class Playable(val title: String, val url: String, val userAgent: String?, val live: Boolean)
 
+data class AccountStatus(val info: XtreamInfo?, val channels: Int, val movies: Int, val series: Int, val loadedAt: Long)
+
 data class LibraryData(
     val entries: Map<Int, List<Entry>> = emptyMap(),
     val categories: Map<Int, List<Category>> = emptyMap(),
     val errors: Map<String, String> = emptyMap(),
+    val status: Map<String, AccountStatus> = emptyMap(),
 ) {
     fun entries(kind: Int): List<Entry> = entries[kind].orEmpty()
     fun categories(kind: Int): List<Category> = categories[kind].orEmpty()
@@ -48,6 +56,7 @@ data class LibraryData(
 
 /** Loads channels, movies and series of all enabled accounts into memory. */
 class Library(private val store: Store) {
+    private val m3uGuide = HashMap<String, String>()
 
     private fun api(a: AccountDto) = XtreamApi(Http.client, a.url, a.username, Secrets.unprotect(a.password), a.userAgent)
 
@@ -55,19 +64,22 @@ class Library(private val store: Store) {
         val entries = HashMap<Int, MutableList<Entry>>()
         val categories = HashMap<Int, MutableList<Category>>()
         val errors = HashMap<String, String>()
+        val status = HashMap<String, AccountStatus>()
         for (a in store.config.accounts.filter { it.enabled }) {
             try {
-                if (a.type == "xtream") loadXtream(a, entries, categories) else loadM3u(a, entries, categories)
+                val info = if (a.type == "xtream") loadXtream(a, entries, categories) else { loadM3u(a, entries, categories); null }
+                fun count(kind: Int) = entries[kind].orEmpty().count { it.accountId == a.id }
+                status[a.id] = AccountStatus(info, count(Kind.LIVE), count(Kind.MOVIE), count(Kind.SERIES), System.currentTimeMillis())
             } catch (e: Exception) {
                 errors[a.id] = e.message ?: e.javaClass.simpleName
             }
         }
-        LibraryData(entries, categories, errors)
+        LibraryData(entries, categories, errors, status)
     }
 
-    private fun loadXtream(a: AccountDto, entries: MutableMap<Int, MutableList<Entry>>, categories: MutableMap<Int, MutableList<Category>>) {
+    private fun loadXtream(a: AccountDto, entries: MutableMap<Int, MutableList<Entry>>, categories: MutableMap<Int, MutableList<Category>>): XtreamInfo {
         val api = api(a)
-        api.authenticate()
+        val info = api.authenticate()
         val kinds = listOf(
             Triple(Kind.LIVE, "get_live_categories", "get_live_streams"),
             Triple(Kind.MOVIE, "get_vod_categories", "get_vod_streams"),
@@ -88,10 +100,12 @@ class Library(private val store: Store) {
                         (o.str("stream_icon") ?: o.str("cover"))?.takeIf { it.isNotBlank() },
                         o.str("container_extension")?.takeIf { it.isNotBlank() } ?: "mp4", null,
                         o.str("rating")?.takeIf { it.isNotBlank() },
+                        o.str("epg_channel_id")?.takeIf { it.isNotBlank() }?.lowercase(),
                     )
                 }
             }
         }
+        return info
     }
 
     private fun loadM3u(a: AccountDto, entries: MutableMap<Int, MutableList<Entry>>, categories: MutableMap<Int, MutableList<Category>>) {
@@ -101,11 +115,11 @@ class Library(private val store: Store) {
             val reader = BufferedReader(InputStreamReader(it.body!!.byteStream(), Charsets.UTF_8), 64 * 1024)
             val groups = LinkedHashSet<String>()
             var n = 0
-            for (e in M3uParser.parse(reader)) {
+            for (e in M3uParser.parse(reader) { header -> header.epgUrl?.split(',')?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { m3uGuide[a.id] = it } }) {
                 val vod = e.url.contains("/movie/") || e.url.contains("/series/") || e.url.substringBefore('?').let { u -> VOD_EXT.any { x -> u.endsWith(x) } }
                 val kind = if (vod) Kind.MOVIE else Kind.LIVE
                 groups += "$kind|${e.group}"
-                entries.getOrPut(kind) { mutableListOf() } += Entry(a.id, kind, "m${n++}", e.name, e.group, e.logo, "", e.url, null)
+                entries.getOrPut(kind) { mutableListOf() } += Entry(a.id, kind, "m${n++}", e.name, e.group, e.logo, "", e.url, null, e.tvgId?.lowercase())
             }
             for (g in groups) {
                 val kind = g.substringBefore('|').toInt()
@@ -149,8 +163,56 @@ class Library(private val store: Store) {
         }
     }
 
+    /** Downloads the XMLTV guide of every account and keeps the programs of the channels that exist, from 3 hours ago to 36 hours ahead. */
+    suspend fun loadGuide(live: List<Entry>): Guide = withContext(Dispatchers.IO) {
+        val programs = HashMap<String, MutableList<XmltvProgram>>()
+        val updated = HashMap<String, Long>()
+        val errors = HashMap<String, String>()
+        val now = System.currentTimeMillis() / 1000
+        for (a in store.config.accounts.filter { it.enabled }) {
+            val wanted = live.asSequence().filter { it.accountId == a.id }.mapNotNull { it.epgId }.toHashSet()
+            if (wanted.isEmpty()) continue
+            val url = a.epgUrl?.takeIf { it.isNotBlank() }
+                ?: if (a.type == "xtream") "${a.url}/xmltv.php?username=${java.net.URLEncoder.encode(a.username, "UTF-8")}&password=${java.net.URLEncoder.encode(Secrets.unprotect(a.password), "UTF-8")}"
+                else m3uGuide[a.id]
+            if (url == null) continue
+            try {
+                Http.client.newCall(Http.request(url, a.userAgent)).execute().use { r ->
+                    if (!r.isSuccessful) throw java.io.IOException("HTTP ${r.code}")
+                    r.body!!.byteStream().maybeGunzip().use { input ->
+                        for (p in XmltvParser.parse(input, { it.lowercase() in wanted }, now - 3 * 3600, now + 36 * 3600L)) {
+                            programs.getOrPut(Guide.key(a.id, p.channel)) { mutableListOf() } += p
+                        }
+                    }
+                }
+                updated[a.id] = System.currentTimeMillis()
+            } catch (e: Exception) {
+                errors[a.id] = e.message ?: e.javaClass.simpleName
+            }
+        }
+        Guide(programs.mapValues { (_, list) -> list.sortedBy { it.start } }, updated, errors)
+    }
+
     companion object {
         private val VOD_EXT = listOf(".mp4", ".mkv", ".avi", ".mov")
         fun normalizeServer(input: String) = XtreamUrl.normalizeServer(input)
     }
 }
+
+/** The program guide of all accounts: programs per channel, when each account was updated, and errors. */
+class Guide(
+    val programs: Map<String, List<XmltvProgram>> = emptyMap(),
+    val updated: Map<String, Long> = emptyMap(),
+    val errors: Map<String, String> = emptyMap(),
+) {
+    fun nowNext(accountId: String, epgId: String?, nowSecs: Long): Pair<XmltvProgram?, XmltvProgram?> {
+        if (epgId == null) return null to null
+        val list = programs[key(accountId, epgId)] ?: return null to null
+        return list.firstOrNull { it.start <= nowSecs && it.end > nowSecs } to list.firstOrNull { it.start > nowSecs }
+    }
+
+    companion object {
+        fun key(accountId: String, epgId: String) = "$accountId|${epgId.lowercase()}"
+    }
+}
+
