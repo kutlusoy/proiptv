@@ -3,4 +3,8 @@
     <string name="main_no_accounts_title">Nog geen account</string>
     <string name="main_no_accounts_text">Open Accounts en voeg er een toe om te beginnen.</string>
     <string name="main_version">Versie %1$s</string>
+    <string name="nav_home">Start</string>
+    <string name="home_continue">Verder kijken</string>
+    <string name="home_search">Zoek zenders, films en series</string>
+    <string name="home_no_results">Niets gevonden</string>
 </resources>

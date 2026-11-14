@@ -48,6 +48,10 @@
     <string name="live_other">Otros</string>
     <string name="live_all_accounts">Todas las cuentas</string>
     <string name="live_search">Buscar</string>
+    <string name="nav_home">Inicio</string>
+    <string name="home_continue">Seguir viendo</string>
+    <string name="home_search">Buscar canales, películas y series</string>
+    <string name="home_no_results">No se encontró nada</string>
     <string name="live_no_results">Sin resultados.</string>
     <string name="fav_title">Favoritos</string>
     <string name="fav_add">Añadir a favoritos</string>

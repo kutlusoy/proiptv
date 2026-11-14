@@ -225,4 +225,8 @@
     <string name="remote_failed">Kurulum sayfası başlatılamadı.</string>
     <string name="remote_added">Hesap eklendi: %1$s</string>
     <string name="exit_confirm">ProIPTV kapatılsın mı?</string>
+    <string name="nav_home">Ana sayfa</string>
+    <string name="home_continue">İzlemeye devam et</string>
+    <string name="home_search">Kanal, film ve dizi ara</string>
+    <string name="home_no_results">Sonuç bulunamadı</string>
 </resources>

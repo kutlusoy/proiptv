@@ -166,7 +166,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         val watched = pos.toDouble() / len > 0.92
         val old = state.progress.get(item.account, item.kind, item.remoteId)
         state.progress.save(
-            ProgressDto(item.account, item.kind, item.remoteId, if (watched) 0 else pos, len, watched || old?.watched == true && pos < 5000, System.currentTimeMillis()),
+            ProgressDto(item.account, item.kind, item.remoteId, if (watched) 0 else pos, len, watched || old?.watched == true && pos < 5000, System.currentTimeMillis(), item.seriesRemoteId),
         )
     }
 

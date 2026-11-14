@@ -39,6 +39,7 @@ data class ProgressDto(
     val durationMs: Long = 0,
     val watched: Boolean = false,
     val updated: Long = 0,
+    val seriesId: String = "",
 ) {
     val key: String get() = "$account|$kind|$remoteId"
 }
@@ -115,6 +116,9 @@ class ProgressStore(private val dir: File) {
 
     @Synchronized
     fun get(account: String, kind: Int, remoteId: String): ProgressDto? = map["$account|$kind|$remoteId"]
+
+    @Synchronized
+    fun all(): List<ProgressDto> = map.values.toList()
 
     @Synchronized
     fun save(p: ProgressDto) {

@@ -9,7 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 enum class Tab(val label: String) {
-    LIVE("nav_live"), MOVIES("nav_movies"), SERIES("nav_series"), EPG("nav_epg"), DOWNLOADS("nav_downloads"), RECORDINGS("nav_recordings"), ACCOUNTS("nav_accounts"), SETTINGS("nav_settings"),
+    HOME("nav_home"), LIVE("nav_live"), MOVIES("nav_movies"), SERIES("nav_series"), EPG("nav_epg"), DOWNLOADS("nav_downloads"), RECORDINGS("nav_recordings"), ACCOUNTS("nav_accounts"), SETTINGS("nav_settings"),
 }
 
 sealed interface PlayRequest {
@@ -21,7 +21,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     val library = Library(store)
     val engine by lazy { VlcEngine() }
 
-    var tab by mutableStateOf(Tab.LIVE)
+    var tab by mutableStateOf(Tab.HOME)
     var data by mutableStateOf(LibraryData())
     var loading by mutableStateOf(false)
     var guide by mutableStateOf(Guide())

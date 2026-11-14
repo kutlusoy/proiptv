@@ -3,4 +3,8 @@
     <string name="main_no_accounts_title">Brak konta</string>
     <string name="main_no_accounts_text">Otwórz Konta i dodaj jedno, aby zacząć.</string>
     <string name="main_version">Wersja %1$s</string>
+    <string name="nav_home">Start</string>
+    <string name="home_continue">Kontynuuj oglądanie</string>
+    <string name="home_search">Szukaj kanałów, filmów i seriali</string>
+    <string name="home_no_results">Nic nie znaleziono</string>
 </resources>

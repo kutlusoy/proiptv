@@ -3,4 +3,8 @@
     <string name="main_no_accounts_title">Аккаунта пока нет</string>
     <string name="main_no_accounts_text">Откройте «Аккаунты» и добавьте один, чтобы начать.</string>
     <string name="main_version">Версия %1$s</string>
+    <string name="nav_home">Главная</string>
+    <string name="home_continue">Продолжить просмотр</string>
+    <string name="home_search">Поиск каналов, фильмов и сериалов</string>
+    <string name="home_no_results">Ничего не найдено</string>
 </resources>
