@@ -169,12 +169,12 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
 
     series?.let {
         BackHandler { series = null }
-        SeriesDetailScreen(vm, it) { series = null }
+        SeriesDetailScreen(vm, it, { series = null }, onOpen = { o -> if (o.kind == Kind.SERIES) { series = o; movie = null } else { movie = o; series = null } })
         return
     }
     movie?.let {
         BackHandler { movie = null }
-        MovieDetail(vm, it) { movie = null }
+        MovieDetail(vm, it, { movie = null }, onOpen = { o -> if (o.kind == Kind.SERIES) { series = o; movie = null } else { movie = o; series = null } })
         return
     }
 
@@ -374,7 +374,7 @@ private fun NowPlaying(vm: MainViewModel, accountId: Long, epgId: String?) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boolean = false, onLongClick: () -> Unit = {}, onClick: () -> Unit) {
+internal fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boolean = false, onLongClick: () -> Unit = {}, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "poster")
     Column(

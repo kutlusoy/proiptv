@@ -235,4 +235,9 @@
     <string name="dl_paused">Duraklatıldı</string>
     <string name="dl_open_folder">Klasörü aç</string>
     <string name="epg_to_channel">Kanala git</string>
+    <string name="detail_trailer">Fragmanı izle</string>
+    <string name="detail_related_movies">İlgili filmler</string>
+    <string name="detail_related_series">İlgili diziler</string>
+    <string name="detail_genre">Tür</string>
+    <string name="detail_runtime">Süre</string>
 </resources>

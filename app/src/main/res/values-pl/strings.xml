@@ -13,4 +13,9 @@
     <string name="dl_paused">Wstrzymano</string>
     <string name="dl_open_folder">Otwórz folder</string>
     <string name="epg_to_channel">Przejdź do kanału</string>
+    <string name="detail_trailer">Obejrzyj zwiastun</string>
+    <string name="detail_related_movies">Podobne filmy</string>
+    <string name="detail_related_series">Podobne seriale</string>
+    <string name="detail_genre">Gatunek</string>
+    <string name="detail_runtime">Czas trwania</string>
 </resources>

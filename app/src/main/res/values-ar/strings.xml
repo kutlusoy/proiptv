@@ -13,4 +13,9 @@
     <string name="dl_paused">متوقف مؤقتاً</string>
     <string name="dl_open_folder">فتح المجلد</string>
     <string name="epg_to_channel">الانتقال إلى القناة</string>
+    <string name="detail_trailer">مشاهدة المقطع الدعائي</string>
+    <string name="detail_related_movies">أفلام ذات صلة</string>
+    <string name="detail_related_series">مسلسلات ذات صلة</string>
+    <string name="detail_genre">النوع</string>
+    <string name="detail_runtime">المدة</string>
 </resources>

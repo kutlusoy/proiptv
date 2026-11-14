@@ -235,4 +235,9 @@
     <string name="dl_paused">En pausa</string>
     <string name="dl_open_folder">Abrir carpeta</string>
     <string name="epg_to_channel">Ir al canal</string>
+    <string name="detail_trailer">Ver tráiler</string>
+    <string name="detail_related_movies">Películas relacionadas</string>
+    <string name="detail_related_series">Series relacionadas</string>
+    <string name="detail_genre">Género</string>
+    <string name="detail_runtime">Duración</string>
 </resources>

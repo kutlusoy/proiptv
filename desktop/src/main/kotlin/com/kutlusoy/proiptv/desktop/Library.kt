@@ -3,6 +3,8 @@ package com.kutlusoy.proiptv.desktop
 import com.kutlusoy.proiptv.net.Http
 import com.kutlusoy.proiptv.net.StreamUrls
 import com.kutlusoy.proiptv.net.XtreamApi
+import com.kutlusoy.proiptv.net.SeriesDetail
+import com.kutlusoy.proiptv.net.VodInfo
 import com.kutlusoy.proiptv.net.XtreamEpisode
 import com.kutlusoy.proiptv.net.XtreamInfo
 import com.kutlusoy.proiptv.net.maybeGunzip
@@ -155,9 +157,18 @@ class Library(private val store: Store) {
         return Playable(e.name, url, a.userAgent, e.kind == Kind.LIVE, a.id, e.kind, e.remoteId)
     }
 
-    suspend fun episodes(e: Entry): List<XtreamEpisode> = withContext(Dispatchers.IO) {
-        val a = store.config.accounts.firstOrNull { it.id == e.accountId } ?: return@withContext emptyList()
-        api(a).seriesDetail(e.remoteId).episodes
+    suspend fun episodes(e: Entry): List<XtreamEpisode> = seriesDetail(e).episodes
+
+    suspend fun seriesDetail(e: Entry): SeriesDetail = withContext(Dispatchers.IO) {
+        val a = store.config.accounts.firstOrNull { it.id == e.accountId } ?: return@withContext SeriesDetail(null, emptyList())
+        api(a).seriesDetail(e.remoteId)
+    }
+
+    /** Plot, cast, director and more of a movie, as far as the provider gives them (Xtream only). */
+    suspend fun vodInfo(e: Entry): VodInfo? = withContext(Dispatchers.IO) {
+        val a = store.config.accounts.firstOrNull { it.id == e.accountId } ?: return@withContext null
+        if (a.type != "xtream") return@withContext null
+        runCatching { api(a).vodInfo(e.remoteId) }.getOrNull()
     }
 
     fun episodePlayable(series: Entry, ep: XtreamEpisode): Playable? {

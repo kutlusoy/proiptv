@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
+import com.kutlusoy.proiptv.net.trailerUrl
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -175,7 +176,7 @@ private fun PlayButton(label: String, focus: FocusRequester? = null, onClick: ()
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit) {
+fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit, onOpen: (Item) -> Unit = {}) {
     val loaded by produceState<Pair<Boolean, VodInfo?>>(false to null, item.id) {
         value = true to runCatching { vm.repo.vodInfo(item) }.getOrNull()
     }
@@ -218,7 +219,9 @@ fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit) {
                     onClick = { vm.run { vm.repo.setWatched(item.accountId, Kind.MOVIE, listOf(item.remoteId), !watched); refresh++ } },
                     modifier = Modifier.focusHighlight(),
                 ) { Text(stringResource(if (watched) R.string.detail_mark_unwatched else R.string.detail_mark_watched), maxLines = 1) }
+                TrailerButton(info?.trailer)
             }
+            RatingStars(info?.rating ?: item.rating)
             if (saved != null && saved.durationMs > 0) {
                 LinearProgressIndicator(progress = { (saved.positionMs.toFloat() / saved.durationMs).coerceIn(0f, 1f) }, Modifier.fillMaxWidth(0.5f))
             }
@@ -232,12 +235,47 @@ fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit) {
             if (loaded.first && plot == null && info == null) {
                 Text(stringResource(R.string.detail_no_info), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
             }
+            RelatedRow(vm, item, R.string.detail_related_movies, onOpen)
         }
     }
 }
 
 @Composable
-fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit) {
+private fun TrailerButton(trailer: String?) {
+    val url = trailerUrl(trailer) ?: return
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    OutlinedButton(
+        onClick = { runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } },
+        modifier = Modifier.focusHighlight(),
+    ) { Text(stringResource(R.string.detail_trailer), maxLines = 1) }
+}
+
+/** Five stars from the rating of the provider (0 to 10). */
+@Composable
+private fun RatingStars(value: String?) {
+    val r = value?.toDoubleOrNull()?.takeIf { it > 0 } ?: return
+    val filled = Math.round(r / 2).toInt().coerceIn(0, 5)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        for (i in 1..5) Icon(Icons.Filled.Star, null, tint = if (i <= filled) Color(0xFFFFC107) else Color.White.copy(alpha = 0.25f), modifier = Modifier.size(22.dp))
+        Text("  " + "%.1f".format(r), style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/** Other titles of the same category, one click away. */
+@Composable
+private fun RelatedRow(vm: MainViewModel, item: Item, title: Int, onOpen: (Item) -> Unit) {
+    val related by produceState<List<Item>>(emptyList(), item.id) {
+        value = vm.repo.db.items().first(item.kind, item.accountId, item.categoryRemoteId, 30).filter { it.id != item.id }
+    }
+    if (related.isEmpty()) return
+    Text(stringResource(title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp)) {
+        items(related, key = { it.id }) { PosterCard(it, Modifier.width(if (LocalTv.current) 150.dp else 112.dp)) { onOpen(it) } }
+    }
+}
+
+@Composable
+fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit, onOpen: (Item) -> Unit = {}) {
     val detail by produceState<SeriesDetail?>(null, series.id) {
         value = runCatching { vm.repo.seriesDetail(series) }.getOrDefault(SeriesDetail(null, emptyList()))
     }
@@ -282,11 +320,14 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit) {
                     val label = if (next.continuing) stringResource(R.string.detail_continue_episode, ep.season, ep.number) else stringResource(R.string.detail_play_episode, ep.season, ep.number)
                     PlayButton(label, focus) { play(ep) }
                 }
+                RatingStars(info?.rating ?: series.rating)
+                TrailerButton(info?.trailer)
                 val plot = info?.plot ?: series.plot
                 if (plot != null) Text(plot, style = MaterialTheme.typography.bodyLarge)
                 Column {
                     Fact(R.string.detail_cast, info?.cast)
                     Fact(R.string.detail_director, info?.director)
+                    Fact(R.string.detail_released, info?.releaseDate)
                 }
                 if (detail == null) Text(stringResource(R.string.series_loading))
             }

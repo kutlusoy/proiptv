@@ -53,6 +53,7 @@ data class VodInfo(
     val rating: String?,
     val cover: String?,
     val backdrop: String?,
+    val trailer: String? = null,
 )
 
 data class SeriesInfo(
@@ -64,6 +65,7 @@ data class SeriesInfo(
     val rating: String?,
     val cover: String?,
     val backdrop: String?,
+    val trailer: String? = null,
 )
 
 data class SeriesDetail(val info: SeriesInfo?, val episodes: List<XtreamEpisode>)
@@ -158,6 +160,7 @@ class XtreamApi(
                 rating = text(info, "rating"),
                 cover = text(info, "movie_image", "cover_big"),
                 backdrop = firstUrl(info["backdrop_path"]),
+                trailer = text(info, "youtube_trailer"),
             )
         }
     }
@@ -176,6 +179,7 @@ class XtreamApi(
                     rating = text(it, "rating"),
                     cover = text(it, "cover"),
                     backdrop = firstUrl(it["backdrop_path"]),
+                    trailer = text(it, "youtube_trailer"),
                 )
             }
             val episodes = root["episodes"]
@@ -232,4 +236,10 @@ class XtreamApi(
             value
         }
     }
+}
+
+/** The address of a trailer: providers give either a full address or only the YouTube video id. */
+fun trailerUrl(value: String?): String? {
+    val v = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    return if (v.startsWith("http://") || v.startsWith("https://")) v.replaceFirst("http://", "https://") else "https://www.youtube.com/watch?v=$v"
 }

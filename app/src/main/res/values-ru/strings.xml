@@ -13,4 +13,9 @@
     <string name="dl_paused">На паузе</string>
     <string name="dl_open_folder">Открыть папку</string>
     <string name="epg_to_channel">Перейти к каналу</string>
+    <string name="detail_trailer">Смотреть трейлер</string>
+    <string name="detail_related_movies">Похожие фильмы</string>
+    <string name="detail_related_series">Похожие сериалы</string>
+    <string name="detail_genre">Жанр</string>
+    <string name="detail_runtime">Продолжительность</string>
 </resources>

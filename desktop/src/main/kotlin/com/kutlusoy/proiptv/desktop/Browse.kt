@@ -3,6 +3,7 @@ package com.kutlusoy.proiptv.desktop
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -54,6 +56,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kutlusoy.proiptv.net.XtreamEpisode
+import com.kutlusoy.proiptv.net.SeriesDetail
+import com.kutlusoy.proiptv.net.VodInfo
+import com.kutlusoy.proiptv.net.trailerUrl
 import com.kutlusoy.proiptv.parse.TitleParser
 
 private const val FAV_PREFIX = "fav:"
@@ -271,7 +276,8 @@ private fun MovieDetail(state: AppState, e: Entry) {
         (local ?: state.library.playable(e))?.let { state.player = PlayRequest.Single(it, startMs) }
     }
     val download = state.downloadOf(e.accountId, Kind.MOVIE, e.remoteId)
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    val vod by produceState<VodInfo?>(null, e.key) { value = state.library.vodInfo(e) }
+    Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         DetailHeader(state, e) { state.movie = null }
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             Logo(e.logo, Modifier.width(220.dp).aspectRatio(0.68f), ContentScale.Crop)
@@ -295,7 +301,49 @@ private fun MovieDetail(state: AppState, e: Entry) {
                 if (resume != null && resume.durationMs > 0) {
                     androidx.compose.material3.LinearProgressIndicator(progress = { (resume.positionMs.toFloat() / resume.durationMs).coerceIn(0f, 1f) }, Modifier.width(260.dp))
                 }
-                e.rating?.let { Text("\u2605 $it") }
+                val v = vod
+                Facts(v?.rating ?: e.rating, v?.plot, v?.director, v?.cast, v?.releaseDate, v?.genre, v?.durationSecs, v?.trailer)
+            }
+        }
+        RelatedRow(state, e, "detail_related_movies")
+    }
+}
+
+@Composable
+private fun Facts(rating: String?, plot: String?, director: String?, cast: String?, released: String?, genre: String?, durationSecs: Int?, trailer: String?) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        rating?.toDoubleOrNull()?.takeIf { it > 0 }?.let { r ->
+            val filled = Math.round(r / 2).toInt().coerceIn(0, 5)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                for (i in 1..5) Icon(Icons.Filled.Star, null, tint = if (i <= filled) Color(0xFFFFC107) else Color.White.copy(alpha = 0.25f), modifier = Modifier.size(22.dp))
+                Text("  " + "%.1f".format(r))
+            }
+        }
+        plot?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+        val facts = listOf("detail_director" to director, "detail_released" to released, "detail_cast" to cast, "detail_genre" to genre,
+            "detail_runtime" to durationSecs?.takeIf { it > 0 }?.let { s -> if (s >= 3600) "${s / 3600} h ${s % 3600 / 60} min" else "${s / 60} min" })
+        for ((key, value) in facts) {
+            if (value.isNullOrBlank()) continue
+            Row { Text(t(key) + ": ", fontWeight = FontWeight.SemiBold, color = Color.White.copy(alpha = 0.8f)); Text(value, Modifier.weight(1f, fill = false)) }
+        }
+        trailerUrl(trailer)?.let { url ->
+            androidx.compose.material3.OutlinedButton(onClick = { runCatching { java.awt.Desktop.getDesktop().browse(java.net.URI(url)) } }) { Text(t("detail_trailer")) }
+        }
+    }
+}
+
+/** Other titles of the same category, one click away. */
+@Composable
+private fun RelatedRow(state: AppState, e: Entry, titleKey: String) {
+    val related = remember(e.key, state.data) {
+        state.data.entries(e.kind).filter { it.accountId == e.accountId && it.categoryId == e.categoryId && it.remoteId != e.remoteId }.take(30)
+    }
+    if (related.isEmpty()) return
+    Text(t(titleKey), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        items(related, key = { it.key }) { r ->
+            Box(Modifier.width(120.dp)) {
+                Poster(state, r) { if (r.kind == Kind.SERIES) { state.series = r; state.movie = null } else { state.movie = r; state.series = null } }
             }
         }
     }
@@ -303,7 +351,8 @@ private fun MovieDetail(state: AppState, e: Entry) {
 
 @Composable
 private fun SeriesDetail(state: AppState, e: Entry) {
-    val episodes by produceState<List<XtreamEpisode>?>(null, e.key) { value = runCatching { state.library.episodes(e) }.getOrDefault(emptyList()) }
+    val detail by produceState<SeriesDetail?>(null, e.key) { value = runCatching { state.library.seriesDetail(e) }.getOrDefault(SeriesDetail(null, emptyList())) }
+    val episodes = detail?.episodes
     var season by remember(e.key) { mutableStateOf(-1) }
     val list = episodes.orEmpty()
     val seasons = list.map { it.season }.distinct()
@@ -348,6 +397,9 @@ private fun SeriesDetail(state: AppState, e: Entry) {
             }
         }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            detail?.info?.let { i ->
+                item { Facts(i.rating ?: e.rating, i.plot, i.director, i.cast, i.releaseDate, i.genre, null, i.trailer) }
+            }
             itemsIndexed(list.filter { it.season == active }, key = { _, ep -> ep.id }) { _, ep ->
                 val p = progressOf(ep.id)
                 val watched = p?.watched == true
@@ -381,6 +433,7 @@ private fun SeriesDetail(state: AppState, e: Entry) {
                     Icon(Icons.Filled.PlayArrow, null)
                 }
             }
+            item { Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 12.dp)) { RelatedRow(state, e, "detail_related_series") } }
         }
     }
 }
