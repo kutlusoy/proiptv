@@ -118,7 +118,7 @@ class VlcEngine {
             }
             val name = if (System.getProperty("os.name").lowercase().contains("win")) "libvlc" else "vlc"
             val loaded = Native.load(name, LibVlc::class.java)
-            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=none", if (System.getenv("PROIPTV_VLC_VERBOSE") != null) "--verbose=2" else "--quiet")
+            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=none", "--file-logging", "--logfile=${File(Store.defaultDir(), "vlc.log").also { it.delete() }.absolutePath}", "--log-verbose=2")
             val inst = loaded.libvlc_new(args.size, args)
             if (inst == null) {
                 error = loaded.libvlc_errmsg() ?: "libvlc_new failed"
@@ -160,6 +160,7 @@ class VlcEngine {
         l.libvlc_media_release(media)
         l.libvlc_audio_set_volume(p, volume)
         val result = l.libvlc_media_player_play(p)
+        Log.write("play ${item.url.substringBefore('?').takeLast(60)} result=$result")
         if (result != 0) Log.write("play failed: ${l.libvlc_errmsg()}")
     }
 

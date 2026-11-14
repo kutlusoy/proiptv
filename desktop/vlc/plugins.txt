@@ -11,6 +11,7 @@ access/libftp_plugin.dll
 misc/libgnutls_plugin.dll
 misc/libxml_plugin.dll
 misc/liblogger_plugin.dll
+logger/libfile_logger_plugin.dll
 demux/libts_plugin.dll
 demux/libmp4_plugin.dll
 demux/libmkv_plugin.dll
