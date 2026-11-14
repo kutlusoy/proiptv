@@ -57,6 +57,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +68,7 @@ import com.kutlusoy.proiptv.data.Kind
 import kotlinx.coroutines.launch
 
 private enum class Tab(val label: Int, val icon: ImageVector) {
+    HOME(R.string.nav_home, Icons.Filled.Home),
     LIVE(R.string.nav_live, Icons.Filled.PlayArrow),
     MOVIES(R.string.nav_movies, Icons.Filled.AccountBox),
     SERIES(R.string.nav_series, Icons.AutoMirrored.Filled.List),
@@ -106,7 +108,7 @@ class MainActivity : AppCompatActivity() {
 private fun AppRoot(vm: MainViewModel) {
     val request by vm.player.collectAsState()
     val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
-    var tab by rememberSaveable { mutableStateOf(Tab.values().firstOrNull { it.name == prefs.lastTab } ?: Tab.LIVE) }
+    var tab by rememberSaveable { mutableStateOf(Tab.values().firstOrNull { it.name == prefs.lastTab } ?: Tab.HOME) }
     LaunchedEffect(tab) { prefs.lastTab = tab.name }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
@@ -138,6 +140,7 @@ private fun AppRoot(vm: MainViewModel) {
     val content: @Composable () -> Unit = {
         holder.SaveableStateProvider(tab.name) {
             when (tab) {
+                Tab.HOME -> HomeScreen(vm)
                 Tab.LIVE -> BrowseScreen(Kind.LIVE, vm)
                 Tab.MOVIES -> BrowseScreen(Kind.MOVIE, vm)
                 Tab.SERIES -> BrowseScreen(Kind.SERIES, vm)

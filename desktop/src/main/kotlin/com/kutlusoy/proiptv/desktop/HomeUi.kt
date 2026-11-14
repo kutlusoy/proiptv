@@ -72,7 +72,7 @@ fun HomeScreen(state: AppState) {
             Text(t(if (q.isNotEmpty()) "home_no_results" else "main_loading"), Modifier.padding(8.dp), color = Color.White.copy(alpha = 0.7f))
         }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
-            items(rows, key = { it.title + it.kind }) { row ->
+            items(rows) { row ->
                 Text(row.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(row.entries, key = { it.key }) { e ->
