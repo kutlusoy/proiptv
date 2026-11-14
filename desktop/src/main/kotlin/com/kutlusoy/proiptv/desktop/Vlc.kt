@@ -91,9 +91,32 @@ class VlcEngine {
         attached = canvas
         if (System.getProperty("os.name").lowercase().contains("win")) l.libvlc_media_player_set_hwnd(p, Native.getComponentPointer(canvas))
         else l.libvlc_media_player_set_xwindow(p, Native.getComponentID(canvas).toInt())
+        // playback that was asked for before the window existed starts now, so VLC never opens a window of its own
+        wanted?.let { (item, volume) -> wanted = null; start(item, volume) }
     }
 
+    /** Releases the video output when the player screen is left. */
+    fun detach() {
+        val l = lib ?: return
+        val p = player ?: return
+        wanted = null
+        attached = null
+        if (System.getProperty("os.name").lowercase().contains("win")) l.libvlc_media_player_set_hwnd(p, null)
+        else l.libvlc_media_player_set_xwindow(p, 0)
+    }
+
+    private var wanted: Pair<Playable, Int>? = null
+
+    /** Plays as soon as the video canvas exists. Until then the request waits. */
     fun play(item: Playable, volume: Int) {
+        if (attached == null) {
+            wanted = item to volume
+            return
+        }
+        start(item, volume)
+    }
+
+    private fun start(item: Playable, volume: Int) {
         val l = lib ?: return
         val i = instance ?: return
         val p = player ?: return
