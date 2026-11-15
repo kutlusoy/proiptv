@@ -17,6 +17,11 @@ class Prefs(context: Context) {
         get() = sp.getInt("ui_mode", 0)
         set(value) = sp.edit().putInt("ui_mode", value).apply()
 
+    /** Counts the changes of how the lists are filtered; a lower number than the app knows means the stored lists must be loaded again once. */
+    var filterSync: Int
+        get() = sp.getInt("filter_sync", 0)
+        set(value) = sp.edit().putInt("filter_sync", value).apply()
+
     var hideAdult: Boolean
         get() = sp.getBoolean("hide_adult", true)
         set(value) = sp.edit().putBoolean("hide_adult", value).apply()

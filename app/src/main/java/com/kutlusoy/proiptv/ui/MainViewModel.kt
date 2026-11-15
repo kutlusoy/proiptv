@@ -127,7 +127,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 updateUi.value = UpdateUi.Error(com.kutlusoy.proiptv.update.UpdateException.Code.INSTALL_FAILED, it)
             }
         }
-        viewModelScope.launch { repo.ensureDefaultLists(app.getString(R.string.fav_title)) }
+        viewModelScope.launch {
+            repo.ensureDefaultLists(app.getString(R.string.fav_title))
+            // the lists stored by an older version were loaded without the filter for adult content: once load them again
+            if (prefs.filterSync < FILTER_SYNC) {
+                prefs.filterSync = FILTER_SYNC
+                repo.db.accounts().list().filter { it.enabled }.forEach { repo.sync.sync(it.id) }
+            }
+        }
     }
 
     val updateUi = MutableStateFlow<UpdateUi>(UpdateUi.Idle)
@@ -207,8 +214,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteRecording(id: Long) = run { (getApplication<Application>() as ProIptvApp).recordings.delete(id) }
 
-    fun refreshAll() {
-        accounts.value.filter { it.enabled }.forEach { repo.sync.sync(it.id) }
+    fun refreshAll(restart: Boolean = false) {
+        accounts.value.filter { it.enabled }.forEach {
+            // a load that is running was started with the old setting: it is stopped and started again
+            if (restart) repo.sync.cancel(it.id)
+            repo.sync.sync(it.id)
+        }
     }
 
     fun playItem(item: Item) {
@@ -226,3 +237,5 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         file.toURI().toString()
     }
 }
+
+private const val FILTER_SYNC = 1
