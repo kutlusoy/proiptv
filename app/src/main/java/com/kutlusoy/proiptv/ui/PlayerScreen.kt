@@ -516,15 +516,15 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     fun browseStep(delta: Int) {
         browseIndex = (browseIndex + delta).coerceIn(0, browseCount - 1)
     }
-    // OK on another channel starts it in the small window, OK on the running one opens the full screen
-    fun okInBrowser() {
-        if (browseList == playingList && browseIndex == index) confirmBrowse() else playHighlighted()
-    }
     fun confirmBrowse() {
         playHighlighted()
         tvBrowse = false
         overlay = true
         touched++
+    }
+    // OK on another channel starts it in the small window, OK on the running one opens the full screen
+    fun okInBrowser() {
+        if (browseList == playingList && browseIndex == index) confirmBrowse() else playHighlighted()
     }
     fun switchList(delta: Int) {
         if (browseLists.isEmpty()) return
