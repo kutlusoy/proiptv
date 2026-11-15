@@ -262,4 +262,6 @@
     <string name="settings_debug_log">Registro de depuración</string>
     <string name="settings_debug_log_show">Mostrar registro</string>
     <string name="settings_debug_log_hint">Solo en compilaciones de depuración. El registro se queda en este dispositivo; usuarios, contraseñas y direcciones se ocultan.</string>
+    <string name="history_title">Últimos canales</string>
+    <string name="history_empty">Aún no has visto ningún canal</string>
 </resources>

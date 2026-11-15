@@ -263,4 +263,6 @@
     <string name="settings_debug_log">Debug log</string>
     <string name="settings_debug_log_show">Show log</string>
     <string name="settings_debug_log_hint">Only in debug builds. The log stays on this device, user names, passwords and addresses are blacked out.</string>
+    <string name="history_title">Recent channels</string>
+    <string name="history_empty">No channels watched yet</string>
 </resources>

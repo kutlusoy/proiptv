@@ -110,6 +110,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         releaseHub(now = true)
         if (request is PlayRequest.Live) {
             val entry = request.entries[index]
+            state.recordHistory(entry)
             val a = state.store.config.accounts.firstOrNull { it.id == entry.accountId }
             val live = item.copy(accountNumber = (a?.id ?: "").hashCode().toLong(), channelId = entry.remoteId, maxConnections = state.data.status[entry.accountId]?.info?.maxConnections)
             current = live

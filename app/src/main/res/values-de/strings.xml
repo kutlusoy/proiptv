@@ -262,4 +262,6 @@
     <string name="settings_debug_log">Debug-Protokoll</string>
     <string name="settings_debug_log_show">Protokoll anzeigen</string>
     <string name="settings_debug_log_hint">Nur in Debug-Builds. Das Protokoll bleibt auf diesem Gerät, Benutzernamen, Passwörter und Adressen sind geschwärzt.</string>
+    <string name="history_title">Letzte Sender</string>
+    <string name="history_empty">Noch keine Sender angesehen</string>
 </resources>

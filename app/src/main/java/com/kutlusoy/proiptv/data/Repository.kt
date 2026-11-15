@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 sealed interface Source {
     data class Browse(val kind: Int, val accountIds: List<Long>, val category: String?, val query: String, val country: String? = null, val year: Int? = null, val flags: Int = 0) : Source
     data class Favs(val listId: Long) : Source
+    data object History : Source
 }
 
 data class PlayTarget(
@@ -63,12 +64,19 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         db.programs().deleteAccount(id)
         db.favorites().deleteAccount(id)
         db.progress().deleteAccount(id)
+        db.history().deleteAccount(id)
         db.recordings().deleteAccount(id)
         db.accounts().delete(id)
     }
 
     suspend fun alternatives(item: Item): List<Item> =
         db.items().alternatives(item.id, item.accountId, item.epgId.orEmpty(), item.name.trim().lowercase())
+
+    suspend fun recordHistory(item: Item) {
+        if (item.kind != Kind.LIVE) return
+        db.history().put(HistoryEntry(item.accountId, item.remoteId, System.currentTimeMillis()))
+        db.history().prune()
+    }
 
     suspend fun maxConnections(accountId: Long): Int? = db.accounts().get(accountId)?.maxConnections
 
@@ -77,11 +85,13 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
     suspend fun count(src: Source): Int = when (src) {
         is Source.Browse -> db.items().count(src.kind, src.accountIds, src.category, src.query, src.country, src.year, src.flags)
         is Source.Favs -> db.favorites().presentCount(src.listId)
+        is Source.History -> db.history().items().size
     }
 
     suspend fun at(src: Source, index: Int): Item? = when (src) {
         is Source.Browse -> db.items().at(src.kind, src.accountIds, src.category, src.query, src.country, src.year, src.flags, index)
         is Source.Favs -> db.favorites().itemAt(src.listId, index)
+        is Source.History -> db.history().items().getOrNull(index)
     }
 
     suspend fun target(item: Item): PlayTarget? = withContext(Dispatchers.IO) {

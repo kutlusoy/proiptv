@@ -61,6 +61,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** A screen asks the main screen to open a tab (for example the button in the empty state). */
     val requestedTab = MutableStateFlow<String?>(null)
+    var historyOnReturn = false
     val activeRecordings = (app as ProIptvApp).recordings.active
     val downloads = db.downloads().all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 

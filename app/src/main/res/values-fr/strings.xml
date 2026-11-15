@@ -262,4 +262,6 @@
     <string name="settings_debug_log">Journal de débogage</string>
     <string name="settings_debug_log_show">Afficher le journal</string>
     <string name="settings_debug_log_hint">Uniquement dans les versions de débogage. Le journal reste sur cet appareil, identifiants, mots de passe et adresses sont masqués.</string>
+    <string name="history_title">Dernières chaînes</string>
+    <string name="history_empty">Aucune chaîne regardée pour l\'instant</string>
 </resources>

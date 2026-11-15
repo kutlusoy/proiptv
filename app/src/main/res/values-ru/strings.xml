@@ -40,4 +40,6 @@
     <string name="settings_debug_log">Журнал отладки</string>
     <string name="settings_debug_log_show">Показать журнал</string>
     <string name="settings_debug_log_hint">Только в отладочных сборках. Журнал остаётся на устройстве, имена, пароли и адреса скрыты.</string>
+    <string name="history_title">Последние каналы</string>
+    <string name="history_empty">Каналы ещё не смотрели</string>
 </resources>

@@ -121,6 +121,7 @@ private val StarOn = Color(0xFFFFC107)
 private const val FAV_KEY = "__fav"
 private const val ALL_KEY = "__all"
 private const val CONT_KEY = "__continue"
+private const val HIST_KEY = "__history"
 
 @Composable
 fun BrowseScreen(kind: Int, vm: MainViewModel) {
@@ -140,6 +141,8 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     var quick by rememberSaveable(kind) { mutableIntStateOf(0) }
     var favMode by rememberSaveable(kind) { mutableStateOf(prefs.browseFav(kind)) }
     var contMode by rememberSaveable(kind) { mutableStateOf(false) }
+    val tvNow = LocalTv.current
+    var histMode by rememberSaveable(kind) { mutableStateOf(kind == Kind.LIVE && tvNow && vm.historyOnReturn.also { vm.historyOnReturn = false }) }
     var favList by rememberSaveable { mutableStateOf<Long?>(prefs.browseFavList(kind)) }
     LaunchedEffect(accountSel, effective, category, favMode, favList) { if (enabled.isNotEmpty()) prefs.saveBrowse(kind, accountSel, effective, category, favMode, favList) }
     var series by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
@@ -190,8 +193,10 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val contLabel = stringResource(R.string.home_continue)
     val allLabel = stringResource(R.string.live_all)
     val favLabel = stringResource(R.string.fav_title)
+    val histLabel = stringResource(R.string.history_title)
     val otherLabel = stringResource(R.string.live_other)
     val options = buildList<Pair<String, String>> {
+        if (kind == Kind.LIVE) add(HIST_KEY to histLabel)
         add(FAV_KEY to favLabel)
         if (tvVod) add(CONT_KEY to contLabel)
         add(ALL_KEY to allLabel)
@@ -199,13 +204,16 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
         else everyCategory.forEach { c -> add("${c.accountId}|${c.remoteId}" to ((enabled.firstOrNull { it.id == c.accountId }?.name?.let { "$it \u00B7 " } ?: "") + c.name.ifBlank { otherLabel })) }
     }
     val current = when {
+        histMode -> HIST_KEY
         contMode -> CONT_KEY
         favMode -> FAV_KEY
         category == null -> ALL_KEY
         else -> category!!
     }
     fun select(v: String) {
+        histMode = v == HIST_KEY
         when (v) {
+            HIST_KEY -> { favMode = false; contMode = false }
             FAV_KEY -> { contMode = false; favMode = true }
             CONT_KEY -> { favMode = false; contMode = true }
             ALL_KEY -> { favMode = false; contMode = false; category = null }
@@ -228,7 +236,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     if (tvLists) {
         val entries = options.map { (key, label) ->
             val n = when (key) {
-                FAV_KEY, CONT_KEY -> null
+                FAV_KEY, CONT_KEY, HIST_KEY -> null
                 ALL_KEY -> counts.sumOf { it.n }
                 else -> if (effective != null) counts.firstOrNull { it.accountId == effective && it.categoryRemoteId == key }?.n
                 else counts.firstOrNull { "${it.accountId}|${it.categoryRemoteId}" == key }?.n
@@ -277,17 +285,23 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
 
         if (kind == Kind.LIVE && !favMode) {
             androidx.compose.foundation.layout.Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(1 to R.string.filter_hd, 2 to R.string.filter_catchup, 4 to R.string.filter_favorites).forEach { (bit, label) ->
+                if (!histMode) listOf(1 to R.string.filter_hd, 2 to R.string.filter_catchup, 4 to R.string.filter_favorites).forEach { (bit, label) ->
                     androidx.compose.material3.FilterChip(
                         selected = quick and bit != 0, onClick = { quick = quick xor bit },
                         label = { Text(stringResource(label)) }, modifier = Modifier.focusHighlight(),
                     )
                 }
+                androidx.compose.material3.FilterChip(
+                    selected = histMode, onClick = { histMode = !histMode },
+                    label = { Text(histLabel) }, modifier = Modifier.focusHighlight(),
+                )
             }
         }
 
         val useRows = kind != Kind.LIVE && !favMode && !contMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
-        if (contMode) {
+        if (histMode) {
+            HistoryPane(vm)
+        } else if (contMode) {
             ContinuePane(vm, kind, favKeys, onToggleFavorite = toggleFavorite) { if (it.kind == Kind.SERIES) series = it else movie = it }
         } else if (favMode) {
             FavoritesPane(vm, kind, favList, onSelect = { favList = it }, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it })

@@ -40,4 +40,6 @@
     <string name="settings_debug_log">Debuglogboek</string>
     <string name="settings_debug_log_show">Logboek tonen</string>
     <string name="settings_debug_log_hint">Alleen in debugversies. Het logboek blijft op dit apparaat, gebruikersnamen, wachtwoorden en adressen zijn zwartgemaakt.</string>
+    <string name="history_title">Laatste zenders</string>
+    <string name="history_empty">Nog geen zenders bekeken</string>
 </resources>

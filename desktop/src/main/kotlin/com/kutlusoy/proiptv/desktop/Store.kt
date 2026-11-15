@@ -60,6 +60,7 @@ data class ConfigDto(
     val tmdbKey: String = "",
     val lastAccount: Map<String, String> = emptyMap(),
     val intro: Boolean = true,
+    val history: List<String> = emptyList(),
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */

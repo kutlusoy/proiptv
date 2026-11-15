@@ -110,6 +110,14 @@ class AppState(val store: Store, val scope: CoroutineScope) {
 
     fun listsOf(kind: Int) = favLists.filter { it.kind == kind }
 
+    var history by mutableStateOf(store.config.history)
+
+    fun recordHistory(e: Entry) {
+        if (e.kind != Kind.LIVE) return
+        store.update { c -> c.copy(history = (listOf(e.key) + c.history.filter { it != e.key }).take(24)) }
+        history = store.config.history
+    }
+
     fun isFavorite(e: Entry) = favorites.any { it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
 
     fun inList(e: Entry, listId: String) = favorites.any { it.listId == listId && it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }

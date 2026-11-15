@@ -79,14 +79,6 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                 }
                 Hint(t("settings_guide_info"))
             }
-            Group(t("settings_tmdb")) {
-                var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
-                OutlinedTextField(
-                    key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(t("settings_tmdb_key")) },
-                )
-                Hint(t("settings_tmdb_hint"))
-            }
             Group(t("settings_group_playback")) {
                 val vlc = state.engine
                 Text(if (vlc.available) "libVLC" else (vlc.error ?: "libVLC not found"), color = if (vlc.available) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error)
@@ -114,6 +106,15 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                 )
             }
             UpdateGroup(state, updater, update)
+            Group(t("settings_tmdb")) {
+                var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
+                OutlinedTextField(
+                    key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(t("settings_tmdb_key")) },
+                )
+                Hint(t("settings_tmdb_hint"))
+            }
+
         }
     }
 }

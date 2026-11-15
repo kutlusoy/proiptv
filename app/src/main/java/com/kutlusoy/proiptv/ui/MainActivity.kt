@@ -131,7 +131,8 @@ private fun AppRoot(vm: MainViewModel) {
     }
 
     request?.let { r ->
-        key(r) { PlayerScreen(vm, r) { vm.player.value = null } }
+        val tvNow = LocalTv.current
+        key(r) { PlayerScreen(vm, r) { if (tvNow && r is PlayRequest.Zap) vm.historyOnReturn = true; vm.player.value = null } }
         return
     }
 
