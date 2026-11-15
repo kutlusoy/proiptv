@@ -125,7 +125,7 @@ fun SettingsScreen(vm: MainViewModel) {
             Group(stringResource(R.string.settings_group_content)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.settings_hide_adult), Modifier.weight(1f))
-                    Switch(checked = hideAdult, onCheckedChange = { hideAdult = it; prefs.hideAdult = it; vm.refreshAll() }, modifier = Modifier.focusHighlight())
+                    Switch(checked = hideAdult, onCheckedChange = { hideAdult = it; prefs.hideAdult = it; vm.refreshAll(restart = true) }, modifier = Modifier.focusHighlight())
                 }
                 Hint(stringResource(R.string.settings_hide_adult_hint))
             }

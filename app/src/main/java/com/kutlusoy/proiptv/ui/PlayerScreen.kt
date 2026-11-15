@@ -500,11 +500,11 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         val currentName = when (current) {
             is Source.Favs -> allFavLists.firstOrNull { it.id == current.listId }?.name
             is Source.History -> histLabel
-            is Source.Browse -> current.category?.let { cat -> enabled.firstNotNullOfOrNull { a -> vm.repo.db.items().categories(a.id, Kind.LIVE).first().firstOrNull { it.remoteId == cat }?.name } }
+            is Source.Browse -> if (current.query.isNotBlank()) "\u201C${current.query}\u201D" else current.category?.let { cat -> enabled.firstNotNullOfOrNull { a -> vm.repo.db.items().categories(a.id, Kind.LIVE).first().firstOrNull { it.remoteId == cat }?.name } }
         } ?: allLabel
         out += BrowseList(currentName, current)
+        if (current != Source.History) out += BrowseList(histLabel, Source.History)
         allFavLists.filter { it.kind == Kind.LIVE }.forEach { l -> Source.Favs(l.id).let { if (it != current) out += BrowseList(l.name, it) } }
-        Source.Browse(Kind.LIVE, ids, null, "").let { if (it != current) out += BrowseList(allLabel, it) }
         for (a in enabled) {
             for (c in vm.repo.db.items().categories(a.id, Kind.LIVE).first()) {
                 val src = Source.Browse(Kind.LIVE, listOf(a.id), c.remoteId, "")
@@ -545,13 +545,26 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         browseList = ((browseList + delta) % browseLists.size + browseLists.size) % browseLists.size
         browseIndex = if (browseList == playingList) index else 0
     }
-    val tvBack = LocalTv.current && request is PlayRequest.Zap && playSource != Source.History
+    val tvBack = LocalTv.current && request is PlayRequest.Zap
     BackHandler {
         when {
             // the browser is left to the list of channels (the grid), the full player goes back to the browser
             tvBrowse -> onClose()
             listOpen -> listOpen = false
-            tvBack -> { browseOrigin = playSource; browseList = 0; playingList = 0; browseIndex = index; tvBrowse = true }
+            tvBack -> scope.launch {
+                var origin = playSource
+                var position = index
+                val now = item
+                // a list of everything means nothing here: the category of the running channel takes its place
+                if (origin is Source.Browse && origin.category == null && origin.query.isBlank() && now != null && now.categoryRemoteId.isNotEmpty()) {
+                    val own = Source.Browse(Kind.LIVE, listOf(now.accountId), now.categoryRemoteId, "")
+                    origin = own
+                    position = vm.repo.db.items().livePosition(own.accountIds, own.category, now.accountId, now.ord)
+                    playSource = own
+                    index = position
+                }
+                browseOrigin = origin; browseList = 0; playingList = 0; browseIndex = position; tvBrowse = true
+            }
             else -> onClose()
         }
     }

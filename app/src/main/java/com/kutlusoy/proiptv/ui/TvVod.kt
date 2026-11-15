@@ -32,6 +32,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -49,13 +50,14 @@ internal data class TvVodEntry(val key: String, val label: String, val count: In
 
 /** Android TV (live TV, movies and series): the lists in a column on the left (favorites, continue watching, all, the categories with their number of titles). */
 @Composable
-internal fun TvVodSidebar(entries: List<TvVodEntry>, selected: String, contentEntry: androidx.compose.ui.focus.FocusRequester, onSelect: (String) -> Unit) {
+internal fun TvVodSidebar(entries: List<TvVodEntry>, selected: String, contentEntry: androidx.compose.ui.focus.FocusRequester, selectedEntry: androidx.compose.ui.focus.FocusRequester, onSelect: (String) -> Unit) {
     LazyColumn(Modifier.width(300.dp).fillMaxHeight().padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         items(entries, key = { it.key }) { e ->
             val on = e.key == selected
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
                     .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.45f) else androidx.compose.ui.graphics.Color.Transparent)
+                    .then(if (on) Modifier.focusRequester(selectedEntry) else Modifier)
                     .focusHighlight()
                     // Right goes to the first entry of the content, not to the search or the menu above it
                     .onPreviewKeyEvent { k -> k.type == KeyEventType.KeyDown && k.key == Key.DirectionRight && contentEntry.requestFocus() }

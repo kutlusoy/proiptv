@@ -15,6 +15,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.runtime.mutableFloatStateOf
@@ -125,6 +126,7 @@ private const val CONT_KEY = "__continue"
 private const val HIST_KEY = "__history"
 private const val FAVL_PREFIX = "__fav|"
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val accounts by vm.accounts.collectAsState()
@@ -260,6 +262,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     }
     val counts by vm.categoryCounts(ids, kind).collectAsState(initial = emptyList())
     val contentEntry = remember { androidx.compose.ui.focus.FocusRequester() }
+    val selectedEntry = remember { androidx.compose.ui.focus.FocusRequester() }
     var newListDialog by remember { mutableStateOf(false) }
     var renameListDialog by remember { mutableStateOf(false) }
     // after OK in the main menu the first entry is focused, not the search symbol
@@ -276,9 +279,13 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             }
             TvVodEntry(key, label, n)
         }
-        TvVodSidebar(entries, current, contentEntry) { select(it) }
+        TvVodSidebar(entries, current, contentEntry, selectedEntry) { select(it) }
     }
-    Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 12.dp)) {
+    // Left leaves the content for the list entry that is selected, whatever the height of the focused item is
+    Column(
+        Modifier.weight(1f).fillMaxHeight().padding(horizontal = 12.dp)
+            .then(if (tvLists) Modifier.focusProperties { exit = { d -> if (d == androidx.compose.ui.focus.FocusDirection.Left) selectedEntry else androidx.compose.ui.focus.FocusRequester.Default } }.focusGroup() else Modifier),
+    ) {
         if (tvLists) {
             TvVodTopBar(
                 showSort = tvVod,
