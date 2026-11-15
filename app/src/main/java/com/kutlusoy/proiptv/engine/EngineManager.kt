@@ -10,11 +10,17 @@ import kotlinx.coroutines.launch
 
 class BudgetExceeded(val limit: Int, val openTitles: List<String>) : Exception("connection limit $limit reached")
 
-class HubLease internal constructor(val hub: StreamHub, private val onRelease: (StreamHub) -> Unit) : Closeable {
+class HubLease internal constructor(val hub: StreamHub, private val onRelease: (StreamHub, Boolean) -> Unit) : Closeable {
     private val released = AtomicBoolean(false)
 
+    /** Gives the channel back. The connection stays open for a short grace time, so going back to the channel is quick. */
     override fun close() {
-        if (released.compareAndSet(false, true)) onRelease(hub)
+        if (released.compareAndSet(false, true)) onRelease(hub, false)
+    }
+
+    /** Gives the channel back and closes the provider connection at once when nobody else uses it (leaving the player). */
+    fun closeNow() {
+        if (released.compareAndSet(false, true)) onRelease(hub, true)
     }
 }
 
@@ -63,11 +69,15 @@ class EngineManager(
         HubLease(hub, ::release)
     }
 
-    private fun release(hub: StreamHub) {
+    private fun release(hub: StreamHub, immediately: Boolean = false) {
         val idleAt = synchronized(lock) {
             val entry = hubs[hub.key] ?: return
             entry.refs--
             if (entry.refs > 0) return
+            if (immediately) {
+                closeEntry(hub.key)
+                return
+            }
             entry.idleSince = clock()
             entry.idleSince
         }

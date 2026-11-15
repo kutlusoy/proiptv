@@ -85,8 +85,8 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var recordingId by mutableStateOf<Long?>(null)
     val timeShift: Boolean get() = lease != null
 
-    private fun releaseHub() {
-        lease?.close()
+    private fun releaseHub(now: Boolean = false) {
+        if (now) lease?.closeNow() else lease?.close()
         lease = null
         behindMs = 0
         bufferedMs = 0
@@ -206,7 +206,8 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     fun stop() {
         saveProgress()
         engine.stop()
-        releaseHub()
+        // leaving the player: the provider connection is closed at once
+        releaseHub(now = true)
         state.player = null
         state.controller = null
         if (state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) state.toggleFullscreen()

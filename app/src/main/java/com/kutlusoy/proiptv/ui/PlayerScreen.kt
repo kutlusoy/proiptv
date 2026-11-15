@@ -334,7 +334,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         exo.addListener(listener)
         onDispose {
             exo.removeListener(listener)
-            holder.lease?.close()
+            // leaving the player: the provider connection is closed at once, so an account with one connection can open the next channel
+            holder.lease?.closeNow()
             val t = active
             if (t != null && !t.live) {
                 val pos = exo.currentPosition
@@ -399,7 +400,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         if (useHub) {
             val lease = try {
                 val max = vm.repo.maxConnections(t.accountId)
-                withContext(Dispatchers.IO) { app.engine.acquire(t.accountId, t.remoteId, t.title, max, Upstream.opener(t.url, t.userAgent)) }
+                // not cancellable: when the channel is switched fast, a finished acquire must not get lost (the connection would stay used for good)
+                withContext(Dispatchers.IO + kotlinx.coroutines.NonCancellable) { app.engine.acquire(t.accountId, t.remoteId, t.title, max, Upstream.opener(t.url, t.userAgent)) }
             } catch (e: BudgetExceeded) {
                 notice = ctx.getString(R.string.player_no_connection, e.limit, e.openTitles.joinToString(", "))
                 return@LaunchedEffect
