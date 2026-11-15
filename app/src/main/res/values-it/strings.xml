@@ -257,4 +257,9 @@
     <string name="tv_live_badge">TV IN DIRETTA</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
+    <string name="settings_intro">Mostra l\'intro all\'avvio</string>
+    <string name="onboarding_tv_hint">Sul televisore è più semplice: scansiona il codice QR con il telefono e inserisci lì l\'account.</string>
+    <string name="settings_debug_log">Registro di debug</string>
+    <string name="settings_debug_log_show">Mostra registro</string>
+    <string name="settings_debug_log_hint">Solo nelle build di debug. Il registro resta su questo dispositivo, utenti, password e indirizzi sono oscurati.</string>
 </resources>

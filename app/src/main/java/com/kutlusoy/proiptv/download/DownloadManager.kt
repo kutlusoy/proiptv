@@ -112,6 +112,7 @@ class DownloadManager(
         } catch (e: NoSpace) {
             dao.setStatus(d.id, DlStatus.FAILED, ERR_SPACE)
         } catch (e: Exception) {
+            com.kutlusoy.proiptv.DebugLog.write("download failed: ${e.javaClass.simpleName} ${e.message}")
             dao.setStatus(d.id, DlStatus.FAILED, e.message?.take(120) ?: ERR_NETWORK)
         }
     }

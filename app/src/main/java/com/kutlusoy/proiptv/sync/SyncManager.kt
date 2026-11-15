@@ -138,6 +138,7 @@ class SyncManager(
             throw e
         } catch (e: Exception) {
             error = describe(e)
+            com.kutlusoy.proiptv.DebugLog.write("sync failed: $error")
         }
         val fresh = db.accounts().get(id) ?: return
         db.accounts().update(

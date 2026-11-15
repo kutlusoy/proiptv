@@ -36,7 +36,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     var controller by mutableStateOf<PlayerController?>(null)
 
     /** The intro at the start of the program. */
-    var splash by mutableStateOf(true)
+    var splash by mutableStateOf(store.config.intro)
 
     /** What a list showed when the player was opened, so it looks the same after the player was closed: the search text per area and the scroll position per list view. */
     val browseQuery = HashMap<Int, String>()

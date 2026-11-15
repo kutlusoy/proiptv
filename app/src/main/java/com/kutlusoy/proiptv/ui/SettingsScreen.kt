@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -100,6 +101,26 @@ fun SettingsScreen(vm: MainViewModel) {
                 }
             }
 
+            if (com.kutlusoy.proiptv.BuildConfig.DEBUG) {
+                Group(stringResource(R.string.settings_debug_log)) {
+                    var shown by remember { mutableStateOf(false) }
+                    OutlinedButton(onClick = { shown = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.settings_debug_log_show)) }
+                    Hint(stringResource(R.string.settings_debug_log_hint))
+                    if (shown) {
+                        androidx.compose.material3.AlertDialog(
+                            onDismissRequest = { shown = false },
+                            title = { Text(stringResource(R.string.settings_debug_log)) },
+                            text = {
+                                Text(
+                                    com.kutlusoy.proiptv.DebugLog.tail().ifBlank { "-" }, style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                                )
+                            },
+                            confirmButton = { androidx.compose.material3.TextButton(onClick = { shown = false }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_close)) } },
+                        )
+                    }
+                }
+            }
             Group(stringResource(R.string.settings_tmdb)) {
                 val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
                 var key by remember { mutableStateOf(prefs.tmdbKey) }

@@ -35,4 +35,9 @@
     <string name="tv_live_badge">بث مباشر</string>
     <string name="sort_az">أ–ي</string>
     <string name="sort_za">ي–أ</string>
+    <string name="settings_intro">عرض المقدمة عند البدء</string>
+    <string name="onboarding_tv_hint">الأسهل على التلفزيون: امسح رمز QR بهاتفك وأدخل الحساب هناك.</string>
+    <string name="settings_debug_log">سجل التصحيح</string>
+    <string name="settings_debug_log_show">عرض السجل</string>
+    <string name="settings_debug_log_hint">في إصدارات التصحيح فقط. يبقى السجل على هذا الجهاز، وتُحجب أسماء المستخدمين وكلمات المرور والعناوين.</string>
 </resources>

@@ -35,4 +35,9 @@
     <string name="tv_live_badge">TELEWIZJA NA ŻYWO</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
+    <string name="settings_intro">Pokazuj intro przy uruchomieniu</string>
+    <string name="onboarding_tv_hint">Na telewizorze najłatwiej: zeskanuj kod QR telefonem i wpisz konto na telefonie.</string>
+    <string name="settings_debug_log">Dziennik debugowania</string>
+    <string name="settings_debug_log_show">Pokaż dziennik</string>
+    <string name="settings_debug_log_hint">Tylko w wersjach debug. Dziennik zostaje na tym urządzeniu, nazwy użytkowników, hasła i adresy są zaczernione.</string>
 </resources>

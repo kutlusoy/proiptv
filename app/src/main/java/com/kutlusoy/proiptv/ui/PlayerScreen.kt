@@ -286,6 +286,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     DisposableEffect(exo) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
+                com.kutlusoy.proiptv.DebugLog.write("player error ${error.errorCodeName}: ${error.message} hub=${holder.lease?.hub?.lastError}")
                 if (error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED && !forceHls) {
                     forceHls = true
                     return
