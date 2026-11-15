@@ -268,4 +268,7 @@
     <string name="player_compact">Small window</string>
     <string name="player_pin">Always on top</string>
     <string name="player_restore">Normal window</string>
+    <string name="settings_group_content">Content</string>
+    <string name="settings_hide_adult">Hide adult channels</string>
+    <string name="settings_hide_adult_hint">Hides categories and channels marked XXX or adult. The lists are reloaded when this is changed.</string>
 </resources>

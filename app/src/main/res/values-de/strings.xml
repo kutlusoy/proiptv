@@ -267,4 +267,7 @@
     <string name="player_compact">Kleines Fenster</string>
     <string name="player_pin">Immer im Vordergrund</string>
     <string name="player_restore">Normales Fenster</string>
+    <string name="settings_group_content">Inhalte</string>
+    <string name="settings_hide_adult">Erwachsenen-Sender ausblenden</string>
+    <string name="settings_hide_adult_hint">Blendet Kategorien und Sender aus, die als XXX oder Adult gekennzeichnet sind. Beim Ändern werden die Listen neu geladen.</string>
 </resources>

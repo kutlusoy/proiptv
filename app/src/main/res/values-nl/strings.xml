@@ -45,4 +45,7 @@
     <string name="player_compact">Klein venster</string>
     <string name="player_pin">Altijd op de voorgrond</string>
     <string name="player_restore">Normaal venster</string>
+    <string name="settings_group_content">Inhoud</string>
+    <string name="settings_hide_adult">Zenders voor volwassenen verbergen</string>
+    <string name="settings_hide_adult_hint">Verbergt categorieën en zenders die als XXX of adult zijn gemarkeerd. De lijsten worden opnieuw geladen als je dit wijzigt.</string>
 </resources>

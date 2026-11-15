@@ -79,6 +79,14 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                 }
                 Hint(t("settings_guide_info"))
             }
+            Group(t("settings_group_content")) {
+                var hide by remember { mutableStateOf(state.store.config.hideAdult) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("settings_hide_adult"), Modifier.weight(1f))
+                    Switch(checked = hide, onCheckedChange = { hide = it; state.store.update { c -> c.copy(hideAdult = it) }; state.reload() })
+                }
+                Hint(t("settings_hide_adult_hint"))
+            }
             Group(t("settings_group_playback")) {
                 val vlc = state.engine
                 Text(if (vlc.available) "libVLC" else (vlc.error ?: "libVLC not found"), color = if (vlc.available) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error)

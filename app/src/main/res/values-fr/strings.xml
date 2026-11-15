@@ -267,4 +267,7 @@
     <string name="player_compact">Petite fenêtre</string>
     <string name="player_pin">Toujours au premier plan</string>
     <string name="player_restore">Fenêtre normale</string>
+    <string name="settings_group_content">Contenu</string>
+    <string name="settings_hide_adult">Masquer les chaînes pour adultes</string>
+    <string name="settings_hide_adult_hint">Masque les catégories et chaînes marquées XXX ou adulte. Les listes sont rechargées lors d\'un changement.</string>
 </resources>

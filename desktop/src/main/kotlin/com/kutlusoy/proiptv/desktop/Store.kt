@@ -61,6 +61,7 @@ data class ConfigDto(
     val lastAccount: Map<String, String> = emptyMap(),
     val intro: Boolean = true,
     val history: List<String> = emptyList(),
+    val hideAdult: Boolean = true,
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */

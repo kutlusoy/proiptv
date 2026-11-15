@@ -267,4 +267,7 @@
     <string name="player_compact">Ventana pequeña</string>
     <string name="player_pin">Siempre visible</string>
     <string name="player_restore">Ventana normal</string>
+    <string name="settings_group_content">Contenido</string>
+    <string name="settings_hide_adult">Ocultar canales para adultos</string>
+    <string name="settings_hide_adult_hint">Oculta las categorías y los canales marcados como XXX o adultos. Las listas se recargan al cambiarlo.</string>
 </resources>

@@ -45,4 +45,7 @@
     <string name="player_compact">Маленькое окно</string>
     <string name="player_pin">Поверх всех окон</string>
     <string name="player_restore">Обычное окно</string>
+    <string name="settings_group_content">Контент</string>
+    <string name="settings_hide_adult">Скрывать каналы для взрослых</string>
+    <string name="settings_hide_adult_hint">Скрывает категории и каналы с пометкой XXX или для взрослых. При изменении списки загружаются заново.</string>
 </resources>

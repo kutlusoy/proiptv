@@ -71,6 +71,7 @@ fun SettingsScreen(vm: MainViewModel) {
     var current by remember { mutableStateOf(AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore('-')) }
     var timeshift by remember { mutableStateOf(prefs.timeshift) }
     var bufferMb by remember { mutableIntStateOf(prefs.bufferMb) }
+    var hideAdult by remember { mutableStateOf(prefs.hideAdult) }
     val auto = stringResource(R.string.option_auto)
 
     LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 16.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)) {
@@ -120,6 +121,13 @@ fun SettingsScreen(vm: MainViewModel) {
                         )
                     }
                 }
+            }
+            Group(stringResource(R.string.settings_group_content)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.settings_hide_adult), Modifier.weight(1f))
+                    Switch(checked = hideAdult, onCheckedChange = { hideAdult = it; prefs.hideAdult = it; vm.refreshAll() }, modifier = Modifier.focusHighlight())
+                }
+                Hint(stringResource(R.string.settings_hide_adult_hint))
             }
             Group(stringResource(R.string.settings_group_playback)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

@@ -45,4 +45,7 @@
     <string name="player_compact">Małe okno</string>
     <string name="player_pin">Zawsze na wierzchu</string>
     <string name="player_restore">Zwykłe okno</string>
+    <string name="settings_group_content">Treści</string>
+    <string name="settings_hide_adult">Ukryj kanały dla dorosłych</string>
+    <string name="settings_hide_adult_hint">Ukrywa kategorie i kanały oznaczone jako XXX lub dla dorosłych. Po zmianie listy są wczytywane ponownie.</string>
 </resources>

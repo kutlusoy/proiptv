@@ -267,4 +267,7 @@
     <string name="player_compact">Finestra piccola</string>
     <string name="player_pin">Sempre in primo piano</string>
     <string name="player_restore">Finestra normale</string>
+    <string name="settings_group_content">Contenuti</string>
+    <string name="settings_hide_adult">Nascondi i canali per adulti</string>
+    <string name="settings_hide_adult_hint">Nasconde le categorie e i canali contrassegnati come XXX o adulti. Le liste vengono ricaricate quando cambi l\'impostazione.</string>
 </resources>

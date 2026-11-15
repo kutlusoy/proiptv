@@ -16,6 +16,7 @@ import com.kutlusoy.proiptv.net.maybeGunzip
 import com.kutlusoy.proiptv.net.str
 import com.kutlusoy.proiptv.parse.M3uParser
 import com.kutlusoy.proiptv.parse.decodeEntities
+import com.kutlusoy.proiptv.parse.AdultFilter
 import com.kutlusoy.proiptv.parse.TitleParser
 import com.kutlusoy.proiptv.parse.XmltvParser
 import java.io.BufferedReader
@@ -44,6 +45,7 @@ class SyncManager(
     private val db: AppDatabase,
     private val secrets: SecretBox,
     private val scope: CoroutineScope,
+    private val hideAdult: () -> Boolean = { false },
 ) {
     private val _state = MutableStateFlow<Map<Long, SyncState>>(emptyMap())
     val state: StateFlow<Map<Long, SyncState>> = _state
@@ -193,7 +195,9 @@ class SyncManager(
                 Category(accountId = account.id, kind = kind, remoteId = o.str("category_id").orEmpty(), name = o.str("category_name").orEmpty().decodeEntities(), ord = i)
             }.toList()
         }
-        db.items().replaceCategories(account.id, kind, cats)
+        val hide = hideAdult()
+        val adultCats = if (hide) cats.filter { AdultFilter.isAdult(it.name) }.map { it.remoteId }.toSet() else emptySet()
+        db.items().replaceCategories(account.id, kind, cats.filter { it.remoteId !in adultCats })
         var ord = 0
         val batch = ArrayList<Item>(BATCH)
         val groupNames = cats.associate { it.remoteId to it.name }
@@ -201,6 +205,7 @@ class SyncManager(
             for (o in s.items) {
                 val remote = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
                 val name = o.str("name").orEmpty().decodeEntities()
+                if (hide && (o.str("category_id").orEmpty() in adultCats || AdultFilter.isAdult(name))) continue
                 val info = TitleParser.parse(name, groupNames[o.str("category_id").orEmpty()].orEmpty())
                 batch += Item(
                     accountId = account.id, kind = kind, remoteId = remote,
@@ -234,6 +239,7 @@ class SyncManager(
         open(account.url, account.userAgent).use { raw ->
             val reader = BufferedReader(InputStreamReader(raw.maybeGunzip(), Charsets.UTF_8), 64 * 1024)
             for (e in M3uParser.parse(reader) { epgFromHeader = it.epgUrl }) {
+                if (hideAdult() && AdultFilter.isAdult(e.group, e.name)) continue
                 val kind = detectKind(e.url)
                 val map = groups.getValue(kind)
                 map.getOrPut(e.group) { map.size }
