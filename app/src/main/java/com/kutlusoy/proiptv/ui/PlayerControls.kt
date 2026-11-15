@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +35,8 @@ enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN, REC, REC_STOP, STAR_ON, ST
 fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, diameter: androidx.compose.ui.unit.Dp = 76.dp) {
     var focused by remember { mutableStateOf(false) }
     Box(
-        modifier.size(diameter).onFocusChanged { focused = it.hasFocus }
+        // required: a crowded row must never squeeze a round control into an oval
+        modifier.requiredSize(diameter).onFocusChanged { focused = it.hasFocus }
             .background(Color(0xCC000000), CircleShape)
             .border(if (focused) 3.dp else 1.5.dp, if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f), CircleShape)
             .semantics { contentDescription = description }

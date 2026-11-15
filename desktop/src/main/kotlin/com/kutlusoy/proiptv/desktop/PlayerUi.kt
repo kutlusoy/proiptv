@@ -381,7 +381,6 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
                 androidx.compose.material3.TextButton(onClick = { controller.goLive() }) { Text("${t("player_live")}  -${clock(controller.behindMs)}") }
             }
         }
-        if (floating) Text(controller.title, Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
         if (!controller.live && controller.length > 0) {
             Text(clock(controller.position), style = MaterialTheme.typography.bodySmall)
             Slider(
@@ -394,7 +393,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             Box(Modifier.weight(1f))
         }
         Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp))
-        Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(120.dp))
+        Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp))
         if (controller.live) RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp)
         RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp)
         IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) }

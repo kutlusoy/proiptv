@@ -12,12 +12,19 @@ import java.util.Date
  */
 object DebugLog {
     private var file: File? = null
-    private var writes = 0
     private val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+
+    private const val LIMIT = 200_000
+    private const val KEEP = 100_000
+
+    /** The file never grows past the limit: it is checked at every start and after every line, and cut to the last part. */
+    private fun trim(f: File) {
+        if (f.length() > LIMIT) f.writeText(f.readText().takeLast(KEEP))
+    }
 
     fun init(context: Context) {
         if (!BuildConfig.DEBUG) return
-        file = File(context.filesDir, "debug-log.txt")
+        file = File(context.filesDir, "debug-log.txt").also { runCatching { trim(it) } }
         write("ProIPTV ${BuildConfig.VERSION_NAME} started")
     }
 
@@ -31,7 +38,7 @@ object DebugLog {
         val f = file ?: return
         runCatching {
             f.appendText("${format.format(Date())}  ${redact(message)}\n")
-            if (++writes % 50 == 0 && f.length() > 200_000) f.writeText(f.readText().takeLast(100_000))
+            trim(f)
         }
     }
 
