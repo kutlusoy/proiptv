@@ -465,7 +465,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val tvBack = LocalTv.current && request is PlayRequest.Zap
     BackHandler {
         when {
-            listOpen -> listOpen = false
+            // on a TV the list that Back showed is left with the second Back, together with the player
+            listOpen -> if (tvBack) onClose() else listOpen = false
             // on a TV the first Back shows the channel list, the second one leaves the player
             tvBack -> { overlay = true; listOpen = true }
             else -> onClose()
@@ -592,7 +593,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         Row(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Fade(overlay) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (zapping) RoundControl(PlayerGlyph.MENU, stringResource(R.string.player_channel_list), { listOpen = true }, diameter = 44.dp)
+                    if (zapping && !LocalTv.current) RoundControl(PlayerGlyph.MENU, stringResource(R.string.player_channel_list), { listOpen = true }, diameter = 44.dp)
                 }
             }
             if (recordingHere != null) {

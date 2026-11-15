@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material.icons.filled.FiberManualRecord
@@ -372,6 +374,12 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             }
         }
         if (controller.live) {
+            controller.entries.getOrNull(controller.index)?.let { entry ->
+                val fav = state.isFavorite(entry)
+                IconButton(onClick = { state.toggleFavorite(entry) }) {
+                    Icon(if (fav) Icons.Filled.Star else Icons.Filled.StarBorder, t(if (fav) "fav_remove" else "fav_add"), tint = if (fav) Color(0xFFFFC107) else LocalContentColor.current)
+                }
+            }
             IconButton(onClick = { guideOpen = true }) { Icon(Icons.Filled.Event, t("player_guide")) }
             val recording = controller.recordingId != null
             IconButton(onClick = { if (recording) controller.stopRecording() else recordOpen = true }) {
