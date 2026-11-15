@@ -166,7 +166,7 @@ The app retries three times. If the channel still fails, it looks for the same c
 
 The menu entry **EPG** shows the guide as a timeline: the channels one below the other, the shows of each channel side by side by time, a red line for now. A click on a show opens its details (go to the channel, record or plan a recording). The group and the account are chosen on top, the field below searches show titles and channel names, **Now** jumps to the current time. The guide itself is loaded with the account sync, see section 4.
 
-**On Android TV** the screen follows the usual TV layout: on top the title, time and description of the show that has the focus, below it a row of lists (favorites lists, all channels, the groups). **Left** and **right** choose a list and **OK** loads it, **down** moves into the grid, left and right walk through the shows of a channel, and a click on a show or on a channel opens the channel browser (see the TV player below). All channels of the list are shown, also those without guide data.
+**On Android TV** the screen follows the usual TV layout: on top the title, time and description of the show that has the focus, below it a row of lists (favorites lists, all channels, the groups). **Left** and **right** choose a list and **OK** loads it, **down** moves into the grid, left and right walk through the shows of a channel, and a click on a show or on a channel opens the channel browser (see the TV player below). **Back** in the browser returns to the guide at the show where you were, another **Back** goes to the start page, and **Back** on the start page asks whether to close the app (this holds for all screens of the TV layout). All channels of the list are shown, also those without guide data.
 
 ## Settings and updates
 

@@ -135,7 +135,9 @@ private fun AppRoot(vm: MainViewModel) {
         return
     }
 
-    BackHandler { confirmExit = true }
+    // on a TV Back from any screen goes to the start page first, only there it asks whether to close the app
+    val tvNow = LocalTv.current
+    BackHandler { if (tvNow && tab != Tab.HOME) tab = Tab.HOME else confirmExit = true }
     BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
 
     val ctx = LocalContext.current

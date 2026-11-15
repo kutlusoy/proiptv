@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -115,6 +116,15 @@ fun EpgScreen(vm: MainViewModel) {
     }.collectAsState(initial = emptyList())
     val channels = if (tv) tvChannels else phoneChannels
     var focusedProgram by remember { mutableStateOf<Pair<Item, Program>?>(null) }
+    // after the player was closed the focus returns to the show where it was
+    var lastFocus by rememberSaveable { mutableStateOf<String?>(null) }
+    val restoreFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(tv, channels.isNotEmpty()) {
+        if (tv && lastFocus != null && channels.isNotEmpty()) {
+            delay(250)
+            runCatching { restoreFocus.requestFocus() }
+        }
+    }
 
     fun playChannel(channel: Item) {
         if (tv && tvSource != null) {
@@ -222,7 +232,8 @@ fun EpgScreen(vm: MainViewModel) {
                                     Modifier.offset(x = xOf(from)).width((hourWidth * ((to - from) / 3600f) - 2.dp).coerceAtLeast(2.dp)).fillMaxHeight().padding(vertical = 2.dp)
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(if (running) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface)
-                                        .onFocusChanged { if (it.hasFocus) focusedProgram = channel to p }
+                                        .then(if (tv && lastFocus == "${channel.id}|${p.start}") Modifier.focusRequester(restoreFocus) else Modifier)
+                                        .onFocusChanged { if (it.hasFocus) { focusedProgram = channel to p; lastFocus = "${channel.id}|${p.start}" } }
                                         .focusHighlight()
                                         .clickable { if (tv) playChannel(channel) else detail = channel to p }.padding(horizontal = 8.dp, vertical = 4.dp),
                                 ) {
