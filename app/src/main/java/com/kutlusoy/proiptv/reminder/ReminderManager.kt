@@ -91,18 +91,10 @@ class ReminderManager(private val app: Application, private val db: AppDatabase)
         )
 
     private fun setAlarm(id: Long, atMs: Long) {
-        val manager = app.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val show = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         // a show that starts within the minute: the reminder comes at once
         val at = maxOf(atMs, System.currentTimeMillis() + 2_000L)
         val operation = alarmIntent(id, PendingIntent.FLAG_UPDATE_CURRENT) ?: return
-        try {
-            manager.setAlarmClock(AlarmManager.AlarmClockInfo(at, show), operation)
-        } catch (e: Exception) {
-            // a device that refuses exact alarms: an inexact one is better than a crash
-            DebugLog.write("Reminder alarm: ${e.javaClass.simpleName} ${e.message}")
-            runCatching { manager.set(AlarmManager.RTC_WAKEUP, at, operation) }
-        }
+        com.kutlusoy.proiptv.recording.Alarms.set(app, at, operation)
     }
 
     private fun cancelAlarm(id: Long) {

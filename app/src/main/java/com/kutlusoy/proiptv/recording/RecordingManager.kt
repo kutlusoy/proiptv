@@ -174,9 +174,7 @@ class RecordingManager(
         )
 
     private fun setAlarm(id: Long, atMs: Long) {
-        val manager = app.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val show = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-        manager.setAlarmClock(AlarmManager.AlarmClockInfo(atMs, show), alarmIntent(id, PendingIntent.FLAG_UPDATE_CURRENT)!!)
+        Alarms.set(app, atMs, alarmIntent(id, PendingIntent.FLAG_UPDATE_CURRENT)!!)
     }
 
     private fun cancelAlarm(id: Long) {
