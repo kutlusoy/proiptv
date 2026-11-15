@@ -74,7 +74,7 @@ class Updater(private val downloader: UpdateDownloader = UpdateDownloader(Http.c
                 "timeout /t 1 /nobreak >nul",
                 "goto wait",
                 ":run",
-                "timeout /t 2 /nobreak >nul",
+                "timeout /t 8 /nobreak >nul",
                 "\"${file.absolutePath}\" /SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /NORESTART /LOG=\"${log.absolutePath}\"",
                 "echo setup ended with code %errorlevel% > \"${result.absolutePath}\"",
             ).joinToString("\r\n") + "\r\n",
