@@ -1,6 +1,13 @@
 package com.kutlusoy.proiptv.desktop
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,7 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 
 object Palette {
     val Velvet = Color(0xFF0B0709)
@@ -73,11 +79,60 @@ fun <T> DropdownField(selected: String, options: List<Pair<T, String>>, onSelect
     }
 }
 
+/** The letters of a title for a missing logo: the first letters of its first two words. */
+fun initialsOf(name: String?): String {
+    val words = com.kutlusoy.proiptv.parse.TitleParser.parse(name.orEmpty()).title.ifBlank { name.orEmpty() }
+        .split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
+    return words.take(2).joinToString("") { it.first().uppercase() }
+}
+
 @Composable
-fun Logo(url: String?, modifier: Modifier, scale: ContentScale = ContentScale.Fit) {
+private fun Initials(name: String?, modifier: Modifier) {
     val shape = RoundedCornerShape(6.dp)
-    if (url.isNullOrBlank()) Box(modifier.clip(shape).border(1.dp, Color.White.copy(alpha = 0.08f), shape))
-    else AsyncImage(model = url, contentDescription = null, modifier = modifier.clip(shape), contentScale = scale)
+    Box(modifier.clip(shape).background(Color.White.copy(alpha = 0.06f)).border(1.dp, Color.White.copy(alpha = 0.08f), shape), contentAlignment = Alignment.Center) {
+        val letters = initialsOf(name)
+        if (letters.isNotEmpty()) Text(letters, style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.55f), maxLines = 1)
+    }
+}
+
+/** A logo or poster. When the address is missing or the picture cannot be loaded, the first letters of [name] take its place. */
+@Composable
+fun Logo(url: String?, modifier: Modifier, scale: ContentScale = ContentScale.Fit, name: String? = null) {
+    val shape = RoundedCornerShape(6.dp)
+    if (url.isNullOrBlank()) {
+        Initials(name, modifier)
+    } else {
+        coil3.compose.SubcomposeAsyncImage(
+            model = url, contentDescription = name, modifier = modifier.clip(shape), contentScale = scale,
+            loading = { Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.04f))) },
+            error = { Initials(name, Modifier.fillMaxSize()) },
+        )
+    }
+}
+
+/** What the user sees before the first account exists: what to do next, with the button for it. */
+@Composable
+fun NoAccountsPane(state: AppState) {
+    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(t("main_no_accounts_title"), style = MaterialTheme.typography.headlineMedium)
+        Text(t("main_no_accounts_text"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.padding(vertical = 8.dp))
+        androidx.compose.material3.Button(onClick = { state.tab = Tab.ACCOUNTS }) { Text(t("onboarding_add_account")) }
+    }
+}
+
+/** Grey placeholder rows while the first data is loaded, instead of an empty screen. */
+@Composable
+fun SkeletonRows() {
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "skeleton")
+    val alpha by transition.animateFloat(0.04f, 0.12f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(900), androidx.compose.animation.core.RepeatMode.Reverse), label = "alpha")
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        repeat(3) {
+            Box(Modifier.width(160.dp).height(16.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = alpha)))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(8) { Box(Modifier.width(140.dp).height(200.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = alpha))) }
+            }
+        }
+    }
 }
 
 fun clock(ms: Long): String {

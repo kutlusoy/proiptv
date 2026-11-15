@@ -129,6 +129,7 @@ import com.kutlusoy.proiptv.recording.NotEnoughSpace
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -198,6 +199,16 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
 
     var index by remember { mutableIntStateOf((request as? PlayRequest.Zap)?.index ?: 0) }
     var count by remember { mutableIntStateOf(1) }
+    // TV: a click in a list opens the browser (list, small video, info, guide), OK there opens the full player
+    val tvMode = LocalTv.current
+    var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap) }
+    var playSource by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
+    var browseList by remember { mutableIntStateOf(0) }
+    // the list the browser opened with (always first) and the position of the list that the running channel comes from
+    var browseOrigin by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
+    var playingList by remember { mutableIntStateOf(0) }
+    var browseIndex by remember { mutableIntStateOf((request as? PlayRequest.Zap)?.index ?: 0) }
+    var browseCount by remember { mutableIntStateOf(1) }
     var item by remember { mutableStateOf<Item?>(null) }
     var target by remember { mutableStateOf((request as? PlayRequest.Single)?.target) }
     var catchup by remember { mutableStateOf<PlayTarget?>(null) }
@@ -283,7 +294,16 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         reload++
                     }
                 } else {
-                    message = R.string.player_failed
+                    // a clear reason when the provider said why (login, connection limit, blocked, not found)
+                    val code = generateSequence<Throwable>(error) { it.cause }.filterIsInstance<androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException>().firstOrNull()?.responseCode
+                        ?: com.kutlusoy.proiptv.net.ProviderProblems.codeOf(holder.lease?.hub?.lastError)
+                    message = when (com.kutlusoy.proiptv.net.ProviderProblems.fromHttp(code)) {
+                        com.kutlusoy.proiptv.net.ProviderProblem.AUTH -> R.string.player_err_auth
+                        com.kutlusoy.proiptv.net.ProviderProblem.LIMIT -> R.string.player_err_limit
+                        com.kutlusoy.proiptv.net.ProviderProblem.BLOCKED -> R.string.player_err_blocked
+                        com.kutlusoy.proiptv.net.ProviderProblem.NOT_FOUND -> R.string.player_err_notfound
+                        else -> R.string.player_failed
+                    }
                     failed = true
                 }
             }
@@ -325,10 +345,11 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
 
-    LaunchedEffect(index) {
-        val r = request as? PlayRequest.Zap ?: return@LaunchedEffect
-        count = vm.repo.count(r.source).coerceAtLeast(1)
-        val i = vm.repo.at(r.source, index)
+    LaunchedEffect(index, playSource) {
+        val src = playSource ?: return@LaunchedEffect
+        if (request !is PlayRequest.Zap) return@LaunchedEffect
+        count = vm.repo.count(src).coerceAtLeast(1)
+        val i = vm.repo.at(src, index)
         item = i
         retry = 0
         forceHls = false
@@ -453,12 +474,66 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
 
+    val accountsNow by vm.accounts.collectAsState()
+    val allLabel = stringResource(R.string.live_all)
+    val browseLists by produceState(emptyList<BrowseList>(), browseOrigin, tvBrowse, allFavLists, accountsNow) {
+        if (!tvBrowse) return@produceState
+        val current = browseOrigin ?: return@produceState
+        val enabled = accountsNow.filter { it.enabled }
+        val ids = enabled.map { it.id }
+        val out = ArrayList<BrowseList>()
+        val currentName = when (current) {
+            is Source.Favs -> allFavLists.firstOrNull { it.id == current.listId }?.name
+            is Source.Browse -> current.category?.let { cat -> enabled.firstNotNullOfOrNull { a -> vm.repo.db.items().categories(a.id, Kind.LIVE).first().firstOrNull { it.remoteId == cat }?.name } }
+        } ?: allLabel
+        out += BrowseList(currentName, current)
+        allFavLists.filter { it.kind == Kind.LIVE }.forEach { l -> Source.Favs(l.id).let { if (it != current) out += BrowseList(l.name, it) } }
+        Source.Browse(Kind.LIVE, ids, null, "").let { if (it != current) out += BrowseList(allLabel, it) }
+        for (a in enabled) {
+            for (c in vm.repo.db.items().categories(a.id, Kind.LIVE).first()) {
+                val src = Source.Browse(Kind.LIVE, listOf(a.id), c.remoteId, "")
+                if (src != current) out += BrowseList((if (enabled.size > 1) a.name + " \u00B7 " else "") + c.name.ifBlank { allLabel }, src)
+            }
+        }
+        value = out
+    }
+    LaunchedEffect(browseList, browseLists, tvBrowse) {
+        val src = browseLists.getOrNull(browseList)?.source ?: return@LaunchedEffect
+        browseCount = vm.repo.count(src).coerceAtLeast(1)
+        if (browseIndex >= browseCount) browseIndex = browseCount - 1
+    }
+    val highlightedItem by produceState<Item?>(null, browseLists, browseList, browseIndex, tvBrowse) {
+        value = if (!tvBrowse) null else browseLists.getOrNull(browseList)?.source?.let { vm.repo.at(it, browseIndex) }
+    }
+    fun playHighlighted() {
+        browseLists.getOrNull(browseList)?.source?.let { playSource = it }
+        index = browseIndex
+        playingList = browseList
+    }
+    fun browseStep(delta: Int) {
+        val next = (browseIndex + delta).coerceIn(0, browseCount - 1)
+        if (next == browseIndex) return
+        browseIndex = next
+        playHighlighted()
+    }
+    fun confirmBrowse() {
+        playHighlighted()
+        tvBrowse = false
+        overlay = true
+        touched++
+    }
+    fun switchList(delta: Int) {
+        if (browseLists.isEmpty()) return
+        browseList = ((browseList + delta) % browseLists.size + browseLists.size) % browseLists.size
+        browseIndex = if (browseList == playingList) index else 0
+    }
     val tvBack = LocalTv.current && request is PlayRequest.Zap
     BackHandler {
         when {
+            // the browser is left to the list of channels (the grid), the full player goes back to the browser
+            tvBrowse -> onClose()
             listOpen -> listOpen = false
-            // on a TV the first Back shows the channel list, the second one leaves the player
-            tvBack -> { overlay = true; listOpen = true }
+            tvBack -> { browseOrigin = playSource; browseList = 0; playingList = 0; browseIndex = index; tvBrowse = true }
             else -> onClose()
         }
     }
@@ -512,6 +587,17 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             .focusable()
             .onPreviewKeyEvent { e ->
                 if (e.type != KeyEventType.KeyDown || dialogOpen) return@onPreviewKeyEvent false
+                if (tvBrowse) {
+                    return@onPreviewKeyEvent when (e.key) {
+                        // up and down switch the channel of the shown list at once, the picture follows the highlight
+                        Key.DirectionUp, Key.ChannelDown, Key.PageUp -> { browseStep(-1); true }
+                        Key.DirectionDown, Key.ChannelUp, Key.PageDown -> { browseStep(1); true }
+                        Key.DirectionLeft -> { switchList(-1); true }
+                        Key.DirectionRight -> { switchList(1); true }
+                        Key.DirectionCenter, Key.Enter -> { confirmBrowse(); true }
+                        else -> false
+                    }
+                }
                 touched++
                 val code = e.key.nativeKeyCode
                 when {
@@ -574,7 +660,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             },
     ) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = if (tvBrowse) Modifier.tvPreviewRect() else Modifier.fillMaxSize(),
             factory = { c -> PlayerView(c).apply { useController = false; player = exo; keepScreenOn = true } },
             update = { it.resizeMode = resize },
         )
@@ -583,7 +669,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         Row(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Fade(overlay) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (zapping) RoundControl(PlayerGlyph.MENU, stringResource(R.string.player_channel_list), { listOpen = true }, diameter = 44.dp)
+                    if (zapping && !LocalTv.current) RoundControl(PlayerGlyph.MENU, stringResource(R.string.player_channel_list), { listOpen = true }, diameter = 44.dp)
                 }
             }
             if (recordingHere != null) {
@@ -695,10 +781,13 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 }
             }
         }
+        if (tvBrowse) {
+            TvBrowseLayer(vm, browseLists, browseList, browseCount, browseIndex, highlightedItem, item, nowNext.first)
+        }
         if (listOpen && request is PlayRequest.Zap) {
             Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { listOpen = false })
             ChannelPanel(
-                vm, request.source, count, index,
+                vm, playSource ?: request.source, count, index,
                 onPick = { i -> index = i; listOpen = false; overlay = false },
                 modifier = Modifier.align(Alignment.CenterStart),
             )
@@ -971,7 +1060,7 @@ private fun ChannelPanel(vm: MainViewModel, source: Source, count: Int, selected
                     .focusHighlight().clickable { onPick(i) }.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Logo(channel?.logo, Modifier.size(width = 56.dp, height = 36.dp))
+                Logo(channel?.logo, Modifier.size(width = 56.dp, height = 36.dp), name = channel?.name)
                 Text(
                     channel?.let { TitleParser.parse(it.name).title } ?: "", color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),

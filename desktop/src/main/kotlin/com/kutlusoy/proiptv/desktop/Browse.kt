@@ -70,10 +70,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val data = state.data
     val enabled = state.accounts.filter { it.enabled }
     if (enabled.isEmpty()) {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(t("main_no_accounts_title"), style = MaterialTheme.typography.headlineMedium)
-            Text(t("main_no_accounts_text"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-        }
+        NoAccountsPane(state)
         return
     }
     state.series?.takeIf { kind == Kind.SERIES }?.let { SeriesDetail(state, it); return }
@@ -83,14 +80,32 @@ fun BrowseScreen(state: AppState, kind: Int) {
     androidx.compose.runtime.LaunchedEffect(category) {
         if (state.store.config.lastCategory[kind.toString()] != category) state.store.update { c -> c.copy(lastCategory = c.lastCategory + (kind.toString() to category)) }
     }
-    var query by remember(kind) { mutableStateOf("") }
-    var accountFilter by remember(kind) { mutableStateOf<String?>(null) }
+    var query by remember(kind) { mutableStateOf(state.browseQuery[kind] ?: "") }
+    androidx.compose.runtime.LaunchedEffect(query) { state.browseQuery[kind] = query }
+    var hdOnly by remember(kind) { mutableStateOf(false) }
+    var favOnly by remember(kind) { mutableStateOf(false) }
+    var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
+    androidx.compose.runtime.LaunchedEffect(accountFilter) {
+        // the chosen account is kept, so the list is the same after the player was closed
+        if (state.store.config.lastAccount[kind.toString()] != accountFilter) state.store.update { c -> c.copy(lastAccount = if (accountFilter == null) c.lastAccount - kind.toString() else c.lastAccount + (kind.toString() to accountFilter!!)) }
+    }
     val activeAccount = accountFilter?.takeIf { id -> enabled.any { it.id == id } }
     val categories = data.categories(kind).filter { activeAccount == null || it.accountId == activeAccount }
     val all = data.entries(kind).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
     val q = query.trim()
-    val shown = remember(all, category, q, state.favorites, state.guide, state.tick / 60) {
+    val scrollKey = "$kind|$activeAccount|$category|$q"
+    val listState = remember(scrollKey) { state.scrollMemory["$scrollKey|l"].let { m -> androidx.compose.foundation.lazy.LazyListState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
+    val gridState = remember(scrollKey) { state.scrollMemory["$scrollKey|g"].let { m -> androidx.compose.foundation.lazy.grid.LazyGridState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
+    androidx.compose.runtime.LaunchedEffect(scrollKey) {
+        androidx.compose.runtime.snapshotFlow { intArrayOf(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) }.collect { state.scrollMemory["$scrollKey|l"] = it }
+    }
+    androidx.compose.runtime.LaunchedEffect(scrollKey) {
+        androidx.compose.runtime.snapshotFlow { intArrayOf(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset) }.collect { state.scrollMemory["$scrollKey|g"] = it }
+    }
+    val shown = remember(all, category, q, hdOnly, favOnly, state.favorites, state.guide, state.tick / 60) {
         all.asSequence()
+            .filter { e -> !hdOnly || e.name.contains("HD", ignoreCase = true) || e.name.contains("4K", ignoreCase = true) }
+            .filter { e -> !favOnly || state.isFavorite(e) }
             .filter { e ->
                 when {
                     category == ALL_KEY -> true
@@ -139,9 +154,15 @@ fun BrowseScreen(state: AppState, kind: Int) {
             OutlinedTextField(
                 query, { query = it }, singleLine = true, modifier = Modifier.weight(0.55f),
                 placeholder = { Text(t(if (kind == Kind.LIVE) "live_search" else "live_search")) },
-                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, null) } },
+                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
             )
             IconButton(onClick = { state.reload() }, enabled = !state.loading && !state.guideLoading) { Icon(Icons.Filled.Refresh, t("settings_refresh")) }
+        }
+        if (kind == Kind.LIVE && !inFavorites) {
+            Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.FilterChip(selected = hdOnly, onClick = { hdOnly = !hdOnly }, label = { Text(t("filter_hd")) })
+                androidx.compose.material3.FilterChip(selected = favOnly, onClick = { favOnly = !favOnly }, label = { Text(t("filter_favorites")) })
+            }
         }
         if (inFavorites && currentList != null) {
             var menu by remember { mutableStateOf(false) }
@@ -165,7 +186,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
         else if (shown.isEmpty()) Text(t("live_no_results"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(8.dp))
 
         if (kind == Kind.LIVE || inFavorites) {
-            LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            LazyColumn(Modifier.fillMaxSize(), state = listState, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 itemsIndexed(shown, key = { _, e -> e.key }) { index, e ->
                     ChannelRow(
                         state, e,
@@ -177,7 +198,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 }
             }
         } else {
-            LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), state = gridState, contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(shown, key = { it.key }) { e ->
                     Poster(state, e) { if (kind == Kind.SERIES) state.series = e else state.movie = e }
                 }
@@ -208,7 +229,7 @@ private fun ChannelRow(state: AppState, e: Entry, onMove: ((Int) -> Unit)? = nul
         Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Logo(e.logo, Modifier.size(width = 64.dp, height = 40.dp))
+        Logo(e.logo, Modifier.size(width = 64.dp, height = 40.dp), name = e.name)
         if (info.country.isNotEmpty()) Badge(info.country)
         state.accountLabel(e.accountId)?.let { Badge(it) }
         val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
@@ -246,7 +267,7 @@ private fun Poster(state: AppState, e: Entry, onClick: () -> Unit) {
     val info = remember(e.name) { TitleParser.parse(e.name) }
     Column(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(2.dp)) {
         Box {
-            Logo(e.logo, Modifier.fillMaxWidth().aspectRatio(0.68f), ContentScale.Crop)
+            Logo(e.logo, Modifier.fillMaxWidth().aspectRatio(0.68f), ContentScale.Crop, e.name)
             if (state.isFavorite(e)) Icon(Icons.Filled.Star, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = Color(0xFFFFC107))
         }
         Text(info.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))

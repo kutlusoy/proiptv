@@ -18,6 +18,7 @@ What the app can do on Windows today:
 - player: a menu button with the list of channels that the player was started from (the channel keeps playing), channel up and down
 - accounts with the same information as on Android (status, expiry date and days left, connections, counts, last sync, guide update, errors) in collapsible cards, and buttons to refresh the lists and the guide by hand (also in the settings)
 
+- the intro of the app at start (same animation and pictures as on Android, a click or any key skips it)
 - start page with rows: continue watching, the own favorites lists and the first movies and series; one search over live, movies and series
 - several favorites lists per area, sorted by hand, with the list dialog of the star
 - watched marks and resume for movies and episodes (resume, restart, mark as watched, season as watched, "continue S x E y")

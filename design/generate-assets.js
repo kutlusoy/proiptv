@@ -58,12 +58,53 @@ const page = (w, h, body, background = 'transparent') =>
   // Store icon, full bleed
   await shot('app/src/main/ic_launcher-playstore.png', 512, 512, mark(512 * 0.64), BLACK);
 
-  // Android TV banner: 320x180dp, mark and lettering side by side
+  // Android TV banner: 320x180dp, mark and lettering side by side, in a thin glowing red frame with slightly rounded corners
+  // (transparent outside of the frame, a faint red shimmer inside so the banner is not too dark on the home screen)
+  const RED = '#E0003C';
   for (const [name, factor] of Object.entries(DENSITIES)) {
     if (name === 'xxxhdpi') continue;
-    await shot(`${res}/drawable-${name}/tv_banner.png`, 320 * factor, 180 * factor,
-      `<div style="transform:scale(${factor});transform-origin:center;display:flex;align-items:center;gap:16px">${mark(124)}${word(160)}</div>`, BLACK);
+    const f = factor;
+    const frame =
+      `<div style="position:absolute;left:${5 * f}px;top:${5 * f}px;right:${5 * f}px;bottom:${5 * f}px;box-sizing:border-box;` +
+      `border:${1.5 * f}px solid ${RED};border-radius:${6 * f}px;` +
+      `background:radial-gradient(ellipse at 50% 50%,#2a0a14 0%,#120408 60%,#000 100%);` +
+      `box-shadow:0 0 ${7 * f}px ${f}px rgba(224,0,60,.85),0 0 ${16 * f}px ${2 * f}px rgba(224,0,60,.45),inset 0 0 ${9 * f}px rgba(224,0,60,.5);` +
+      `display:flex;align-items:center;justify-content:center;gap:${16 * f}px">${mark(118 * f)}${word(150 * f)}</div>`;
+    await shot(`${res}/drawable-${name}/tv_banner.png`, 320 * f, 180 * f, `<div style="position:relative;width:${320 * f}px;height:${180 * f}px">${frame}</div>`);
   }
+
+  // Windows icon (design/ProIPTV.ico and the window icon): the mark on black in the same thin glowing red frame as the TV banner,
+  // transparent outside of the rounded corners. Every size is drawn on its own so the frame stays sharp.
+  const iconTile = (s) => {
+    const inset = Math.max(1, s * 0.035), bw = Math.max(1, s * 0.022), radius = s * 0.1, blur = s * 0.035;
+    return `<div style="position:relative;width:${s}px;height:${s}px"><div style="position:absolute;left:${inset}px;top:${inset}px;right:${inset}px;bottom:${inset}px;` +
+      `box-sizing:border-box;border:${bw}px solid ${RED};border-radius:${radius}px;` +
+      `background:radial-gradient(ellipse at 50% 50%,#2a0a14 0%,#120408 60%,#000 100%);` +
+      `box-shadow:0 0 ${blur}px ${blur * 0.2}px rgba(224,0,60,.85),inset 0 0 ${blur * 1.3}px rgba(224,0,60,.5);` +
+      `display:flex;align-items:center;justify-content:center">${mark(s * 0.6)}</div></div>`;
+  };
+  const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'proiptv-ico-'));
+  const entries = [];
+  for (const size of [16, 24, 32, 48, 64, 128, 256]) {
+    const file = path.join(tmp, `${size}.png`);
+    await shot(file, size, size, iconTile(size));
+    entries.push({ size, data: fs.readFileSync(file) });
+  }
+  // an ICO file with PNG pictures: header, one directory entry per picture, then the pictures
+  const header = Buffer.alloc(6 + 16 * entries.length);
+  header.writeUInt16LE(0, 0); header.writeUInt16LE(1, 2); header.writeUInt16LE(entries.length, 4);
+  let offset = header.length;
+  entries.forEach((e, i) => {
+    const at = 6 + 16 * i;
+    header.writeUInt8(e.size === 256 ? 0 : e.size, at); header.writeUInt8(e.size === 256 ? 0 : e.size, at + 1);
+    header.writeUInt8(0, at + 2); header.writeUInt8(0, at + 3);
+    header.writeUInt16LE(1, at + 4); header.writeUInt16LE(32, at + 6);
+    header.writeUInt32LE(e.data.length, at + 8); header.writeUInt32LE(offset, at + 12);
+    offset += e.data.length;
+  });
+  fs.writeFileSync(path.join(__dirname, 'ProIPTV.ico'), Buffer.concat([header, ...entries.map((e) => e.data)]));
+  console.log('wrote design/ProIPTV.ico');
+  await shot('desktop/src/main/resources/icon.png', 512, 512, iconTile(512));
 
   // Splash layers (drawn and animated by the app, see ui/splash)
   await shot(`${res}/drawable-nodpi/splash_mark.png`, Math.ceil(900 * MARK_RATIO), 900, mark(900));

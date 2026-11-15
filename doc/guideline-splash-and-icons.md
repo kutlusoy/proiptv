@@ -34,6 +34,7 @@ The SVG files MUST be viewed in a browser or an editor that supports SVG filters
 | Android TV banner | `res/drawable-<density>/tv_banner.png` (320 x 180 dp) | mark and lettering |
 | Splash layers | `res/drawable-nodpi/splash_mark.png`, `splash_title.png`, `splash_glow_wide.png`, `splash_glow_near.png`, `splash_spark.png` | mark, lettering |
 | Repository graphics | `doc/logo.png`, `doc/social-preview.png` | full logo |
+| Windows icon (shortcut, installer, window) | `design/ProIPTV.ico` (7 sizes from 16 to 256), `desktop/src/main/resources/icon.png` | mark on black in a thin glowing red frame, transparent corners |
 | Debug build icons | `app/src/debug/res/` | amber background, DEBUG label |
 
 The debug app has its own launcher icon (amber with a DEBUG label) and banner, so it is not mixed up with the release app.

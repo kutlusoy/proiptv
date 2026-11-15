@@ -21,4 +21,18 @@
     <string name="settings_tmdb">Informacje o filmach (TMDB)</string>
     <string name="settings_tmdb_hint">Opcjonalnie. Z własnym darmowym kluczem API z themoviedb.org aplikacja pobiera opis, obsadę i zwiastun dla tytułów bez informacji (np. z list M3U). Wysyłany jest tylko tytuł i rok.</string>
     <string name="settings_tmdb_key">Klucz API</string>
+    <string name="onboarding_add_account">Dodaj konto</string>
+    <string name="player_err_auth">Dostawca odrzucił logowanie. Sprawdź nazwę użytkownika, hasło i datę ważności konta.</string>
+    <string name="player_err_limit">Dostawca nie zezwala na kolejne połączenie. Zamknij inne strumienie lub urządzenia tego konta.</string>
+    <string name="player_err_blocked">Dostawca blokuje ten strumień dla Twojej sieci lub regionu.</string>
+    <string name="player_err_notfound">Ten kanał lub tytuł nie jest dostępny u dostawcy.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Catch-up</string>
+    <string name="filter_favorites">Ulubione</string>
+    <string name="player_fullscreen">Pełny ekran</string>
+    <string name="epg_earlier">Wcześniej</string>
+    <string name="epg_later">Później</string>
+    <string name="tv_live_badge">TELEWIZJA NA ŻYWO</string>
+    <string name="sort_az">A–Z</string>
+    <string name="sort_za">Z–A</string>
 </resources>

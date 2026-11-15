@@ -21,4 +21,18 @@
     <string name="settings_tmdb">Информация о фильмах (TMDB)</string>
     <string name="settings_tmdb_hint">По желанию. С вашим бесплатным ключом API от themoviedb.org приложение загружает описание, актёров и трейлер для названий без данных (например из списков M3U). Отправляются только название и год.</string>
     <string name="settings_tmdb_key">Ключ API</string>
+    <string name="onboarding_add_account">Добавить аккаунт</string>
+    <string name="player_err_auth">Поставщик отклонил вход. Проверьте имя пользователя, пароль и срок действия аккаунта.</string>
+    <string name="player_err_limit">Поставщик не разрешает больше подключений. Закройте другие потоки или устройства этого аккаунта.</string>
+    <string name="player_err_blocked">Поставщик блокирует этот поток для вашей сети или региона.</string>
+    <string name="player_err_notfound">Этот канал или название недоступны у поставщика.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Архив</string>
+    <string name="filter_favorites">Избранное</string>
+    <string name="player_fullscreen">Полный экран</string>
+    <string name="epg_earlier">Раньше</string>
+    <string name="epg_later">Позже</string>
+    <string name="tv_live_badge">ПРЯМОЙ ЭФИР</string>
+    <string name="sort_az">А–Я</string>
+    <string name="sort_za">Я–А</string>
 </resources>

@@ -24,9 +24,10 @@ def infoDir = layout.buildDirectory.dir('generated/appinfo')
 tasks.register('syncShared', Copy) {
     from(sharedRoot) {
         include 'parse/Entities.kt', 'parse/M3uParser.kt', 'parse/TitleParser.kt', 'parse/XmltvParser.kt'
-        include 'net/Http.kt', 'net/XtreamApi.kt', 'net/XtreamUrl.kt', 'net/StreamUrls.kt', 'net/Upstream.kt', 'net/Tmdb.kt'
+        include 'net/Http.kt', 'net/XtreamApi.kt', 'net/XtreamUrl.kt', 'net/StreamUrls.kt', 'net/Upstream.kt', 'net/Tmdb.kt', 'net/ProviderProblem.kt'
         include 'engine/*.kt'
         include 'update/Release.kt', 'update/UpdateDownloader.kt'
+        include 'ui/splash/SplashTimeline.kt', 'ui/splash/SplashParticles.kt'
     }
     into sharedDir
 }
@@ -36,6 +37,15 @@ tasks.register('syncStrings', Copy) {
         include 'values*/strings.xml'
     }
     into stringsDir.map { it.dir('strings') }
+}
+
+// the pictures of the intro are the same files as in the Android app
+def splashDir = layout.buildDirectory.dir('generated/splash')
+tasks.register('syncSplash', Copy) {
+    from(rootProject.file('app/src/main/res/drawable-nodpi')) {
+        include 'splash_mark.png', 'splash_title.png', 'splash_glow_wide.png', 'splash_glow_near.png', 'splash_spark.png'
+    }
+    into splashDir.map { it.dir('splash') }
 }
 
 tasks.register('writeAppInfo') {
@@ -56,11 +66,12 @@ sourceSets {
         kotlin.srcDir(sharedDir)
         resources.srcDir(stringsDir)
         resources.srcDir(infoDir)
+        resources.srcDir(splashDir)
     }
 }
 
 tasks.named('compileKotlin') { dependsOn 'syncShared' }
-tasks.named('processResources') { dependsOn 'syncStrings', 'writeAppInfo' }
+tasks.named('processResources') { dependsOn 'syncStrings', 'writeAppInfo', 'syncSplash' }
 
 dependencies {
     implementation compose.desktop.currentOs

@@ -53,11 +53,49 @@ class EpgSearchTest {
     @Test
     fun searchFindsRunningShowsButNotFinishedOnes() = runBlocking {
         val ids = listOf(account)
-        assertEquals(1, db.items().count(Kind.LIVE, ids, null, "Tagesschau", null, null))
-        assertEquals("Erstes", db.items().at(Kind.LIVE, ids, null, "Tagesschau", null, null, 0)?.name)
-        assertEquals(1, db.items().count(Kind.LIVE, ids, null, "Zweites", null, null))
-        assertEquals(0, db.items().count(Kind.LIVE, ids, null, "Fußball", null, null))
-        assertEquals(3, db.items().count(Kind.LIVE, ids, null, "", null, null))
+        assertEquals(1, db.items().count(Kind.LIVE, ids, null, "Tagesschau", null, null, 0))
+        assertEquals("Erstes", db.items().at(Kind.LIVE, ids, null, "Tagesschau", null, null, 0, 0)?.name)
+        assertEquals(1, db.items().count(Kind.LIVE, ids, null, "Zweites", null, null, 0))
+        assertEquals(0, db.items().count(Kind.LIVE, ids, null, "Fußball", null, null, 0))
+        assertEquals(3, db.items().count(Kind.LIVE, ids, null, "", null, null, 0))
+    }
+
+    @Test
+    fun quickFiltersKeepOnlyHdCatchupAndFavoriteChannels() = runBlocking {
+        val ids = listOf(account)
+        db.items().upsert(
+            listOf(
+                Item(accountId = account, kind = Kind.LIVE, remoteId = "4", name = "Kanal HD", ord = 3, categoryRemoteId = "n", archiveDays = 3),
+                Item(accountId = account, kind = Kind.LIVE, remoteId = "5", name = "Kanal UHD", ord = 4, categoryRemoteId = "n"),
+            ),
+        )
+        val list = db.favorites().insertList(com.kutlusoy.proiptv.data.FavoriteList(name = "F", kind = Kind.LIVE))
+        db.favorites().add(com.kutlusoy.proiptv.data.Favorite(list, account, Kind.LIVE, "2", "Zweites", 1.0))
+        assertEquals(2, db.items().count(Kind.LIVE, ids, null, "", null, null, 1))
+        assertEquals(1, db.items().count(Kind.LIVE, ids, null, "", null, null, 2))
+        assertEquals(1, db.items().count(Kind.LIVE, ids, null, "", null, null, 4))
+        assertEquals(0, db.items().count(Kind.LIVE, ids, null, "", null, null, 1 or 4))
+        assertEquals(5, db.items().count(Kind.LIVE, ids, null, "", null, null, 0))
+    }
+
+    @Test
+    fun theListCanBeSortedFromAToZAndFromZToA() = runBlocking {
+        val ids = listOf(account)
+        suspend fun names(flags: Int): List<String> {
+            val source = db.items().paging(Kind.LIVE, ids, null, "", null, null, flags)
+            val page = source.load(androidx.paging.PagingSource.LoadParams.Refresh(null, 50, false)) as androidx.paging.PagingSource.LoadResult.Page
+            return page.data.map { it.name }
+        }
+        assertEquals(listOf("Erstes", "Zweites", "Sport 1"), names(0))
+        assertEquals(listOf("Erstes", "Sport 1", "Zweites"), names(8))
+        assertEquals(listOf("Zweites", "Sport 1", "Erstes"), names(16))
+    }
+
+    @Test
+    fun categoriesAreCounted() = runBlocking {
+        val counts = db.items().categoryCounts(listOf(account), Kind.LIVE).first()
+        assertEquals(2, counts.first { it.categoryRemoteId == "n" }.n)
+        assertEquals(1, counts.first { it.categoryRemoteId == "s" }.n)
     }
 
     @Test

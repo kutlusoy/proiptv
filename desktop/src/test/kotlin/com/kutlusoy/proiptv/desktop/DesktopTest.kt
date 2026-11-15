@@ -149,4 +149,11 @@ class DesktopTest {
         assertEquals("2", started?.episode?.id)
         assertEquals(true, started?.continuing)
     }
+
+    @Test
+    fun aMissingLogoIsReplacedByTheFirstLettersOfTheFirstTwoWords() {
+        assertEquals("DE", initialsOf("Das Erste"))
+        assertEquals("", initialsOf(null))
+        assertEquals("", initialsOf("   "))
+    }
 }

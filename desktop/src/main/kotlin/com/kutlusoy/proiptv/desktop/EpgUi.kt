@@ -106,11 +106,11 @@ fun EpgScreen(state: AppState) {
                 OutlinedTextField(
                     query, { query = it }, singleLine = true, modifier = Modifier.weight(0.6f),
                     placeholder = { Text(t("epg_search")) },
-                    trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, null) } },
+                    trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
                 )
-                IconButton(onClick = { coroutines.launch { scroll.animateScrollTo((scroll.value - with(density) { (HOUR_WIDTH * 2).toPx().toInt() }).coerceAtLeast(0)) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null) }
+                IconButton(onClick = { coroutines.launch { scroll.animateScrollTo((scroll.value - with(density) { (HOUR_WIDTH * 2).toPx().toInt() }).coerceAtLeast(0)) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, t("epg_earlier")) }
                 OutlinedButton(onClick = { jumpToNow() }) { Text(t("epg_now")) }
-                IconButton(onClick = { coroutines.launch { scroll.animateScrollTo(scroll.value + with(density) { (HOUR_WIDTH * 2).toPx().toInt() }) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                IconButton(onClick = { coroutines.launch { scroll.animateScrollTo(scroll.value + with(density) { (HOUR_WIDTH * 2).toPx().toInt() }) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, t("epg_later")) }
                 IconButton(onClick = { state.refreshGuide() }, enabled = !state.guideLoading) { Icon(Icons.Filled.Refresh, t("account_sync_guide")) }
             }
             if (channels.isEmpty()) {
@@ -165,7 +165,7 @@ private fun ChannelCell(e: Entry, account: String?, onClick: () -> Unit) {
         Modifier.width(CHANNEL_WIDTH).fillMaxHeight().padding(vertical = 2.dp).clip(RoundedCornerShape(6.dp)).background(Palette.Surface).clickable(onClick = onClick).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Logo(e.logo, Modifier.size(width = 44.dp, height = 32.dp))
+        Logo(e.logo, Modifier.size(width = 44.dp, height = 32.dp), name = e.name)
         Column {
             Text(TitleParser.parse(e.name).title.ifBlank { e.name }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
             account?.let { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f)) }

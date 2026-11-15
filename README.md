@@ -5,13 +5,13 @@
 IPTV player for **Android** (phones, tablets, Android TV) and **Windows**. It plays the streams of your own provider: Xtream Codes accounts, M3U playlists and XMLTV guides, with several accounts side by side, many source types (more are planned) (Xtream Codes, M3U, Stalker portal, HDHomeRun, Enigma2, TVHeadend and more), live TV, guide, movies, series, catch-up, favorites with manual sorting, recording and time shift. No content is included, no account with us, no ads, no analytics.
 
 - **Application ID:** `com.kutlusoy.proiptv`
-- **Version:** 0.0.1 (project skeleton, see below)
+- **Version:** 0.0.3 (the version is in `app/version.txt`, see below)
 - **Platforms:** Android 7.0 or newer (min SDK 24), Windows 10 or 11 (64 bit, first version, see below)
 - **License:** MIT
 
 ## State
 
-Version 0.0.1 is the first runnable version. It works end to end and is tested with a fake provider server:
+The app works end to end and is tested with a fake provider server:
 
 - several **Xtream Codes** and **M3U** accounts, passwords encrypted with the Android Keystore, account status (state, expiry, connections)
 - streaming sync of channels, movies, series and the **XMLTV guide** (very large lists, no out of memory)
@@ -114,6 +114,7 @@ To add a language: create `app/src/main/res/values-xx/strings.xml` with all keys
 | [guideline-product-plan.md](doc/guideline-product-plan.md) | product, architecture, engine, release plan, roadmap |
 | [guideline-feature-matrix.md](doc/guideline-feature-matrix.md) | content types and features per version, market comparison |
 | [guideline-user-guide.md](doc/guideline-user-guide.md) | install, add an account, remote control keys, favorites |
+| [guideline-review-0.0.3.md](doc/guideline-review-0.0.3.md) | review of 0.0.2 and what 0.0.3 does about it (done and open items) |
 | [guideline-windows-version.md](doc/guideline-windows-version.md) | plan for a Windows version from the same code (libVLC) |
 | [guideline-windows-signing-signpath.md](doc/guideline-windows-signing-signpath.md) | step by step: free SignPath Foundation certificate for the Windows installer |
 | [guideline-windows-signing-azure.md](doc/guideline-windows-signing-azure.md) | alternative: Azure Artifact Signing (needs a registered company) |

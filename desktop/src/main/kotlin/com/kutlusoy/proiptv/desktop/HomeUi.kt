@@ -49,10 +49,7 @@ private class HomeRow(val title: String, val kind: Int, val entries: List<Entry>
 fun HomeScreen(state: AppState) {
     val data = state.data
     if (state.accounts.none { it.enabled }) {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(t("main_no_accounts_title"), style = MaterialTheme.typography.headlineMedium)
-            Text(t("main_no_accounts_text"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-        }
+        NoAccountsPane(state)
         return
     }
     var query by remember { mutableStateOf("") }
@@ -66,9 +63,10 @@ fun HomeScreen(state: AppState) {
             query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             placeholder = { Text(t("home_search")) },
             leadingIcon = { Icon(Icons.Filled.Search, null) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, null) } },
+            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
         )
-        if (rows.isEmpty()) {
+        if (rows.isEmpty() && q.isEmpty() && (state.loading || state.guideLoading)) SkeletonRows()
+        if (rows.isEmpty() && !(q.isEmpty() && (state.loading || state.guideLoading))) {
             Text(t(if (q.isNotEmpty()) "home_no_results" else "main_loading"), Modifier.padding(8.dp), color = Color.White.copy(alpha = 0.7f))
         }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
@@ -102,7 +100,7 @@ private fun PosterCard(e: Entry, progress: Float?, account: String?, onClick: ()
     val wide = e.kind == Kind.LIVE
     Column(Modifier.width(if (wide) 190.dp else 140.dp).scale(if (hovered) 1.05f else 1f).clickable(interactionSource = hover, indication = null, onClick = onClick)) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (wide) 16f / 9f else 0.68f).clip(RoundedCornerShape(10.dp)).background(Palette.Surface)) {
-            Logo(e.logo, Modifier.fillMaxSize(), if (wide) ContentScale.Fit else ContentScale.Crop)
+            Logo(e.logo, Modifier.fillMaxSize(), if (wide) ContentScale.Fit else ContentScale.Crop, name = e.name)
             if (progress != null) LinearProgressIndicator(progress = { progress }, Modifier.align(Alignment.BottomCenter).fillMaxWidth())
         }
         Text(TitleParser.parse(e.name).title.ifBlank { e.name }, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)

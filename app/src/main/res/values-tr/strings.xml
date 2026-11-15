@@ -243,4 +243,18 @@
     <string name="settings_tmdb">Film bilgileri (TMDB)</string>
     <string name="settings_tmdb_hint">İsteğe bağlı. themoviedb.org\'dan aldığınız ücretsiz API anahtarıyla uygulama, bilgisi olmayan başlıklar (örneğin M3U listeleri) için konu, oyuncular ve fragmanı yükler. Yalnızca başlık ve yıl gönderilir.</string>
     <string name="settings_tmdb_key">API anahtarı</string>
+    <string name="onboarding_add_account">Hesap ekle</string>
+    <string name="player_err_auth">Sağlayıcı girişi reddetti. Kullanıcı adını, şifreyi ve hesabın bitiş tarihini kontrol edin.</string>
+    <string name="player_err_limit">Sağlayıcı başka bağlantıya izin vermiyor. Bu hesabın diğer yayınlarını veya cihazlarını kapatın.</string>
+    <string name="player_err_blocked">Sağlayıcı bu yayını ağınız veya bölgeniz için engelliyor.</string>
+    <string name="player_err_notfound">Bu kanal veya başlık sağlayıcıda mevcut değil.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Geriye dönük</string>
+    <string name="filter_favorites">Favoriler</string>
+    <string name="player_fullscreen">Tam ekran</string>
+    <string name="epg_earlier">Daha erken</string>
+    <string name="epg_later">Daha geç</string>
+    <string name="tv_live_badge">CANLI TV</string>
+    <string name="sort_az">A–Z</string>
+    <string name="sort_za">Z–A</string>
 </resources>

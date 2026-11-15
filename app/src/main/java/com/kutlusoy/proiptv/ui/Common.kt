@@ -1,6 +1,10 @@
 package com.kutlusoy.proiptv.ui
 
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,13 +34,63 @@ fun Modifier.focusHighlight(): Modifier = composed {
         .then(if (focused) Modifier.border(2.dp, color, RoundedCornerShape(10.dp)) else Modifier)
 }
 
+/** The letters of a title for a missing logo: the first letters of its first two words ("TRT 1 HD" gives "T1"). */
+fun initialsOf(name: String?): String {
+    val words = com.kutlusoy.proiptv.parse.TitleParser.parse(name.orEmpty()).title.ifBlank { name.orEmpty() }
+        .split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
+    return words.take(2).joinToString("") { it.first().uppercase() }
+}
+
 @Composable
-fun Logo(url: String?, modifier: Modifier = Modifier, scale: ContentScale = ContentScale.Fit) {
+private fun Initials(name: String?, modifier: Modifier) {
+    val shape = RoundedCornerShape(6.dp)
+    Box(modifier.clip(shape).background(Color.White.copy(alpha = 0.06f)).border(1.dp, Color.White.copy(alpha = 0.08f), shape), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        val letters = initialsOf(name)
+        if (letters.isNotEmpty()) androidx.compose.material3.Text(letters, style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.55f), maxLines = 1)
+    }
+}
+
+/** A logo or poster. When the address is missing or the picture cannot be loaded, the first letters of [name] take its place. */
+@Composable
+fun Logo(url: String?, modifier: Modifier = Modifier, scale: ContentScale = ContentScale.Fit, name: String? = null) {
     val shape = RoundedCornerShape(6.dp)
     if (url.isNullOrBlank()) {
-        Box(modifier.clip(shape).border(1.dp, Color.White.copy(alpha = 0.08f), shape))
+        Initials(name, modifier)
     } else {
-        AsyncImage(model = url, contentDescription = null, modifier = modifier.clip(shape), contentScale = scale)
+        coil3.compose.SubcomposeAsyncImage(
+            model = url, contentDescription = name, modifier = modifier.clip(shape), contentScale = scale,
+            loading = { Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.04f))) },
+            error = { Initials(name, Modifier.fillMaxSize()) },
+        )
+    }
+}
+
+/** What the user sees before the first account exists: what to do next, with the button for it. */
+@Composable
+fun NoAccountsPane(vm: MainViewModel) {
+    Centered {
+        androidx.compose.foundation.layout.Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.main_no_accounts_title), style = MaterialTheme.typography.headlineMedium)
+            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.main_no_accounts_text), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.padding(vertical = 8.dp))
+            androidx.compose.material3.Button(onClick = { vm.requestedTab.value = "ACCOUNTS" }, modifier = Modifier.focusHighlight()) {
+                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.onboarding_add_account))
+            }
+        }
+    }
+}
+
+/** Grey placeholder rows while the first data is loaded, instead of an empty screen. */
+@Composable
+fun SkeletonRows() {
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "skeleton")
+    val alpha by transition.animateFloat(0.04f, 0.12f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(900), androidx.compose.animation.core.RepeatMode.Reverse), label = "alpha")
+    androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(18.dp)) {
+        repeat(3) {
+            Box(Modifier.width(160.dp).height(16.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = alpha)))
+            androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                repeat(6) { Box(Modifier.width(120.dp).height(170.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = alpha))) }
+            }
+        }
     }
 }
 

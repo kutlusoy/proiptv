@@ -243,4 +243,18 @@
     <string name="settings_tmdb">Filminformationen (TMDB)</string>
     <string name="settings_tmdb_hint">Optional. Mit deinem eigenen kostenlosen API-Schlüssel von themoviedb.org lädt die App Handlung, Besetzung und Trailer für Titel ohne Informationen (zum Beispiel aus M3U-Listen). Gesendet werden nur der Titel und das Jahr des geöffneten Titels.</string>
     <string name="settings_tmdb_key">API-Schlüssel</string>
+    <string name="onboarding_add_account">Konto hinzufügen</string>
+    <string name="player_err_auth">Der Anbieter hat die Anmeldung abgelehnt. Prüfe Benutzername, Passwort und Ablaufdatum des Kontos.</string>
+    <string name="player_err_limit">Der Anbieter erlaubt keine weitere Verbindung. Schließe andere Streams oder Geräte dieses Kontos.</string>
+    <string name="player_err_blocked">Der Anbieter sperrt diesen Stream für dein Netzwerk oder deine Region.</string>
+    <string name="player_err_notfound">Dieser Sender oder Titel ist beim Anbieter nicht verfügbar.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Catch-up</string>
+    <string name="filter_favorites">Favoriten</string>
+    <string name="player_fullscreen">Vollbild</string>
+    <string name="epg_earlier">Früher</string>
+    <string name="epg_later">Später</string>
+    <string name="tv_live_badge">LIVE-TV</string>
+    <string name="sort_az">A–Z</string>
+    <string name="sort_za">Z–A</string>
 </resources>

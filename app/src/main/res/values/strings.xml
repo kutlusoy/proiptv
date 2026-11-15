@@ -244,4 +244,18 @@
     <string name="settings_tmdb">Movie information (TMDB)</string>
     <string name="settings_tmdb_hint">Optional. With your own free API key from themoviedb.org the app loads plot, cast and trailer for titles that have none (for example from M3U lists). Only the title and the year of the opened title are sent.</string>
     <string name="settings_tmdb_key">API key</string>
+    <string name="onboarding_add_account">Add account</string>
+    <string name="player_err_auth">The provider refused the login. Check user name, password and the expiry date of the account.</string>
+    <string name="player_err_limit">The provider allows no further connection. Close other streams or devices of this account.</string>
+    <string name="player_err_blocked">The provider blocks this stream for your network or region.</string>
+    <string name="player_err_notfound">This channel or title is not available at the provider.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Catch-up</string>
+    <string name="filter_favorites">Favorites</string>
+    <string name="player_fullscreen">Full screen</string>
+    <string name="epg_earlier">Earlier</string>
+    <string name="epg_later">Later</string>
+    <string name="tv_live_badge">LIVE TV</string>
+    <string name="sort_az">A–Z</string>
+    <string name="sort_za">Z–A</string>
 </resources>

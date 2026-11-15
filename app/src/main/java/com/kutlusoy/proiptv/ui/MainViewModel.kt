@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
+import androidx.paging.cachedIn
 import androidx.paging.PagingConfig
 import com.kutlusoy.proiptv.ProIptvApp
 import com.kutlusoy.proiptv.R
@@ -57,6 +58,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val favKeys = db.favorites().keys().map { list -> list.map { Triple(it.accountId, it.kind, it.remoteId) }.toSet() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     val player = MutableStateFlow<PlayRequest?>(null)
+
+    /** A screen asks the main screen to open a tab (for example the button in the empty state). */
+    val requestedTab = MutableStateFlow<String?>(null)
     val activeRecordings = (app as ProIptvApp).recordings.active
     val downloads = db.downloads().all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -165,6 +169,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun categories(accountId: Long, kind: Int) = db.items().categories(accountId, kind)
 
+    fun categoryCounts(ids: List<Long>, kind: Int) = db.items().categoryCounts(ids, kind)
+
+    fun liveChannels(ids: List<Long>, category: String?) = db.items().liveChannels(ids, category)
+
+    fun favoriteChannels(listId: Long) = db.favorites().channelItems(listId)
+
     fun guideChannels(ids: List<Long>, category: String?, query: String, from: Long) = db.programs().guideChannels(ids, category, query, from)
 
     fun guide(ids: List<Long>, category: String?, from: Long, to: Long, query: String) = db.programs().guide(ids, category, from, to, query)
@@ -175,10 +185,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         db.items().countFlow(accountId, Kind.SERIES),
     ) { a, b, c -> Triple(a, b, c) }
 
-    fun pager(kind: Int, ids: List<Long>, category: String?, query: String) =
-        Pager(PagingConfig(pageSize = 60, enablePlaceholders = false)) {
-            db.items().paging(kind, ids, category, query, null, null)
-        }.flow
+    // the loaded pages of the last list per area are kept, so the list is the same (and at the same place) after the player was closed
+    private val pagers = HashMap<Int, Pair<List<Any?>, kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>>>>()
+
+    fun pager(kind: Int, ids: List<Long>, category: String?, query: String, flags: Int = 0): kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>> {
+        val key = listOf(kind, ids, category, query, flags)
+        pagers[kind]?.takeIf { it.first == key }?.let { return it.second }
+        val flow = Pager(PagingConfig(pageSize = 60, enablePlaceholders = false)) {
+            db.items().paging(kind, ids, category, query, null, null, flags)
+        }.flow.cachedIn(viewModelScope)
+        pagers[kind] = key to flow
+        return flow
+    }
 
 
     fun favoriteRows(listId: Long, kind: Int) = db.favorites().rows(listId, kind)
