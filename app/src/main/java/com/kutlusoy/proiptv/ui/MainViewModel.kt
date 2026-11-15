@@ -221,7 +221,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val cat = item.categoryRemoteId.ifEmpty { null }
             val index = repo.db.items().livePosition(listOf(accountId), cat, accountId, item.ord)
             player.value = PlayRequest.Zap(Source.Browse(Kind.LIVE, listOf(accountId), cat, ""), index, direct = true)
-            android.widget.Toast.makeText(app, app.getString(R.string.reminder_toast, title), android.widget.Toast.LENGTH_LONG).show()
+            val context = getApplication<Application>()
+            android.widget.Toast.makeText(context, context.getString(R.string.reminder_toast, title), android.widget.Toast.LENGTH_LONG).show()
         }
     }
 

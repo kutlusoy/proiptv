@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.layout.Column
@@ -131,7 +132,7 @@ private fun AppRoot(vm: MainViewModel) {
     // a reminder while the app is open: the app jumps to the channel
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(Unit) {
-        androidx.lifecycle.RepeatOnLifecycleKt.repeatOnLifecycle(lifecycle, androidx.lifecycle.Lifecycle.State.STARTED) {
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
             com.kutlusoy.proiptv.reminder.ReminderBus.events.collect { vm.openChannel(it.accountId, it.channelRemoteId, it.title) }
         }
     }

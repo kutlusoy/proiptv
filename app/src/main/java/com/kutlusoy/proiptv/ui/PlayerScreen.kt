@@ -1006,9 +1006,10 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
     confirm?.let { p ->
         AlertDialog(
             onDismissRequest = { confirm = null },
+            title = { Text(p.title.decodeEntities(), maxLines = 2, overflow = TextOverflow.Ellipsis) },
             text = {
                 Column {
-                    Text(stringResource(R.string.rec_confirm, p.title, time.format(Date(p.start * 1000)), time.format(Date(p.end * 1000))))
+                    Text("${day.format(Date(p.start * 1000))} ${time.format(Date(p.start * 1000))} - ${time.format(Date(p.end * 1000))}")
                     if (p.start > now) {
                         val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp
                         val existing by produceState<com.kutlusoy.proiptv.data.Reminder?>(null, p.id) { value = app.reminders.forProgram(item.accountId, item.remoteId, p.start * 1000) }
