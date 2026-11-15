@@ -512,11 +512,13 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         index = browseIndex
         playingList = browseList
     }
+    // up and down only move the highlight (and show its guide), the running picture stays
     fun browseStep(delta: Int) {
-        val next = (browseIndex + delta).coerceIn(0, browseCount - 1)
-        if (next == browseIndex) return
-        browseIndex = next
-        playHighlighted()
+        browseIndex = (browseIndex + delta).coerceIn(0, browseCount - 1)
+    }
+    // OK on another channel starts it in the small window, OK on the running one opens the full screen
+    fun okInBrowser() {
+        if (browseList == playingList && browseIndex == index) confirmBrowse() else playHighlighted()
     }
     fun confirmBrowse() {
         playHighlighted()
@@ -591,12 +593,11 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 if (e.type != KeyEventType.KeyDown || dialogOpen) return@onPreviewKeyEvent false
                 if (tvBrowse) {
                     return@onPreviewKeyEvent when (e.key) {
-                        // up and down switch the channel of the shown list at once, the picture follows the highlight
                         Key.DirectionUp, Key.ChannelDown, Key.PageUp -> { browseStep(-1); true }
                         Key.DirectionDown, Key.ChannelUp, Key.PageDown -> { browseStep(1); true }
                         Key.DirectionLeft -> { switchList(-1); true }
                         Key.DirectionRight -> { switchList(1); true }
-                        Key.DirectionCenter, Key.Enter -> { confirmBrowse(); true }
+                        Key.DirectionCenter, Key.Enter -> { okInBrowser(); true }
                         else -> false
                     }
                 }
