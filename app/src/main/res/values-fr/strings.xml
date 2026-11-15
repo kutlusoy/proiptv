@@ -281,4 +281,7 @@
     <string name="reminder_set_action">Me rappeler 1 minute avant</string>
     <string name="reminder_remove_action">Supprimer le rappel</string>
     <string name="reminder_set">Rappel défini</string>
+    <string name="timers_title">Minuteurs</string>
+    <string name="timers_empty">Aucun minuteur défini</string>
+    <string name="rec_refused">Impossible : à ce moment il y aurait plus d\'enregistrements que de connexions du compte (%1$d).</string>
 </resources>

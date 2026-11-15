@@ -6,6 +6,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -97,3 +107,47 @@ fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, m
     }
 }
 
+
+/** Hours and minutes with an h, for example 01:35h. */
+fun hoursMinutes(ms: Long): String {
+    val minutes = (ms / 60_000).coerceAtLeast(0)
+    return "%02d:%02d".format(minutes / 60, minutes % 60) + "h"
+}
+
+/** The bar of the player with a text at both ends and a text above the position (the time that is left). Without onSeek it only shows. */
+@Composable
+fun TimeBar(
+    fraction: Float, left: String, right: String, mark: String, modifier: Modifier = Modifier,
+    onSeek: ((Float) -> Unit)? = null, sliderModifier: Modifier = Modifier,
+) {
+    val f = fraction.coerceIn(0f, 1f)
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+        Text(left, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 10.dp, bottom = 2.dp))
+        Column(Modifier.weight(1f)) {
+            BoxWithConstraints(Modifier.fillMaxWidth().height(22.dp)) {
+                val width = 72.dp
+                Text(
+                    mark, color = Color.White, style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.offset(x = (maxWidth * f - width / 2).coerceIn(0.dp, (maxWidth - width).coerceAtLeast(0.dp))).requiredSize(width, 20.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+            if (onSeek != null) Slider(value = f, onValueChange = onSeek, modifier = sliderModifier.fillMaxWidth())
+            else LinearProgressIndicator(progress = { f }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+        }
+        Text(right, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 10.dp, bottom = 2.dp))
+    }
+}
+
+/** A small clock, gold for a timer. */
+@Composable
+fun ClockGlyph(modifier: Modifier = Modifier, color: Color = Color(0xFFFFC107), size: androidx.compose.ui.unit.Dp = 16.dp) {
+    Canvas(modifier.size(size)) {
+        val r = this.size.minDimension / 2
+        val stroke = this.size.minDimension / 9
+        drawCircle(color, radius = r - stroke / 2, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+        val c = Offset(this.size.width / 2, this.size.height / 2)
+        drawLine(color, c, Offset(c.x, c.y - r * 0.55f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(color, c, Offset(c.x + r * 0.4f, c.y), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+    }
+}

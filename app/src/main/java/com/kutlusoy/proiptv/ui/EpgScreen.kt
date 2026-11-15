@@ -149,10 +149,22 @@ fun EpgScreen(vm: MainViewModel) {
     val coroutines = rememberCoroutineScope()
     LaunchedEffect(Unit) { scroll.scrollTo(with(density) { xOf(System.currentTimeMillis() / 1000 - 1800).toPx().toInt() }) }
     var detail by remember { mutableStateOf<Pair<Item, Program>?>(null) }
+    var timersDialog by remember { mutableStateOf(false) }
+    val timerReminders by vm.repo.db.reminders().allFlow().collectAsState(initial = emptyList())
+    val timerRecordings by vm.recordings.collectAsState()
+    val plannedRecordings = timerRecordings.filter { it.status == com.kutlusoy.proiptv.data.RecStatus.SCHEDULED }
+    val timerCount = timerReminders.count { it.startMs > System.currentTimeMillis() } + plannedRecordings.count { (it.plannedStart ?: it.startedAt) > System.currentTimeMillis() }
+    val timersButton: @Composable () -> Unit = {
+        OutlinedButton(onClick = { timersDialog = true }, modifier = Modifier.focusHighlight()) {
+            ClockGlyph(color = MaterialTheme.colorScheme.onSurface)
+            Text("  " + stringResource(R.string.timers_title) + if (timerCount > 0) " ($timerCount)" else "")
+        }
+    }
     val timeFormat = remember { DateFormat.getTimeInstance(DateFormat.SHORT) }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         if (tv) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { timersButton() }
             TvEpgHeader(focusedProgram, tvLists, tab, timeFormat) { tab = it }
         }
         if (!tv) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
@@ -181,6 +193,7 @@ fun EpgScreen(vm: MainViewModel) {
             OutlinedButton(onClick = { coroutines.launch { scroll.animateScrollTo(with(density) { xOf(System.currentTimeMillis() / 1000 - 1800).toPx().toInt() }) } }, modifier = Modifier.focusHighlight()) {
                 Text(stringResource(R.string.epg_now))
             }
+            timersButton()
         }
         if (!tv) OutlinedTextField(
             query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
@@ -238,6 +251,14 @@ fun EpgScreen(vm: MainViewModel) {
                                         .focusHighlight()
                                         .clickable { if (tv) playChannel(channel) else detail = channel to p }.padding(horizontal = 8.dp, vertical = 4.dp),
                                 ) {
+                                    val hasReminder = timerReminders.any { it.accountId == channel.accountId && it.channelRemoteId == channel.remoteId && it.startMs == p.start * 1000 }
+                                    val hasRecording = plannedRecordings.any { it.accountId == channel.accountId && it.channelRemoteId == channel.remoteId && kotlin.math.abs((it.plannedStart ?: 0L) + 30_000L - p.start * 1000) < 10_000L }
+                                    if (hasReminder || hasRecording) {
+                                        Row(Modifier.align(Alignment.TopEnd), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            if (hasRecording) Box(Modifier.size(11.dp).background(Color(0xFFE53935), androidx.compose.foundation.shape.CircleShape))
+                                            if (hasReminder) ClockGlyph(size = 15.dp)
+                                        }
+                                    }
                                     Column {
                                         Text(p.title.decodeEntities(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, fontWeight = if (running) FontWeight.SemiBold else FontWeight.Normal)
                                         Text(timeFormat.format(Date(p.start * 1000)) + " - " + timeFormat.format(Date(p.end * 1000)), maxLines = 1, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
@@ -251,6 +272,7 @@ fun EpgScreen(vm: MainViewModel) {
             }
         }
     }
+    if (timersDialog) TimersDialog(vm) { timersDialog = false }
     detail?.let { (channel, p) ->
         ProgramDialog(vm, channel, p, ids, category, timeFormat) { detail = null }
     }
@@ -290,9 +312,12 @@ private fun ProgramDialog(vm: MainViewModel, channel: Item, p: Program, ids: Lis
                                         }
                                     } else {
                                         val startMs = p.start * 1000 - START_PAD_MS
-                                        val conflict = app.recordings.conflicts(channel, startMs, endMs)
-                                        app.recordings.schedule(channel, title, startMs, endMs)
-                                        ctx.getString(R.string.rec_scheduled) + if (conflict) " " + ctx.getString(R.string.rec_conflict) else ""
+                                        if (app.recordings.fits(channel, startMs, endMs)) {
+                                            app.recordings.schedule(channel, title, startMs, endMs)
+                                            ctx.getString(R.string.rec_scheduled)
+                                        } else {
+                                            ctx.getString(R.string.rec_refused, app.recordings.limit(channel.accountId) ?: 1)
+                                        }
                                     }
                                 } catch (e: BudgetExceeded) {
                                     ctx.getString(R.string.player_no_connection, e.limit, e.openTitles.joinToString(", "))

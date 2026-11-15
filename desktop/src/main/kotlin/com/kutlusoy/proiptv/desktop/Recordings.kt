@@ -175,6 +175,15 @@ class RecordingManager(
         }
     }
 
+    /** Whether a recording of this channel fits next to the planned and running ones of the account (its connections at the same time). */
+    fun fits(item: Playable, startMs: Long, endMs: Long): Boolean {
+        val max = item.maxConnections ?: return true
+        val others = store.all().filter { it.account == item.account && (it.status == RecStatus.SCHEDULED || it.status == RecStatus.RECORDING) }.map {
+            com.kutlusoy.proiptv.engine.RecordingSlot(it.channelRemoteId, it.plannedStart ?: it.startedAt, it.plannedEnd ?: Long.MAX_VALUE)
+        }
+        return com.kutlusoy.proiptv.engine.RecordingSlots.fits(max, com.kutlusoy.proiptv.engine.RecordingSlot(item.channelId, startMs, endMs), others)
+    }
+
     /** Plans a recording of a later show. It starts when the program is running at that time (see startDue). */
     fun schedule(item: Playable, startMs: Long, endMs: Long): Long =
         store.add(RecordingDto(0, item.account, item.title, startMs, null, endMs, "", 0, RecStatus.SCHEDULED, item.channelId, plannedStart = startMs))

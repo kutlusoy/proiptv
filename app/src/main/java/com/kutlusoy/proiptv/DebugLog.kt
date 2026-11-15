@@ -26,6 +26,12 @@ object DebugLog {
         if (!BuildConfig.DEBUG) return
         file = File(context.filesDir, "debug-log.txt").also { runCatching { trim(it) } }
         write("ProIPTV ${BuildConfig.VERSION_NAME} started")
+        // a crash is written to the log, so it can be read in the settings after the restart
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            write("CRASH in ${thread.name}: ${error.stackTraceToString().take(2500)}")
+            previous?.uncaughtException(thread, error)
+        }
     }
 
     /** Blacks out what must not appear in a log: passwords and user names in addresses, and addresses of the provider altogether. */

@@ -322,7 +322,7 @@ interface RecordingDao {
     @Query("SELECT * FROM recordings WHERE status = 3")
     suspend fun scheduled(): List<Recording>
 
-    @Query("SELECT * FROM recordings WHERE accountId = :accountId AND status IN (0, 3) AND COALESCE(plannedStart, startedAt) < :to AND plannedEnd > :from")
+    @Query("SELECT * FROM recordings WHERE accountId = :accountId AND status IN (0, 3) AND COALESCE(plannedStart, startedAt) < :to AND (plannedEnd IS NULL OR plannedEnd > :from)")
     suspend fun overlapping(accountId: Long, from: Long, to: Long): List<Recording>
 
     @Query("UPDATE recordings SET status = 2 WHERE status = 0")
@@ -375,6 +375,12 @@ interface ReminderDao {
 
     @Query("SELECT * FROM reminders")
     suspend fun all(): List<Reminder>
+
+    @Query("SELECT * FROM reminders ORDER BY startMs")
+    fun allFlow(): Flow<List<Reminder>>
+
+    @Query("DELETE FROM reminders WHERE startMs < :now")
+    suspend fun deleteBefore(now: Long)
 
     @Query("DELETE FROM reminders WHERE id = :id")
     suspend fun delete(id: Long)

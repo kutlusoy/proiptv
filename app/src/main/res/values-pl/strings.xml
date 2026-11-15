@@ -59,4 +59,7 @@
     <string name="reminder_set_action">Przypomnij 1 minutę wcześniej</string>
     <string name="reminder_remove_action">Usuń przypomnienie</string>
     <string name="reminder_set">Ustawiono przypomnienie</string>
+    <string name="timers_title">Timery</string>
+    <string name="timers_empty">Brak ustawionych timerów</string>
+    <string name="rec_refused">Niemożliwe: w tym czasie działałoby więcej nagrań, niż konto ma połączeń (%1$d).</string>
 </resources>

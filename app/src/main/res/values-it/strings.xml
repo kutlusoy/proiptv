@@ -281,4 +281,7 @@
     <string name="reminder_set_action">Ricordamelo 1 minuto prima</string>
     <string name="reminder_remove_action">Rimuovi il promemoria</string>
     <string name="reminder_set">Promemoria impostato</string>
+    <string name="timers_title">Timer</string>
+    <string name="timers_empty">Nessun timer impostato</string>
+    <string name="rec_refused">Non possibile: in quel momento ci sarebbero più registrazioni che connessioni dell\'account (%1$d).</string>
 </resources>

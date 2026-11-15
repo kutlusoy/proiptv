@@ -738,23 +738,22 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 Text(active?.title?.decodeEntities() ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (active?.live == true) {
                     nowNext.first?.let { now ->
+                        val clockNow by produceState(System.currentTimeMillis()) { while (true) { delay(15_000); value = System.currentTimeMillis() } }
                         val total = (now.end - now.start).coerceAtLeast(1)
-                        val done = ((System.currentTimeMillis() / 1000 - now.start).toFloat() / total).coerceIn(0f, 1f)
+                        val done = ((clockNow / 1000 - now.start).toFloat() / total).coerceIn(0f, 1f)
+                        val shortTime = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
                         Text("${stringResource(R.string.player_now)}: ${now.title.decodeEntities()}", color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        LinearProgressIndicator(progress = { done }, Modifier.fillMaxWidth())
+                        TimeBar(done, shortTime.format(java.util.Date(now.start * 1000)), shortTime.format(java.util.Date(now.end * 1000)), "-" + hoursMinutes((now.end * 1000 - clockNow).coerceAtLeast(0)))
                     }
                     nowNext.second?.let { Text("${stringResource(R.string.player_next)}: ${it.title.decodeEntities()}", color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 if (active?.live == false && duration > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(clock(position), color = Color.White)
-                        Slider(
-                            value = (position.toFloat() / duration).coerceIn(0f, 1f),
-                            onValueChange = { exo.seekTo((it * duration).toLong()); position = exo.currentPosition; touched++ },
-                            modifier = Modifier.weight(1f).focusHighlight(),
-                        )
-                        Text(clock(duration), color = Color.White)
-                    }
+                    TimeBar(
+                        fraction = position.toFloat() / duration, left = hoursMinutes(0), right = hoursMinutes(duration),
+                        mark = "-" + hoursMinutes(duration - position),
+                        onSeek = { exo.seekTo((it * duration).toLong()); position = exo.currentPosition; touched++ },
+                        sliderModifier = Modifier.focusHighlight(),
+                    )
                 }
                 if (hubActive) {
                     Text(
@@ -856,9 +855,12 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         startRecording(endMs, title)
                     } else {
                         val startMs = p.start * 1000 - START_PAD_MS
-                        val conflict = app.recordings.conflicts(i, startMs, endMs)
-                        app.recordings.schedule(i, title, startMs, endMs)
-                        info = ctx.getString(R.string.rec_scheduled) + if (conflict) " " + ctx.getString(R.string.rec_conflict) else ""
+                        if (app.recordings.fits(i, startMs, endMs)) {
+                            app.recordings.schedule(i, title, startMs, endMs)
+                            info = ctx.getString(R.string.rec_scheduled)
+                        } else {
+                            info = ctx.getString(R.string.rec_refused, app.recordings.limit(i.accountId) ?: 1)
+                        }
                     }
                 }
             }, onRemind = { p, remove ->

@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import com.kutlusoy.proiptv.DebugLog
 import com.kutlusoy.proiptv.ProIptvApp
 import com.kutlusoy.proiptv.R
 import com.kutlusoy.proiptv.data.AppDatabase
@@ -41,6 +42,9 @@ class ReminderManager(private val app: Application, private val db: AppDatabase)
         cancelAlarm(id)
         db.reminders().delete(id)
     }
+
+    /** Reminders whose show has begun are used up. */
+    suspend fun removeExpired() = db.reminders().deleteBefore(System.currentTimeMillis())
 
     suspend fun rescheduleAll() {
         val now = System.currentTimeMillis()
@@ -87,11 +91,10 @@ class ReminderManager(private val app: Application, private val db: AppDatabase)
         )
 
     private fun setAlarm(id: Long, atMs: Long) {
-        val manager = app.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val show = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         // a show that starts within the minute: the reminder comes at once
         val at = maxOf(atMs, System.currentTimeMillis() + 2_000L)
-        manager.setAlarmClock(AlarmManager.AlarmClockInfo(at, show), alarmIntent(id, PendingIntent.FLAG_UPDATE_CURRENT)!!)
+        val operation = alarmIntent(id, PendingIntent.FLAG_UPDATE_CURRENT) ?: return
+        com.kutlusoy.proiptv.recording.Alarms.set(app, at, operation)
     }
 
     private fun cancelAlarm(id: Long) {

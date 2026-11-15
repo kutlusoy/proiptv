@@ -281,4 +281,7 @@
     <string name="reminder_set_action">Recordar 1 minuto antes</string>
     <string name="reminder_remove_action">Quitar el recordatorio</string>
     <string name="reminder_set">Recordatorio activado</string>
+    <string name="timers_title">Temporizadores</string>
+    <string name="timers_empty">No hay temporizadores</string>
+    <string name="rec_refused">No es posible: a esa hora se grabarían más programas que conexiones tiene la cuenta (%1$d).</string>
 </resources>

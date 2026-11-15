@@ -282,4 +282,7 @@
     <string name="reminder_set_action">Remind me 1 minute before</string>
     <string name="reminder_remove_action">Remove the reminder</string>
     <string name="reminder_set">Reminder set</string>
+    <string name="timers_title">Timers</string>
+    <string name="timers_empty">No timers set</string>
+    <string name="rec_refused">Not possible: at that time more recordings would run than the account has connections (%1$d).</string>
 </resources>

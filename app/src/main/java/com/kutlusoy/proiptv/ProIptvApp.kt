@@ -60,7 +60,7 @@ class ProIptvApp : Application() {
         scope.launch {
             recordings.recoverInterrupted()
             recordings.rescheduleAll()
-            reminders.rescheduleAll()
+            runCatching { reminders.rescheduleAll() }.onFailure { DebugLog.write("Reminders: ${it.stackTraceToString().take(600)}") }
             downloads.resume()
         }
         scope.launch {
