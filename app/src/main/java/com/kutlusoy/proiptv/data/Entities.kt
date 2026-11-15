@@ -131,6 +131,7 @@ data class Progress(
     val updated: Long,
     val watched: Boolean = false,
     val seriesRemoteId: String = "",
+    val dismissed: Boolean = false,
 )
 
 data class FavoriteRow(

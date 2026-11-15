@@ -274,4 +274,5 @@
     <string name="update_ready">L\'aggiornamento %1$s è scaricato e verificato. Installarlo ora?</string>
     <string name="update_install_now">Installa ora</string>
     <string name="update_installing_win">Avvio dell\'installazione, l\'app si chiude.</string>
+    <string name="continue_remove">Rimuovi da continua a guardare</string>
 </resources>

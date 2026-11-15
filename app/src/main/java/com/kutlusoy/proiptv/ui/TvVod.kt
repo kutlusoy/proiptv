@@ -28,6 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -100,6 +103,22 @@ internal fun ContinuePane(vm: MainViewModel, kind: Int, favKeys: Set<Triple<Long
         }
         value = out
     }
+    var menuFor by remember { mutableStateOf<Item?>(null) }
+    menuFor?.let { item ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { menuFor = null },
+            title = { Text(item.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+            text = {
+                Column {
+                    androidx.compose.material3.TextButton(
+                        onClick = { vm.run { vm.repo.dismissContinue(item) }; menuFor = null },
+                        modifier = Modifier.fillMaxWidth().focusHighlight(),
+                    ) { Text(stringResource(R.string.continue_remove), Modifier.fillMaxWidth()) }
+                }
+            },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { menuFor = null }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
     if (items.isEmpty()) {
         Text(stringResource(R.string.live_no_results), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
     }
@@ -108,7 +127,7 @@ internal fun ContinuePane(vm: MainViewModel, kind: Int, favKeys: Set<Triple<Long
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items(items, key = { it.id }) { item ->
-            PosterCard(item, favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { onToggleFavorite(item) }) { onOpen(item) }
+            PosterCard(item, favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { menuFor = item }) { onOpen(item) }
         }
     }
 }

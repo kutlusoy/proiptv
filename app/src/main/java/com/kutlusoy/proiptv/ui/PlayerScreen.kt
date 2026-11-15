@@ -265,8 +265,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val zapping = request is PlayRequest.Zap && catchup == null
     val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog || listOpen
     val activeNow by rememberUpdatedState(active)
-    val itemNow by rememberUpdatedState(item)
-    val sourceNow by rememberUpdatedState(playSource)
     val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
     val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
 
@@ -343,7 +341,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             exo.removeListener(listener)
             // leaving the player: the provider connection is closed at once, so an account with one connection can open the next channel
             holder.lease?.closeNow()
-            itemNow?.let { i -> if (sourceNow == Source.History) app.scope.launch { app.repo.recordHistory(i) } }
             val t = active
             if (t != null && !t.live) {
                 val pos = exo.currentPosition
@@ -367,10 +364,18 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         shiftTime = null
         failed = false
         tried.clear()
-        if (i != null && playSource != Source.History) vm.repo.recordHistory(i)
         target = i?.let { vm.repo.target(it) }
         overlay = true
         touched++
+    }
+
+    // only a channel that is shown full screen counts, not the small picture of the browser
+    LaunchedEffect(item, tvBrowse) {
+        val i = item ?: return@LaunchedEffect
+        if (tvBrowse || request !is PlayRequest.Zap) return@LaunchedEffect
+        vm.repo.recordHistory(i)
+        // the channel is now the first of the last channels
+        if (playSource == Source.History && index != 0) { index = 0; browseIndex = 0 }
     }
 
     LaunchedEffect(failed) {

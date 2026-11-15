@@ -52,4 +52,5 @@
     <string name="update_ready">تم تنزيل التحديث %1$s والتحقق منه. هل تريد تثبيته الآن؟</string>
     <string name="update_install_now">ثبّت الآن</string>
     <string name="update_installing_win">جارٍ بدء التثبيت، سيُغلق التطبيق.</string>
+    <string name="continue_remove">إزالة من متابعة المشاهدة</string>
 </resources>

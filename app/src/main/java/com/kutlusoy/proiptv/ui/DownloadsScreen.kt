@@ -150,21 +150,33 @@ private fun DownloadRow(vm: MainViewModel, d: Download, title: String, onDelete:
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
                 )
             }
+            val leave = rememberLeaveFocus()
+            val active = d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                if (d.status == DlStatus.DONE) {
-                    OutlinedButton(onClick = { vm.playDownload(d) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.detail_play)) }
+                // the first button stays the same control while the state changes, so the focus stays on it
+                OutlinedButton(
+                    onClick = {
+                        when {
+                            d.status == DlStatus.DONE -> vm.playDownload(d)
+                            active -> vm.pauseDownload(d.id)
+                            else -> vm.retryDownload(d.id)
+                        }
+                    },
+                    modifier = Modifier.focusHighlight(),
+                ) {
+                    Text(
+                        stringResource(
+                            when {
+                                d.status == DlStatus.DONE -> R.string.detail_play
+                                active -> R.string.dl_pause
+                                d.status == DlStatus.PAUSED -> R.string.dl_resume
+                                else -> R.string.dl_retry
+                            },
+                        ),
+                    )
                 }
-                if (d.status == DlStatus.FAILED) {
-                    OutlinedButton(onClick = { vm.retryDownload(d.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.dl_retry)) }
-                }
-                if (d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED) {
-                    OutlinedButton(onClick = { vm.pauseDownload(d.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.dl_pause)) }
-                }
-                if (d.status == DlStatus.PAUSED) {
-                    OutlinedButton(onClick = { vm.retryDownload(d.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.dl_resume)) }
-                }
-                if (d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED || d.status == DlStatus.PAUSED) {
-                    OutlinedButton(onClick = { vm.deleteDownload(d.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.dl_stop)) }
+                if (active || d.status == DlStatus.PAUSED) {
+                    OutlinedButton(onClick = { leave(); vm.deleteDownload(d.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.dl_stop)) }
                 } else {
                     OutlinedButton(onClick = onDelete, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
                 }

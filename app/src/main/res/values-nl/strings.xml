@@ -52,4 +52,5 @@
     <string name="update_ready">Update %1$s is gedownload en gecontroleerd. Nu installeren?</string>
     <string name="update_install_now">Nu installeren</string>
     <string name="update_installing_win">De installatie wordt gestart, de app sluit.</string>
+    <string name="continue_remove">Verwijderen uit verder kijken</string>
 </resources>

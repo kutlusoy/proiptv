@@ -29,6 +29,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
@@ -39,6 +41,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -372,6 +375,9 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit, onOp
             EpisodeRow(
                 ep, progress[ep.id], downloadOf(ep), onClick = { play(ep) },
                 onDownload = { val d = downloadOf(ep); if (d == null) vm.download(listOf(toDownload(ep))) else if (d.status == DlStatus.FAILED) vm.retryDownload(d.id) },
+                onPause = { downloadOf(ep)?.let { vm.pauseDownload(it.id) } },
+                onResume = { downloadOf(ep)?.let { vm.retryDownload(it.id) } },
+                onRemove = { downloadOf(ep)?.let { vm.deleteDownload(it.id) } },
                 onToggleWatched = { vm.run { vm.repo.setWatched(series.accountId, Kind.EPISODE, listOf(ep.id), progress[ep.id]?.watched != true); refresh++ } },
             )
         }
@@ -379,47 +385,75 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit, onOp
 }
 
 @Composable
-private fun EpisodeRow(ep: XtreamEpisode, progress: Progress?, download: Download?, onClick: () -> Unit, onDownload: () -> Unit, onToggleWatched: () -> Unit) {
+private fun EpisodeRow(
+    ep: XtreamEpisode, progress: Progress?, download: Download?, onClick: () -> Unit,
+    onDownload: () -> Unit, onPause: () -> Unit, onResume: () -> Unit, onRemove: () -> Unit, onToggleWatched: () -> Unit,
+) {
     val watched = progress?.watched == true
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).focusHighlight().clickable(onClick = onClick).padding(6.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(Modifier.width(140.dp).height(80.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
-            if (!ep.image.isNullOrBlank()) AsyncImage(model = ep.image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Icon(Icons.Filled.PlayArrow, null, Modifier.align(Alignment.Center).size(28.dp), tint = Color.White.copy(alpha = 0.85f))
-            if (watched && (progress?.positionMs ?: 0) == 0L) {
-                Icon(Icons.Filled.CheckCircle, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = Palette.WineSoft)
+    val green = Color(0xFF00E676)
+    // the controls stand beside the row, each one can be reached with the right arrow
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).focusHighlight().clickable(onClick = onClick).padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(Modifier.width(140.dp).height(80.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                if (!ep.image.isNullOrBlank()) AsyncImage(model = ep.image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                Icon(Icons.Filled.PlayArrow, null, Modifier.align(Alignment.Center).size(28.dp), tint = Color.White.copy(alpha = 0.85f))
+                if (watched && (progress?.positionMs ?: 0) == 0L) {
+                    Icon(Icons.Filled.CheckCircle, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = green)
+                }
+                if (progress != null && progress.positionMs > 0 && progress.durationMs > 0) {
+                    LinearProgressIndicator(
+                        progress = { (progress.positionMs.toFloat() / progress.durationMs).coerceIn(0f, 1f) },
+                        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                    )
+                }
             }
-            if (progress != null && progress.positionMs > 0 && progress.durationMs > 0) {
-                LinearProgressIndicator(
-                    progress = { (progress.positionMs.toFloat() / progress.durationMs).coerceIn(0f, 1f) },
-                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
-                )
+            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("${ep.number}. ${ep.title}", fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                durationText(ep.durationSecs)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) }
+                ep.plot?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f)) }
             }
         }
-        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("${ep.number}. ${ep.title}", fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            durationText(ep.durationSecs)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) }
-            ep.plot?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f)) }
-        }
-        IconButton(onClick = onDownload, modifier = Modifier.focusHighlight()) {
-            when (download?.status) {
-                DlStatus.RUNNING -> CircularProgressIndicator(
-                    progress = { if (download.total > 0) (download.bytes.toFloat() / download.total).coerceIn(0f, 1f) else 0f },
-                    modifier = Modifier.size(22.dp), strokeWidth = 2.dp,
-                )
-                DlStatus.QUEUED -> CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                DlStatus.DONE -> Icon(DownloadIcon, stringResource(R.string.dl_downloaded), tint = Palette.WineSoft)
-                DlStatus.FAILED -> Icon(DownloadIcon, stringResource(R.string.dl_retry), tint = MaterialTheme.colorScheme.error)
+        val first = remember { FocusRequester() }
+        val running = download?.status == DlStatus.RUNNING || download?.status == DlStatus.QUEUED
+        val paused = download?.status == DlStatus.PAUSED
+        // first slot: download, pause or continue, it stays the same control so the focus stays on it
+        IconButton(
+            onClick = { if (running) onPause() else if (paused) onResume() else onDownload() },
+            modifier = Modifier.focusRequester(first).focusHighlight(),
+        ) {
+            when {
+                running && download?.status == DlStatus.RUNNING -> Box(contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        progress = { if (download.total > 0) (download.bytes.toFloat() / download.total).coerceIn(0f, 1f) else 0f },
+                        modifier = Modifier.size(30.dp), strokeWidth = 2.dp,
+                    )
+                    PauseGlyph(14.dp)
+                }
+                running -> PauseGlyph(22.dp)
+                paused -> Icon(Icons.Filled.PlayArrow, stringResource(R.string.dl_resume))
+                download?.status == DlStatus.DONE -> Icon(DownloadIcon, stringResource(R.string.dl_downloaded), tint = green)
+                download?.status == DlStatus.FAILED -> Icon(DownloadIcon, stringResource(R.string.dl_retry), tint = MaterialTheme.colorScheme.error)
                 else -> Icon(DownloadIcon, stringResource(R.string.dl_download), tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+            }
+        }
+        // second slot: stop and remove a running or paused download, delete a finished one
+        if (download != null && download.status != DlStatus.FAILED) {
+            IconButton(onClick = { runCatching { first.requestFocus() }; onRemove() }, modifier = Modifier.focusHighlight()) {
+                Icon(
+                    if (download.status == DlStatus.DONE) Icons.Filled.Delete else Icons.Filled.Close,
+                    stringResource(if (download.status == DlStatus.DONE) R.string.action_delete else R.string.dl_stop),
+                )
             }
         }
         IconButton(onClick = onToggleWatched, modifier = Modifier.focusHighlight()) {
             Icon(
                 Icons.Filled.CheckCircle,
                 stringResource(if (watched) R.string.detail_mark_unwatched else R.string.detail_mark_watched),
-                tint = if (watched) Palette.WineSoft else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                tint = if (watched) green else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                modifier = Modifier.size(28.dp),
             )
         }
     }
@@ -439,4 +473,12 @@ private fun DownloadButton(dl: Download?, onStart: () -> Unit, onRetry: () -> Un
         enabled = dl == null || dl.status == DlStatus.FAILED,
         modifier = Modifier.focusHighlight(),
     ) { Text(label) }
+}
+
+@Composable
+private fun PauseGlyph(size: androidx.compose.ui.unit.Dp) {
+    val color = LocalContentColor.current
+    Row(Modifier.size(size), horizontalArrangement = Arrangement.SpaceEvenly) {
+        repeat(2) { Box(Modifier.width(size / 4).fillMaxHeight().background(color, RoundedCornerShape(1.dp))) }
+    }
 }
