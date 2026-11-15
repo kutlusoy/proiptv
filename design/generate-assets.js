@@ -58,11 +58,19 @@ const page = (w, h, body, background = 'transparent') =>
   // Store icon, full bleed
   await shot('app/src/main/ic_launcher-playstore.png', 512, 512, mark(512 * 0.64), BLACK);
 
-  // Android TV banner: 320x180dp, mark and lettering side by side
+  // Android TV banner: 320x180dp, mark and lettering side by side, in a thin glowing red frame with slightly rounded corners
+  // (transparent outside of the frame, a faint red shimmer inside so the banner is not too dark on the home screen)
+  const RED = '#E0003C';
   for (const [name, factor] of Object.entries(DENSITIES)) {
     if (name === 'xxxhdpi') continue;
-    await shot(`${res}/drawable-${name}/tv_banner.png`, 320 * factor, 180 * factor,
-      `<div style="transform:scale(${factor});transform-origin:center;display:flex;align-items:center;gap:16px">${mark(124)}${word(160)}</div>`, BLACK);
+    const f = factor;
+    const frame =
+      `<div style="position:absolute;left:${5 * f}px;top:${5 * f}px;right:${5 * f}px;bottom:${5 * f}px;box-sizing:border-box;` +
+      `border:${1.5 * f}px solid ${RED};border-radius:${6 * f}px;` +
+      `background:radial-gradient(ellipse at 50% 50%,#2a0a14 0%,#120408 60%,#000 100%);` +
+      `box-shadow:0 0 ${7 * f}px ${f}px rgba(224,0,60,.85),0 0 ${16 * f}px ${2 * f}px rgba(224,0,60,.45),inset 0 0 ${9 * f}px rgba(224,0,60,.5);` +
+      `display:flex;align-items:center;justify-content:center;gap:${16 * f}px">${mark(118 * f)}${word(150 * f)}</div>`;
+    await shot(`${res}/drawable-${name}/tv_banner.png`, 320 * f, 180 * f, `<div style="position:relative;width:${320 * f}px;height:${180 * f}px">${frame}</div>`);
   }
 
   // Splash layers (drawn and animated by the app, see ui/splash)
