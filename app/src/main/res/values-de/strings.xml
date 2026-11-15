@@ -275,4 +275,10 @@
     <string name="update_install_now">Jetzt installieren</string>
     <string name="update_installing_win">Das Setup wird gestartet, die App schließt sich.</string>
     <string name="continue_remove">Aus Weiterschauen entfernen</string>
+    <string name="reminder_channel">Erinnerungen</string>
+    <string name="reminder_notification">Erinnerung: %1$s startet in 1 Minute</string>
+    <string name="reminder_toast">%1$s startet in 1 Minute</string>
+    <string name="reminder_set_action">1 Minute vorher erinnern</string>
+    <string name="reminder_remove_action">Erinnerung entfernen</string>
+    <string name="reminder_set">Erinnerung gesetzt</string>
 </resources>

@@ -126,7 +126,7 @@ internal fun TvBrowseLayer(
                         stringResource(R.string.tv_live_badge), Modifier.background(Palette.Wine, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
                         color = Color.White, style = MaterialTheme.typography.labelLarge,
                     )
-                    Text(playing?.name.orEmpty(), Modifier.padding(top = 8.dp), color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(playing?.name.orEmpty(), Modifier.padding(top = 8.dp), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 6, overflow = TextOverflow.Ellipsis)
                     playingNow?.let {
                         Text(it.title.decodeEntities(), Modifier.padding(top = 8.dp), color = Palette.WineSoft, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(time.format(Date(it.start * 1000)) + " - " + time.format(Date(it.end * 1000)), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodyMedium)

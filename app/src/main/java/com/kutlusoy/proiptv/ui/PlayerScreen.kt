@@ -205,7 +205,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var count by remember { mutableIntStateOf(1) }
     // TV: a click in a list opens the browser (list, small video, info, guide), OK there opens the full player
     val tvMode = LocalTv.current
-    var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap && request.source != Source.History) }
+    var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap && request.source != Source.History && !request.direct) }
     var playSource by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
     var browseList by remember { mutableIntStateOf(0) }
     // the list the browser opened with (always first) and the position of the list that the running channel comes from
@@ -860,6 +860,19 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         info = ctx.getString(R.string.rec_scheduled) + if (conflict) " " + ctx.getString(R.string.rec_conflict) else ""
                     }
                 }
+            }, onRemind = { p, remove ->
+                guideDialog = false
+                scope.launch {
+                    if (remove) {
+                        app.reminders.forProgram(i.accountId, i.remoteId, p.start * 1000)?.let { app.reminders.remove(it.id) }
+                    } else {
+                        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        app.reminders.add(i.accountId, i.remoteId, i.name, p.title.decodeEntities(), p.start * 1000)
+                        info = ctx.getString(R.string.reminder_set)
+                    }
+                }
             }, onDismiss = { guideDialog = false })
         }
     }
@@ -950,7 +963,7 @@ private fun TracksDialog(exo: ExoPlayer, tracks: Tracks, onDismiss: () -> Unit) 
 }
 
 @Composable
-private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit, onRecord: (Program) -> Unit, onDismiss: () -> Unit) {
+private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit, onRecord: (Program) -> Unit, onRemind: (Program, Boolean) -> Unit, onDismiss: () -> Unit) {
     var confirm by remember { mutableStateOf<Program?>(null) }
     val programs by produceState<List<Program>?>(null, item.id) {
         value = item.epgId?.let { vm.repo.guide(item.accountId, it, if (item.archiveDays > 0) 3 else 0, 2) } ?: emptyList()
@@ -993,7 +1006,19 @@ private fun GuideDialog(vm: MainViewModel, item: Item, onPlay: (Program) -> Unit
     confirm?.let { p ->
         AlertDialog(
             onDismissRequest = { confirm = null },
-            text = { Text(stringResource(R.string.rec_confirm, p.title, time.format(Date(p.start * 1000)), time.format(Date(p.end * 1000)))) },
+            title = { Text(p.title.decodeEntities(), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+            text = {
+                Column {
+                    Text("${day.format(Date(p.start * 1000))} ${time.format(Date(p.start * 1000))} - ${time.format(Date(p.end * 1000))}")
+                    if (p.start > now) {
+                        val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp
+                        val existing by produceState<com.kutlusoy.proiptv.data.Reminder?>(null, p.id) { value = app.reminders.forProgram(item.accountId, item.remoteId, p.start * 1000) }
+                        TextButton(onClick = { confirm = null; onRemind(p, existing != null) }, modifier = Modifier.fillMaxWidth().focusHighlight()) {
+                            Text(stringResource(if (existing != null) R.string.reminder_remove_action else R.string.reminder_set_action), Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+            },
             confirmButton = { TextButton(onClick = { confirm = null; onRecord(p) }) { Text(stringResource(R.string.rec_record)) } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.action_cancel)) } },
         )

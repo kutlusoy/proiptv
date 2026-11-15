@@ -53,4 +53,10 @@
     <string name="update_install_now">Nu installeren</string>
     <string name="update_installing_win">De installatie wordt gestart, de app sluit.</string>
     <string name="continue_remove">Verwijderen uit verder kijken</string>
+    <string name="reminder_channel">Herinneringen</string>
+    <string name="reminder_notification">Herinnering: %1$s begint over 1 minuut</string>
+    <string name="reminder_toast">%1$s begint over 1 minuut</string>
+    <string name="reminder_set_action">1 minuut vooraf herinneren</string>
+    <string name="reminder_remove_action">Herinnering verwijderen</string>
+    <string name="reminder_set">Herinnering ingesteld</string>
 </resources>

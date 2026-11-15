@@ -53,4 +53,10 @@
     <string name="update_install_now">Установить сейчас</string>
     <string name="update_installing_win">Запускается установка, приложение закроется.</string>
     <string name="continue_remove">Убрать из «Продолжить просмотр»</string>
+    <string name="reminder_channel">Напоминания</string>
+    <string name="reminder_notification">Напоминание: %1$s начнётся через 1 минуту</string>
+    <string name="reminder_toast">%1$s начнётся через 1 минуту</string>
+    <string name="reminder_set_action">Напомнить за 1 минуту</string>
+    <string name="reminder_remove_action">Убрать напоминание</string>
+    <string name="reminder_set">Напоминание установлено</string>
 </resources>

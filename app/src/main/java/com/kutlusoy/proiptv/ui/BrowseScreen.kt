@@ -342,14 +342,13 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
 
         if (kind == Kind.LIVE && !favMode && !tvLists) {
             androidx.compose.foundation.layout.Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!histMode) listOf(1 to R.string.filter_hd, 2 to R.string.filter_catchup, 4 to R.string.filter_favorites).forEach { (bit, label) ->
-                    androidx.compose.material3.FilterChip(
-                        selected = quick and bit != 0, onClick = { quick = quick xor bit },
-                        label = { Text(stringResource(label)) }, modifier = Modifier.focusHighlight(),
-                    )
-                }
+                // both stay in view, the one that is on can be switched to the other or off
                 androidx.compose.material3.FilterChip(
-                    selected = histMode, onClick = { histMode = !histMode },
+                    selected = quick and 4 != 0, onClick = { quick = quick xor 4; if (quick and 4 != 0) histMode = false },
+                    label = { Text(stringResource(R.string.filter_favorites)) }, modifier = Modifier.focusHighlight(),
+                )
+                androidx.compose.material3.FilterChip(
+                    selected = histMode, onClick = { histMode = !histMode; if (histMode) quick = quick and 4.inv() },
                     label = { Text(histLabel) }, modifier = Modifier.focusHighlight(),
                 )
             }

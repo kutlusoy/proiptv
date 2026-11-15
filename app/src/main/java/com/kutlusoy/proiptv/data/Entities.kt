@@ -212,6 +212,16 @@ data class GuideRow(
     val category: String,
 )
 
+@Entity(tableName = "reminders", indices = [Index(value = ["accountId", "channelRemoteId", "startMs"], unique = true)])
+data class Reminder(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    val channelRemoteId: String,
+    val channelName: String,
+    val title: String,
+    val startMs: Long,
+)
+
 @Entity(tableName = "history", primaryKeys = ["accountId", "remoteId"], indices = [Index("watched")])
 data class HistoryEntry(
     val accountId: Long,

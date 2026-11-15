@@ -79,6 +79,7 @@ private fun runApplication() = application {
         while (true) {
             kotlinx.coroutines.delay(15_000)
             state.checkScheduled()
+            state.checkReminders()
         }
     }
     LaunchedEffect(state.placement) { windowState.placement = state.placement }
@@ -169,6 +170,13 @@ private fun App(state: AppState, updater: Updater, update: UpdateState) {
                 }
             }
         }
+    }
+    state.reminderNotice?.let { text ->
+        AlertDialog(
+            onDismissRequest = { state.reminderNotice = null },
+            text = { Text(text) },
+            confirmButton = { TextButton(onClick = { state.reminderNotice = null }) { Text(t("action_close")) } },
+        )
     }
     state.confirmRemove?.let { e ->
         AlertDialog(

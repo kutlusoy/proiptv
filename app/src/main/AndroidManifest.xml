@@ -53,6 +53,9 @@
             android:name=".recording.RecordingAlarmReceiver"
             android:exported="false" />
         <receiver
+            android:name=".reminder.ReminderAlarmReceiver"
+            android:exported="false" />
+        <receiver
             android:name=".recording.BootReceiver"
             android:exported="true">
             <intent-filter>

@@ -275,4 +275,10 @@
     <string name="update_install_now">Şimdi kur</string>
     <string name="update_installing_win">Kurulum başlatılıyor, uygulama kapanacak.</string>
     <string name="continue_remove">İzlemeye devam et listesinden kaldır</string>
+    <string name="reminder_channel">Hatırlatmalar</string>
+    <string name="reminder_notification">Hatırlatma: %1$s 1 dakika sonra başlıyor</string>
+    <string name="reminder_toast">%1$s 1 dakika sonra başlıyor</string>
+    <string name="reminder_set_action">1 dakika önce hatırlat</string>
+    <string name="reminder_remove_action">Hatırlatmayı kaldır</string>
+    <string name="reminder_set">Hatırlatma ayarlandı</string>
 </resources>

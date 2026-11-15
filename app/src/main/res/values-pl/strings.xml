@@ -53,4 +53,10 @@
     <string name="update_install_now">Zainstaluj teraz</string>
     <string name="update_installing_win">Uruchamianie instalatora, aplikacja się zamknie.</string>
     <string name="continue_remove">Usuń z kontynuuj oglądanie</string>
+    <string name="reminder_channel">Przypomnienia</string>
+    <string name="reminder_notification">Przypomnienie: %1$s zaczyna się za 1 minutę</string>
+    <string name="reminder_toast">%1$s zaczyna się za 1 minutę</string>
+    <string name="reminder_set_action">Przypomnij 1 minutę wcześniej</string>
+    <string name="reminder_remove_action">Usuń przypomnienie</string>
+    <string name="reminder_set">Ustawiono przypomnienie</string>
 </resources>

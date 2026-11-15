@@ -275,4 +275,10 @@
     <string name="update_install_now">Installer maintenant</string>
     <string name="update_installing_win">Lancement de l\'installation, l\'application se ferme.</string>
     <string name="continue_remove">Retirer de la reprise</string>
+    <string name="reminder_channel">Rappels</string>
+    <string name="reminder_notification">Rappel : %1$s commence dans 1 minute</string>
+    <string name="reminder_toast">%1$s commence dans 1 minute</string>
+    <string name="reminder_set_action">Me rappeler 1 minute avant</string>
+    <string name="reminder_remove_action">Supprimer le rappel</string>
+    <string name="reminder_set">Rappel défini</string>
 </resources>

@@ -34,6 +34,8 @@ class ProIptvApp : Application() {
         private set
     lateinit var recordings: RecordingManager
         private set
+    lateinit var reminders: com.kutlusoy.proiptv.reminder.ReminderManager
+        private set
     lateinit var backup: BackupManager
         private set
     lateinit var downloads: DownloadManager
@@ -52,11 +54,13 @@ class ProIptvApp : Application() {
             minOf(wanted, hubDir.usableSpace / 3).coerceAtLeast(64L * 1024 * 1024)
         })
         recordings = RecordingManager(this, db, engine, scope, resolve = { repo.target(it) }, maxConnections = { repo.maxConnections(it) })
+        reminders = com.kutlusoy.proiptv.reminder.ReminderManager(this, db)
         downloads = DownloadManager(this, db, scope, Http.client, File(getExternalFilesDir(null) ?: filesDir, "downloads"), resolve = { repo.downloadSource(it) })
         backup = BackupManager(repo, { prefs.timeshift to prefs.bufferMb }, { on, mb -> prefs.timeshift = on; prefs.bufferMb = mb }, { secrets.decrypt(it.password) })
         scope.launch {
             recordings.recoverInterrupted()
             recordings.rescheduleAll()
+            reminders.rescheduleAll()
             downloads.resume()
         }
         scope.launch {
