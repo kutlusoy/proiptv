@@ -125,6 +125,9 @@ interface ItemDao {
     @Insert
     suspend fun insertCategories(list: List<Category>)
 
+    @Query("DELETE FROM categories WHERE accountId = :accountId AND kind = :kind AND remoteId NOT IN (SELECT DISTINCT categoryRemoteId FROM items WHERE accountId = :accountId AND kind = :kind)")
+    suspend fun deleteEmptyCategories(accountId: Long, kind: Int)
+
     @Query("DELETE FROM categories WHERE accountId = :accountId AND kind = :kind")
     suspend fun deleteCategories(accountId: Long, kind: Int)
 

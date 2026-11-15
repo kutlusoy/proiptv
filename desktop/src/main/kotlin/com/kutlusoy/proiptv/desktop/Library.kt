@@ -125,6 +125,11 @@ class Library(private val store: Store) {
                     )
                 }
             }
+            if (hide) {
+                // categories that only held flagged titles disappear as well
+                val used = entries[kind].orEmpty().filter { it.accountId == a.id }.map { it.categoryId }.toSet()
+                categories[kind]?.removeAll { it.accountId == a.id && it.id !in used }
+            }
         }
         return info
     }

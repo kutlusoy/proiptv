@@ -226,6 +226,7 @@ class SyncManager(
         }
         if (batch.isNotEmpty()) db.items().upsert(batch.toList())
         db.items().deleteStale(account.id, kind, gen)
+        if (hide) db.items().deleteEmptyCategories(account.id, kind)
     }
 
     private suspend fun syncM3u(account: Account) {
