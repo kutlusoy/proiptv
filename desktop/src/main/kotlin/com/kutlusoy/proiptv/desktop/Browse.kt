@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -55,6 +56,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.kutlusoy.proiptv.net.XtreamEpisode
 import com.kutlusoy.proiptv.net.SeriesDetail
 import com.kutlusoy.proiptv.net.SeriesInfo
@@ -84,6 +86,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
     androidx.compose.runtime.LaunchedEffect(query) { state.browseQuery[kind] = query }
     var hdOnly by remember(kind) { mutableStateOf(false) }
     var favOnly by remember(kind) { mutableStateOf(false) }
+    var historyOnly by remember(kind) { mutableStateOf(false) }
     var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
     androidx.compose.runtime.LaunchedEffect(accountFilter) {
         // the chosen account is kept, so the list is the same after the player was closed
@@ -160,8 +163,11 @@ fun BrowseScreen(state: AppState, kind: Int) {
         }
         if (kind == Kind.LIVE && !inFavorites) {
             Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.FilterChip(selected = hdOnly, onClick = { hdOnly = !hdOnly }, label = { Text(t("filter_hd")) })
-                androidx.compose.material3.FilterChip(selected = favOnly, onClick = { favOnly = !favOnly }, label = { Text(t("filter_favorites")) })
+                if (!historyOnly) {
+                    androidx.compose.material3.FilterChip(selected = hdOnly, onClick = { hdOnly = !hdOnly }, label = { Text(t("filter_hd")) })
+                    androidx.compose.material3.FilterChip(selected = favOnly, onClick = { favOnly = !favOnly }, label = { Text(t("filter_favorites")) })
+                }
+                androidx.compose.material3.FilterChip(selected = historyOnly, onClick = { historyOnly = !historyOnly }, label = { Text(t("history_title")) })
             }
         }
         if (inFavorites && currentList != null) {
@@ -183,9 +189,12 @@ fun BrowseScreen(state: AppState, kind: Int) {
             Text("$name: $message", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
         if (state.loading) Text(t("series_loading"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.padding(8.dp))
+        else if (historyOnly && kind == Kind.LIVE && !inFavorites) Unit
         else if (shown.isEmpty()) Text(t("live_no_results"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(8.dp))
 
-        if (kind == Kind.LIVE || inFavorites) {
+        if (historyOnly && kind == Kind.LIVE && !inFavorites) {
+            HistoryTiles(state, all)
+        } else if (kind == Kind.LIVE || inFavorites) {
             LazyColumn(Modifier.fillMaxSize(), state = listState, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 itemsIndexed(shown, key = { _, e -> e.key }) { index, e ->
                     ChannelRow(
@@ -260,6 +269,37 @@ private fun Badge(text: String) {
         text, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f),
         modifier = Modifier.background(Palette.Wine.copy(alpha = 0.35f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp),
     )
+}
+
+@Composable
+private fun HistoryTiles(state: AppState, all: List<Entry>) {
+    val byKey = remember(all) { all.associateBy { it.key } }
+    val entries = state.history.mapNotNull { byKey[it] }
+    if (entries.isEmpty()) {
+        Text(t("history_empty"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(8.dp))
+        return
+    }
+    val categories = remember(all) { state.data.categories(Kind.LIVE).associate { (it.accountId + "|" + it.id) to it.name } }
+    LazyVerticalGrid(GridCells.Fixed(4), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        gridItemsIndexed(entries, key = { _, e -> e.key }) { index, e ->
+            val info = remember(e.name) { TitleParser.parse(e.name) }
+            Column(Modifier.clip(RoundedCornerShape(10.dp)).clickable { state.player = PlayRequest.Live(entries, index) }.padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Box(Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.06f)).padding(10.dp), contentAlignment = Alignment.Center) {
+                    Logo(e.logo, Modifier.fillMaxSize(), ContentScale.Fit, e.name)
+                }
+                Text(e.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (info.country.isNotEmpty()) {
+                        Text(
+                            info.country, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFD32F2F)).padding(horizontal = 5.dp, vertical = 1.dp),
+                        )
+                    }
+                    Text(categories[e.accountId + "|" + e.categoryId].orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.65f))
+                }
+            }
+        }
+    }
 }
 
 @Composable

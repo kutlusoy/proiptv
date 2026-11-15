@@ -262,4 +262,12 @@
     <string name="settings_debug_log">Hata ayıklama günlüğü</string>
     <string name="settings_debug_log_show">Günlüğü göster</string>
     <string name="settings_debug_log_hint">Yalnızca debug sürümlerinde. Günlük bu cihazda kalır, kullanıcı adları, parolalar ve adresler karartılır.</string>
+    <string name="history_title">Son kanallar</string>
+    <string name="history_empty">Henüz izlenen kanal yok</string>
+    <string name="player_compact">Küçük pencere</string>
+    <string name="player_pin">Her zaman üstte</string>
+    <string name="player_restore">Normal pencere</string>
+    <string name="settings_group_content">İçerik</string>
+    <string name="settings_hide_adult">Yetişkin kanallarını gizle</string>
+    <string name="settings_hide_adult_hint">Xtream sağlayıcısının yetişkin olarak işaretlediği başlıkları gizler. Değiştirildiğinde listeler yeniden yüklenir.</string>
 </resources>

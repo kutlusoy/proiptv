@@ -262,4 +262,12 @@
     <string name="settings_debug_log">Debug-Protokoll</string>
     <string name="settings_debug_log_show">Protokoll anzeigen</string>
     <string name="settings_debug_log_hint">Nur in Debug-Builds. Das Protokoll bleibt auf diesem Gerät, Benutzernamen, Passwörter und Adressen sind geschwärzt.</string>
+    <string name="history_title">Letzte Sender</string>
+    <string name="history_empty">Noch keine Sender angesehen</string>
+    <string name="player_compact">Kleines Fenster</string>
+    <string name="player_pin">Immer im Vordergrund</string>
+    <string name="player_restore">Normales Fenster</string>
+    <string name="settings_group_content">Inhalte</string>
+    <string name="settings_hide_adult">Erwachsenen-Sender ausblenden</string>
+    <string name="settings_hide_adult_hint">Blendet Titel aus, die der Xtream-Anbieter als Erwachsenen-Inhalt kennzeichnet. Beim Ändern werden die Listen neu geladen.</string>
 </resources>

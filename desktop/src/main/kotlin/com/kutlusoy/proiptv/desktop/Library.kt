@@ -99,6 +99,7 @@ class Library(private val store: Store) {
     private fun loadXtream(a: AccountDto, entries: MutableMap<Int, MutableList<Entry>>, categories: MutableMap<Int, MutableList<Category>>): XtreamInfo {
         val api = api(a)
         val info = api.authenticate()
+        val hide = store.config.hideAdult
         val kinds = listOf(
             Triple(Kind.LIVE, "get_live_categories", "get_live_streams"),
             Triple(Kind.MOVIE, "get_vod_categories", "get_vod_streams"),
@@ -114,6 +115,7 @@ class Library(private val store: Store) {
             api.stream(streamAction).use { s ->
                 for (o in s.items) {
                     val id = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
+                    if (hide && o.str("is_adult") == "1") continue
                     entries.getOrPut(kind) { mutableListOf() } += Entry(
                         a.id, kind, id, o.str("name").orEmpty().decodeEntities(), o.str("category_id").orEmpty(),
                         (o.str("stream_icon") ?: o.str("cover"))?.takeIf { it.isNotBlank() },
@@ -122,6 +124,11 @@ class Library(private val store: Store) {
                         o.str("epg_channel_id")?.takeIf { it.isNotBlank() }?.lowercase(),
                     )
                 }
+            }
+            if (hide) {
+                // categories that only held flagged titles disappear as well
+                val used = entries[kind].orEmpty().filter { it.accountId == a.id }.map { it.categoryId }.toSet()
+                categories[kind]?.removeAll { it.accountId == a.id && it.id !in used }
             }
         }
         return info

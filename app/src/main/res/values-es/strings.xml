@@ -262,4 +262,12 @@
     <string name="settings_debug_log">Registro de depuración</string>
     <string name="settings_debug_log_show">Mostrar registro</string>
     <string name="settings_debug_log_hint">Solo en compilaciones de depuración. El registro se queda en este dispositivo; usuarios, contraseñas y direcciones se ocultan.</string>
+    <string name="history_title">Últimos canales</string>
+    <string name="history_empty">Aún no has visto ningún canal</string>
+    <string name="player_compact">Ventana pequeña</string>
+    <string name="player_pin">Siempre visible</string>
+    <string name="player_restore">Ventana normal</string>
+    <string name="settings_group_content">Contenido</string>
+    <string name="settings_hide_adult">Ocultar canales para adultos</string>
+    <string name="settings_hide_adult_hint">Oculta los títulos que el proveedor Xtream marca como para adultos. Las listas se recargan al cambiarlo.</string>
 </resources>

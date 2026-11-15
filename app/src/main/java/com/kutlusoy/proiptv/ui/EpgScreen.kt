@@ -111,7 +111,7 @@ fun EpgScreen(vm: MainViewModel) {
         when (tvSource) {
             is Source.Favs -> vm.favoriteChannels(tvSource.listId)
             is Source.Browse -> vm.liveChannels(tvSource.accountIds, tvSource.category)
-            null -> flowOf(emptyList())
+            is Source.History, null -> flowOf(emptyList())
         }
     }.collectAsState(initial = emptyList())
     val channels = if (tv) tvChannels else phoneChannels
@@ -132,6 +132,7 @@ fun EpgScreen(vm: MainViewModel) {
                 val index = when (tvSource) {
                     is Source.Favs -> tvChannels.indexOfFirst { it.id == channel.id }.coerceAtLeast(0)
                     is Source.Browse -> vm.repo.db.items().livePosition(tvSource.accountIds, tvSource.category, channel.accountId, channel.ord)
+                    is Source.History -> 0
                 }
                 vm.player.value = PlayRequest.Zap(tvSource, index)
             }

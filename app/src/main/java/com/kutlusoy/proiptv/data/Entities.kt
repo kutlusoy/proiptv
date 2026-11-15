@@ -209,3 +209,15 @@ data class GuideRow(
     val ord: Int,
     val category: String,
 )
+
+@Entity(tableName = "history", primaryKeys = ["accountId", "remoteId"], indices = [Index("watched")])
+data class HistoryEntry(
+    val accountId: Long,
+    val remoteId: String,
+    val watched: Long,
+)
+
+data class HistoryRow(
+    @androidx.room.Embedded val item: Item,
+    val listName: String?,
+)

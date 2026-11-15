@@ -205,7 +205,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var count by remember { mutableIntStateOf(1) }
     // TV: a click in a list opens the browser (list, small video, info, guide), OK there opens the full player
     val tvMode = LocalTv.current
-    var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap) }
+    var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap && request.source != Source.History) }
     var playSource by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
     var browseList by remember { mutableIntStateOf(0) }
     // the list the browser opened with (always first) and the position of the list that the running channel comes from
@@ -265,6 +265,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val zapping = request is PlayRequest.Zap && catchup == null
     val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog || listOpen
     val activeNow by rememberUpdatedState(active)
+    val itemNow by rememberUpdatedState(item)
+    val sourceNow by rememberUpdatedState(playSource)
     val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
     val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
 
@@ -341,6 +343,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             exo.removeListener(listener)
             // leaving the player: the provider connection is closed at once, so an account with one connection can open the next channel
             holder.lease?.closeNow()
+            itemNow?.let { i -> if (sourceNow == Source.History) app.scope.launch { app.repo.recordHistory(i) } }
             val t = active
             if (t != null && !t.live) {
                 val pos = exo.currentPosition
@@ -364,6 +367,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         shiftTime = null
         failed = false
         tried.clear()
+        if (i != null && playSource != Source.History) vm.repo.recordHistory(i)
         target = i?.let { vm.repo.target(it) }
         overlay = true
         touched++
@@ -486,6 +490,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
 
     val accountsNow by vm.accounts.collectAsState()
     val allLabel = stringResource(R.string.live_all)
+    val histLabel = stringResource(R.string.history_title)
     val browseLists by produceState(emptyList<BrowseList>(), browseOrigin, tvBrowse, allFavLists, accountsNow) {
         if (!tvBrowse) return@produceState
         val current = browseOrigin ?: return@produceState
@@ -494,6 +499,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         val out = ArrayList<BrowseList>()
         val currentName = when (current) {
             is Source.Favs -> allFavLists.firstOrNull { it.id == current.listId }?.name
+            is Source.History -> histLabel
             is Source.Browse -> current.category?.let { cat -> enabled.firstNotNullOfOrNull { a -> vm.repo.db.items().categories(a.id, Kind.LIVE).first().firstOrNull { it.remoteId == cat }?.name } }
         } ?: allLabel
         out += BrowseList(currentName, current)
@@ -539,7 +545,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         browseList = ((browseList + delta) % browseLists.size + browseLists.size) % browseLists.size
         browseIndex = if (browseList == playingList) index else 0
     }
-    val tvBack = LocalTv.current && request is PlayRequest.Zap
+    val tvBack = LocalTv.current && request is PlayRequest.Zap && playSource != Source.History
     BackHandler {
         when {
             // the browser is left to the list of channels (the grid), the full player goes back to the browser
@@ -705,11 +711,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 }
             }
         }
-        Fade(overlay, Modifier.align(Alignment.TopEnd)) {
-            Row(Modifier.statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                RoundControl(PlayerGlyph.GEAR, stringResource(R.string.player_more), { moreDialog = true }, diameter = 44.dp)
-            }
-        }
         Fade(overlay, Modifier.align(Alignment.BottomCenter)) {
             Column(
                 Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000)))).navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -768,10 +769,11 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         }
                     }
                     val i = item
-                    if (zapping && i?.epgId != null) {
-                        Row(Modifier.align(Alignment.CenterEnd)) {
+                    Row(Modifier.align(Alignment.CenterEnd), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (zapping && i?.epgId != null) {
                             RoundControl(PlayerGlyph.GUIDE, stringResource(R.string.player_guide), { guideDialog = true }, diameter = 48.dp)
                         }
+                        RoundControl(PlayerGlyph.GEAR, stringResource(R.string.player_more), { moreDialog = true }, diameter = 48.dp)
                     }
                 }
             }

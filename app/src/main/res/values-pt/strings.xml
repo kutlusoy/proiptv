@@ -40,4 +40,12 @@
     <string name="settings_debug_log">Registo de depuração</string>
     <string name="settings_debug_log_show">Mostrar registo</string>
     <string name="settings_debug_log_hint">Apenas em compilações de depuração. O registo fica neste dispositivo, utilizadores, palavras-passe e endereços são ocultados.</string>
+    <string name="history_title">Últimos canais</string>
+    <string name="history_empty">Ainda não assistiu a nenhum canal</string>
+    <string name="player_compact">Janela pequena</string>
+    <string name="player_pin">Sempre no topo</string>
+    <string name="player_restore">Janela normal</string>
+    <string name="settings_group_content">Conteúdo</string>
+    <string name="settings_hide_adult">Ocultar canais adultos</string>
+    <string name="settings_hide_adult_hint">Oculta os títulos que o fornecedor Xtream marca como adultos. As listas são recarregadas quando isto é alterado.</string>
 </resources>

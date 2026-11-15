@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
@@ -110,6 +111,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         releaseHub(now = true)
         if (request is PlayRequest.Live) {
             val entry = request.entries[index]
+            state.recordHistory(entry)
             val a = state.store.config.accounts.firstOrNull { it.id == entry.accountId }
             val live = item.copy(accountNumber = (a?.id ?: "").hashCode().toLong(), channelId = entry.remoteId, maxConnections = state.data.status[entry.accountId]?.info?.maxConnections)
             current = live
@@ -214,6 +216,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         releaseHub(now = true)
         state.player = null
         state.controller = null
+        if (state.compact) state.setCompact(false, null)
         if (state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) state.toggleFullscreen()
     }
 
@@ -283,7 +286,9 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     }
 
     Box(Modifier.fillMaxSize()) {
-    if (fullscreen) {
+    if (state.compact) {
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
+    } else if (fullscreen) {
         // the picture fills the screen, the controls float above it and fade away when the mouse rests
         Box(
             Modifier.fillMaxSize().background(Color.Black).onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Move) {
@@ -396,6 +401,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp))
         if (controller.live) RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp)
         RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp)
+        IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) }
         IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) }
     }
 }

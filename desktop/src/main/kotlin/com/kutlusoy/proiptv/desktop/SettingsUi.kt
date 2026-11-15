@@ -79,13 +79,13 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                 }
                 Hint(t("settings_guide_info"))
             }
-            Group(t("settings_tmdb")) {
-                var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
-                OutlinedTextField(
-                    key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(t("settings_tmdb_key")) },
-                )
-                Hint(t("settings_tmdb_hint"))
+            Group(t("settings_group_content")) {
+                var hide by remember { mutableStateOf(state.store.config.hideAdult) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("settings_hide_adult"), Modifier.weight(1f))
+                    Switch(checked = hide, onCheckedChange = { hide = it; state.store.update { c -> c.copy(hideAdult = it) }; state.reload() })
+                }
+                Hint(t("settings_hide_adult_hint"))
             }
             Group(t("settings_group_playback")) {
                 val vlc = state.engine
@@ -114,6 +114,15 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                 )
             }
             UpdateGroup(state, updater, update)
+            Group(t("settings_tmdb")) {
+                var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
+                OutlinedTextField(
+                    key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(t("settings_tmdb_key")) },
+                )
+                Hint(t("settings_tmdb_hint"))
+            }
+
         }
     }
 }

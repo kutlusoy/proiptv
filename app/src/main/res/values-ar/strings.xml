@@ -40,4 +40,12 @@
     <string name="settings_debug_log">سجل التصحيح</string>
     <string name="settings_debug_log_show">عرض السجل</string>
     <string name="settings_debug_log_hint">في إصدارات التصحيح فقط. يبقى السجل على هذا الجهاز، وتُحجب أسماء المستخدمين وكلمات المرور والعناوين.</string>
+    <string name="history_title">آخر القنوات</string>
+    <string name="history_empty">لم تتم مشاهدة أي قناة بعد</string>
+    <string name="player_compact">نافذة صغيرة</string>
+    <string name="player_pin">دائمًا في المقدمة</string>
+    <string name="player_restore">نافذة عادية</string>
+    <string name="settings_group_content">المحتوى</string>
+    <string name="settings_hide_adult">إخفاء قنوات البالغين</string>
+    <string name="settings_hide_adult_hint">يخفي العناوين التي يصنفها مزود Xtream على أنها للبالغين. تُعاد تحميل القوائم عند التغيير.</string>
 </resources>

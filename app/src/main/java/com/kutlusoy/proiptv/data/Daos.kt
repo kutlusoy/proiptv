@@ -125,6 +125,9 @@ interface ItemDao {
     @Insert
     suspend fun insertCategories(list: List<Category>)
 
+    @Query("DELETE FROM categories WHERE accountId = :accountId AND kind = :kind AND remoteId NOT IN (SELECT DISTINCT categoryRemoteId FROM items WHERE accountId = :accountId AND kind = :kind)")
+    suspend fun deleteEmptyCategories(accountId: Long, kind: Int)
+
     @Query("DELETE FROM categories WHERE accountId = :accountId AND kind = :kind")
     suspend fun deleteCategories(accountId: Long, kind: Int)
 
@@ -342,4 +345,30 @@ interface DownloadDao {
 
     @Query("DELETE FROM downloads WHERE id = :id")
     suspend fun delete(id: Long)
+}
+
+@Dao
+interface HistoryDao {
+    @Query(
+        "SELECT i.*, c.name AS listName FROM history h JOIN items i ON i.accountId = h.accountId AND i.kind = 0 AND i.remoteId = h.remoteId " +
+            "LEFT JOIN categories c ON c.accountId = i.accountId AND c.kind = 0 AND c.remoteId = i.categoryRemoteId ORDER BY h.watched DESC LIMIT 24",
+    )
+    fun rows(): kotlinx.coroutines.flow.Flow<List<HistoryRow>>
+
+    @Query(
+        "SELECT i.* FROM history h JOIN items i ON i.accountId = h.accountId AND i.kind = 0 AND i.remoteId = h.remoteId ORDER BY h.watched DESC LIMIT 24",
+    )
+    suspend fun items(): List<Item>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun put(entry: HistoryEntry)
+
+    @Query("DELETE FROM history WHERE watched NOT IN (SELECT watched FROM history ORDER BY watched DESC LIMIT 24)")
+    suspend fun prune()
+
+    @Query("DELETE FROM history WHERE accountId = :accountId")
+    suspend fun deleteAccount(accountId: Long)
+
+    @Query("DELETE FROM history")
+    suspend fun clear()
 }

@@ -44,6 +44,7 @@ class SyncManager(
     private val db: AppDatabase,
     private val secrets: SecretBox,
     private val scope: CoroutineScope,
+    private val hideAdult: () -> Boolean = { false },
 ) {
     private val _state = MutableStateFlow<Map<Long, SyncState>>(emptyMap())
     val state: StateFlow<Map<Long, SyncState>> = _state
@@ -193,6 +194,7 @@ class SyncManager(
                 Category(accountId = account.id, kind = kind, remoteId = o.str("category_id").orEmpty(), name = o.str("category_name").orEmpty().decodeEntities(), ord = i)
             }.toList()
         }
+        val hide = hideAdult()
         db.items().replaceCategories(account.id, kind, cats)
         var ord = 0
         val batch = ArrayList<Item>(BATCH)
@@ -201,6 +203,7 @@ class SyncManager(
             for (o in s.items) {
                 val remote = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
                 val name = o.str("name").orEmpty().decodeEntities()
+                if (hide && o.str("is_adult") == "1") continue
                 val info = TitleParser.parse(name, groupNames[o.str("category_id").orEmpty()].orEmpty())
                 batch += Item(
                     accountId = account.id, kind = kind, remoteId = remote,
@@ -223,6 +226,7 @@ class SyncManager(
         }
         if (batch.isNotEmpty()) db.items().upsert(batch.toList())
         db.items().deleteStale(account.id, kind, gen)
+        if (hide) db.items().deleteEmptyCategories(account.id, kind)
     }
 
     private suspend fun syncM3u(account: Account) {
