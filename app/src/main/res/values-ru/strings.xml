@@ -22,4 +22,8 @@
     <string name="settings_tmdb_hint">По желанию. С вашим бесплатным ключом API от themoviedb.org приложение загружает описание, актёров и трейлер для названий без данных (например из списков M3U). Отправляются только название и год.</string>
     <string name="settings_tmdb_key">Ключ API</string>
     <string name="onboarding_add_account">Добавить аккаунт</string>
+    <string name="player_err_auth">Поставщик отклонил вход. Проверьте имя пользователя, пароль и срок действия аккаунта.</string>
+    <string name="player_err_limit">Поставщик не разрешает больше подключений. Закройте другие потоки или устройства этого аккаунта.</string>
+    <string name="player_err_blocked">Поставщик блокирует этот поток для вашей сети или региона.</string>
+    <string name="player_err_notfound">Этот канал или название недоступны у поставщика.</string>
 </resources>

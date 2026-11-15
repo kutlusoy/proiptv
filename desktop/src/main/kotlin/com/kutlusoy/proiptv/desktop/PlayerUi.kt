@@ -66,6 +66,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var position by mutableLongStateOf(0)
     var length by mutableLongStateOf(0)
     var failed by mutableStateOf<String?>(null)
+    var reconnecting by mutableStateOf(false)
     var listOpen by mutableStateOf(false)
 
     val live: Boolean get() = request is PlayRequest.Live
@@ -218,6 +219,19 @@ class PlayerController(private val state: AppState, private val request: PlayReq
             behindMs = (now - buffer.timeAtOffset(engine.readerPosition)).coerceAtLeast(0)
             bufferedMs = now - buffer.oldestTime()
         }
+        lease?.hub?.let { hub ->
+            reconnecting = hub.state.value == com.kutlusoy.proiptv.engine.HubState.RECONNECTING
+            if (hub.state.value == com.kutlusoy.proiptv.engine.HubState.FAILED && failed == null) {
+                // the provider did not let the stream through: say why in words
+                failed = when (com.kutlusoy.proiptv.net.ProviderProblems.fromMessage(hub.lastError)) {
+                    com.kutlusoy.proiptv.net.ProviderProblem.AUTH -> Strings.get("player_err_auth")
+                    com.kutlusoy.proiptv.net.ProviderProblem.LIMIT -> Strings.get("player_err_limit")
+                    com.kutlusoy.proiptv.net.ProviderProblem.BLOCKED -> Strings.get("player_err_blocked")
+                    com.kutlusoy.proiptv.net.ProviderProblem.NOT_FOUND -> Strings.get("player_err_notfound")
+                    else -> Strings.get("player_failed")
+                }
+            }
+        }
         recordingId?.let { id -> if (state.recordingStore.get(id)?.status != RecStatus.RECORDING) recordingId = null }
         if (!live && length > 0 && System.currentTimeMillis() - lastSaved > 10_000) {
             lastSaved = System.currentTimeMillis()
@@ -257,7 +271,8 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
         } else {
             VideoSurface(engine, modifier, onDoubleClick = { state.toggleFullscreen() }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
         }
-        controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp)) }
+        if (controller.reconnecting && controller.failed == null) Text(t("player_retrying"), Modifier.background(Color(0xAA000000)).padding(12.dp), color = Color.White)
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -271,12 +286,21 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             contentAlignment = Alignment.Center,
         ) {
             video(Modifier.fillMaxSize())
-            if (barVisible) ControlBar(state, controller, Modifier.align(Alignment.BottomCenter), floating = true)
+            if (barVisible) {
+                Column(Modifier.align(Alignment.TopStart).background(Color(0x99000000)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    Text(controller.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                    NowNextLine(state, controller)
+                }
+                ControlBar(state, controller, Modifier.align(Alignment.BottomCenter), floating = true)
+            }
         }
     } else {
         Column(Modifier.fillMaxSize().background(Color.Black)) {
             Row(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(controller.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                Column(Modifier.weight(1f)) {
+                    Text(controller.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                    NowNextLine(state, controller)
+                }
             }
             Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
             ControlBar(state, controller, Modifier, floating = false)
@@ -371,6 +395,21 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         IconButton(onClick = { tracksOpen = true }) { Icon(Icons.Filled.Subtitles, t("player_tracks")) }
         IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, null) }
     }
+}
+
+/** What runs now and what follows, with the end time, for live channels that have guide data. */
+@Composable
+private fun NowNextLine(state: AppState, controller: PlayerController) {
+    if (!controller.live) return
+    val entry = controller.entries.getOrNull(controller.index) ?: return
+    val (now, next) = state.guide.nowNext(entry.accountId, entry.epgId, state.tick)
+    if (now == null && next == null) return
+    val format = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
+    val text = buildString {
+        now?.let { append(t("player_now")).append(": ").append(it.title).append(" (").append(format.format(java.util.Date(it.end * 1000))).append(")") }
+        next?.let { if (isNotEmpty()) append("   "); append(t("player_next")).append(": ").append(it.title) }
+    }
+    Text(text, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
 }
 
 @Composable

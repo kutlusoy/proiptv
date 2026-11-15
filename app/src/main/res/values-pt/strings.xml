@@ -22,4 +22,8 @@
     <string name="settings_tmdb_hint">Opcional. Com a sua própria chave API gratuita do themoviedb.org a app carrega sinopse, elenco e trailer de títulos sem informações (por exemplo de listas M3U). Só são enviados o título e o ano.</string>
     <string name="settings_tmdb_key">Chave API</string>
     <string name="onboarding_add_account">Adicionar conta</string>
+    <string name="player_err_auth">O fornecedor recusou o início de sessão. Verifique utilizador, palavra-passe e data de validade da conta.</string>
+    <string name="player_err_limit">O fornecedor não permite mais ligações. Feche outras transmissões ou dispositivos desta conta.</string>
+    <string name="player_err_blocked">O fornecedor bloqueia esta transmissão para a sua rede ou região.</string>
+    <string name="player_err_notfound">Este canal ou título não está disponível no fornecedor.</string>
 </resources>

@@ -141,7 +141,7 @@ private fun AccountCard(
     val summaryColor: Color
     when {
         state != null -> { summary = syncText(state); summaryColor = MaterialTheme.colorScheme.primary }
-        account.lastError != null -> { summary = stringResource(R.string.account_error, account.lastError); summaryColor = MaterialTheme.colorScheme.error }
+        account.lastError != null -> { summary = friendlyError(account.lastError); summaryColor = MaterialTheme.colorScheme.error }
         days != null && days >= 0 && date != null -> {
             summary = stringResource(R.string.account_until, date)
             summaryColor = if (days <= 7) MaterialTheme.colorScheme.error else dim
@@ -192,7 +192,7 @@ private fun AccountCard(
                     } else if (counts.first > 0) {
                         Text(stringResource(R.string.account_guide_never), color = dim)
                     }
-                    account.lastError?.let { Text(stringResource(R.string.account_error, it), color = MaterialTheme.colorScheme.error) }
+                    account.lastError?.let { Text(friendlyError(it), color = MaterialTheme.colorScheme.error) }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
                         OutlinedButton(onClick = { vm.repo.sync.sync(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync)) }
                         OutlinedButton(onClick = { vm.repo.sync.refreshGuide(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync_guide)) }
@@ -306,4 +306,17 @@ private fun AccountDialog(vm: MainViewModel, initial: Account?, onDismiss: () ->
         confirmButton = { if (!tv) TextButton(enabled = valid, onClick = { save() }) { Text(stringResource(R.string.action_save)) } },
         dismissButton = { if (!tv) TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
+}
+
+/** The reason in words when the provider answered with a known error, else the raw message. */
+@Composable
+private fun friendlyError(raw: String): String {
+    val res = when (com.kutlusoy.proiptv.net.ProviderProblems.fromMessage(raw)) {
+        com.kutlusoy.proiptv.net.ProviderProblem.AUTH -> R.string.player_err_auth
+        com.kutlusoy.proiptv.net.ProviderProblem.LIMIT -> R.string.player_err_limit
+        com.kutlusoy.proiptv.net.ProviderProblem.BLOCKED -> R.string.player_err_blocked
+        com.kutlusoy.proiptv.net.ProviderProblem.NOT_FOUND -> R.string.player_err_notfound
+        else -> null
+    }
+    return if (res != null) stringResource(res) else stringResource(R.string.account_error, raw)
 }

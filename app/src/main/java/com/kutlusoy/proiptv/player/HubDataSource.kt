@@ -7,6 +7,7 @@ import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import com.kutlusoy.proiptv.engine.HubReader
+import com.kutlusoy.proiptv.engine.HubState
 import com.kutlusoy.proiptv.engine.StreamHub
 import java.io.IOException
 import java.io.InterruptedIOException
@@ -43,7 +44,10 @@ class HubDataSource(private val hub: StreamHub, private val startOffset: Long) :
             }
             if (n < 0) return C.RESULT_END_OF_INPUT
             waited += POLL_MS
-            if (waited >= STALL_MS) throw IOException("stream stalled")
+            val state = hub.state.value
+            // the hub gave up: report at once. Connected but silent: shorter wait than while the hub is reconnecting by itself
+            if (state == HubState.FAILED) throw IOException("stream failed: " + (hub.lastError ?: "no data"))
+            if (waited >= if (state == HubState.RECONNECTING) RECONNECT_STALL_MS else STALL_MS) throw IOException("stream stalled")
         }
     }
 
@@ -64,6 +68,7 @@ class HubDataSource(private val hub: StreamHub, private val startOffset: Long) :
 
     private companion object {
         const val POLL_MS = 1000L
-        const val STALL_MS = 30_000L
+        const val STALL_MS = 12_000L
+        const val RECONNECT_STALL_MS = 30_000L
     }
 }

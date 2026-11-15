@@ -244,4 +244,8 @@
     <string name="settings_tmdb_hint">Facultatif. Avec votre propre clé API gratuite de themoviedb.org, l\'app charge résumé, distribution et bande-annonce pour les titres sans informations (par exemple des listes M3U). Seuls le titre et l\'année sont envoyés.</string>
     <string name="settings_tmdb_key">Clé API</string>
     <string name="onboarding_add_account">Ajouter un compte</string>
+    <string name="player_err_auth">Le fournisseur a refusé la connexion. Vérifiez l\'identifiant, le mot de passe et la date d\'expiration du compte.</string>
+    <string name="player_err_limit">Le fournisseur n\'autorise plus de connexion. Fermez d\'autres flux ou appareils de ce compte.</string>
+    <string name="player_err_blocked">Le fournisseur bloque ce flux pour votre réseau ou votre région.</string>
+    <string name="player_err_notfound">Cette chaîne ou ce titre n\'est pas disponible chez le fournisseur.</string>
 </resources>

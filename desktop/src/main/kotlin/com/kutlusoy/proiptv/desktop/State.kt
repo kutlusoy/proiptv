@@ -169,7 +169,11 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         favorites.filter { it.listId == listId }.withIndex().associate { (i, f) -> "${f.account}|${f.kind}|${f.remoteId}" to i }
 
     val hubs = com.kutlusoy.proiptv.engine.EngineManager(
-        java.io.File(System.getProperty("java.io.tmpdir"), "proiptv-timeshift"), scope, capacity = { store.config.bufferMb.coerceIn(64, 4096) * 1024L * 1024L },
+        java.io.File(System.getProperty("java.io.tmpdir"), "proiptv-timeshift"), scope, capacity = {
+            val dir = java.io.File(System.getProperty("java.io.tmpdir"), "proiptv-timeshift")
+            // never more than a third of the free space, so a long session cannot fill the disk
+            minOf(store.config.bufferMb.coerceIn(64, 4096) * 1024L * 1024L, dir.usableSpace.takeIf { it > 0 }?.div(3) ?: Long.MAX_VALUE).coerceAtLeast(64L * 1024 * 1024)
+        },
     )
     val recordingStore = RecordingStore(store.dir)
     val recordingManager = RecordingManager(recordingStore, hubs, scope, DownloadManager.mediaDir("Recordings"))

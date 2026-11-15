@@ -283,7 +283,16 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         reload++
                     }
                 } else {
-                    message = R.string.player_failed
+                    // a clear reason when the provider said why (login, connection limit, blocked, not found)
+                    val code = generateSequence<Throwable>(error) { it.cause }.filterIsInstance<androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException>().firstOrNull()?.responseCode
+                        ?: com.kutlusoy.proiptv.net.ProviderProblems.codeOf(holder.lease?.hub?.lastError)
+                    message = when (com.kutlusoy.proiptv.net.ProviderProblems.fromHttp(code)) {
+                        com.kutlusoy.proiptv.net.ProviderProblem.AUTH -> R.string.player_err_auth
+                        com.kutlusoy.proiptv.net.ProviderProblem.LIMIT -> R.string.player_err_limit
+                        com.kutlusoy.proiptv.net.ProviderProblem.BLOCKED -> R.string.player_err_blocked
+                        com.kutlusoy.proiptv.net.ProviderProblem.NOT_FOUND -> R.string.player_err_notfound
+                        else -> R.string.player_failed
+                    }
                     failed = true
                 }
             }

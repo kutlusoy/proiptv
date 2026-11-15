@@ -22,4 +22,8 @@
     <string name="settings_tmdb_hint">اختياري. بمفتاح API المجاني الخاص بك من themoviedb.org يحمّل التطبيق القصة والممثلين والمقطع الدعائي للعناوين التي لا تحتوي على معلومات (مثل قوائم M3U). يتم إرسال العنوان والسنة فقط.</string>
     <string name="settings_tmdb_key">مفتاح API</string>
     <string name="onboarding_add_account">إضافة حساب</string>
+    <string name="player_err_auth">رفض المزوّد تسجيل الدخول. تحقق من اسم المستخدم وكلمة المرور وتاريخ انتهاء الحساب.</string>
+    <string name="player_err_limit">لا يسمح المزوّد باتصال إضافي. أغلق البثوث أو الأجهزة الأخرى لهذا الحساب.</string>
+    <string name="player_err_blocked">يحظر المزوّد هذا البث على شبكتك أو منطقتك.</string>
+    <string name="player_err_notfound">هذه القناة أو العنوان غير متوفر لدى المزوّد.</string>
 </resources>
