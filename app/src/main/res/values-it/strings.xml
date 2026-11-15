@@ -254,4 +254,5 @@
     <string name="player_fullscreen">Schermo intero</string>
     <string name="epg_earlier">Prima</string>
     <string name="epg_later">Dopo</string>
+    <string name="tv_live_badge">TV IN DIRETTA</string>
 </resources>

@@ -254,4 +254,5 @@
     <string name="player_fullscreen">Pantalla completa</string>
     <string name="epg_earlier">Antes</string>
     <string name="epg_later">Después</string>
+    <string name="tv_live_badge">TV EN DIRECTO</string>
 </resources>

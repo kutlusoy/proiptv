@@ -129,6 +129,7 @@ import com.kutlusoy.proiptv.recording.NotEnoughSpace
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -198,6 +199,13 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
 
     var index by remember { mutableIntStateOf((request as? PlayRequest.Zap)?.index ?: 0) }
     var count by remember { mutableIntStateOf(1) }
+    // TV: a click in a list opens the browser (list, small video, info, guide), OK there opens the full player
+    val tvMode = LocalTv.current
+    var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap) }
+    var playSource by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
+    var browseList by remember { mutableIntStateOf(0) }
+    var browseIndex by remember { mutableIntStateOf((request as? PlayRequest.Zap)?.index ?: 0) }
+    var browseCount by remember { mutableIntStateOf(1) }
     var item by remember { mutableStateOf<Item?>(null) }
     var target by remember { mutableStateOf((request as? PlayRequest.Single)?.target) }
     var catchup by remember { mutableStateOf<PlayTarget?>(null) }
@@ -334,10 +342,11 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
 
-    LaunchedEffect(index) {
-        val r = request as? PlayRequest.Zap ?: return@LaunchedEffect
-        count = vm.repo.count(r.source).coerceAtLeast(1)
-        val i = vm.repo.at(r.source, index)
+    LaunchedEffect(index, playSource) {
+        val src = playSource ?: return@LaunchedEffect
+        if (request !is PlayRequest.Zap) return@LaunchedEffect
+        count = vm.repo.count(src).coerceAtLeast(1)
+        val i = vm.repo.at(src, index)
         item = i
         retry = 0
         forceHls = false
@@ -462,13 +471,56 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
 
+    val accountsNow by vm.accounts.collectAsState()
+    val allLabel = stringResource(R.string.live_all)
+    val browseLists by produceState(emptyList<BrowseList>(), playSource, tvBrowse, allFavLists, accountsNow) {
+        if (!tvBrowse) return@produceState
+        val current = playSource ?: return@produceState
+        val enabled = accountsNow.filter { it.enabled }
+        val ids = enabled.map { it.id }
+        val out = ArrayList<BrowseList>()
+        val currentName = when (current) {
+            is Source.Favs -> allFavLists.firstOrNull { it.id == current.listId }?.name
+            is Source.Browse -> current.category?.let { cat -> enabled.firstNotNullOfOrNull { a -> vm.repo.db.items().categories(a.id, Kind.LIVE).first().firstOrNull { it.remoteId == cat }?.name } }
+        } ?: allLabel
+        out += BrowseList(currentName, current)
+        allFavLists.filter { it.kind == Kind.LIVE }.forEach { l -> Source.Favs(l.id).let { if (it != current) out += BrowseList(l.name, it) } }
+        Source.Browse(Kind.LIVE, ids, null, "").let { if (it != current) out += BrowseList(allLabel, it) }
+        for (a in enabled) {
+            for (c in vm.repo.db.items().categories(a.id, Kind.LIVE).first()) {
+                val src = Source.Browse(Kind.LIVE, listOf(a.id), c.remoteId, "")
+                if (src != current) out += BrowseList((if (enabled.size > 1) a.name + " \u00B7 " else "") + c.name.ifBlank { allLabel }, src)
+            }
+        }
+        value = out
+    }
+    LaunchedEffect(browseList, browseLists, tvBrowse) {
+        val src = browseLists.getOrNull(browseList)?.source ?: return@LaunchedEffect
+        browseCount = vm.repo.count(src).coerceAtLeast(1)
+        if (browseIndex >= browseCount) browseIndex = browseCount - 1
+    }
+    val highlightedItem by produceState<Item?>(null, browseLists, browseList, browseIndex, tvBrowse) {
+        value = if (!tvBrowse) null else browseLists.getOrNull(browseList)?.source?.let { vm.repo.at(it, browseIndex) }
+    }
+    fun confirmBrowse() {
+        browseLists.getOrNull(browseList)?.source?.let { playSource = it }
+        index = browseIndex
+        tvBrowse = false
+        overlay = true
+        touched++
+    }
+    fun switchList(delta: Int) {
+        if (browseLists.isEmpty()) return
+        browseList = ((browseList + delta) % browseLists.size + browseLists.size) % browseLists.size
+        browseIndex = if (browseList == 0) index else 0
+    }
     val tvBack = LocalTv.current && request is PlayRequest.Zap
     BackHandler {
         when {
-            // on a TV the list that Back showed is left with the second Back, together with the player
-            listOpen -> if (tvBack) onClose() else listOpen = false
-            // on a TV the first Back shows the channel list, the second one leaves the player
-            tvBack -> { overlay = true; listOpen = true }
+            // the browser is left to the list of channels (the grid), the full player goes back to the browser
+            tvBrowse -> onClose()
+            listOpen -> listOpen = false
+            tvBack -> { browseList = 0; browseIndex = index; tvBrowse = true }
             else -> onClose()
         }
     }
@@ -522,6 +574,16 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             .focusable()
             .onPreviewKeyEvent { e ->
                 if (e.type != KeyEventType.KeyDown || dialogOpen) return@onPreviewKeyEvent false
+                if (tvBrowse) {
+                    return@onPreviewKeyEvent when (e.key) {
+                        Key.DirectionUp, Key.ChannelDown, Key.PageUp -> { browseIndex = (browseIndex - 1).coerceAtLeast(0); true }
+                        Key.DirectionDown, Key.ChannelUp, Key.PageDown -> { browseIndex = (browseIndex + 1).coerceAtMost(browseCount - 1); true }
+                        Key.DirectionLeft -> { switchList(-1); true }
+                        Key.DirectionRight -> { switchList(1); true }
+                        Key.DirectionCenter, Key.Enter -> { confirmBrowse(); true }
+                        else -> false
+                    }
+                }
                 touched++
                 val code = e.key.nativeKeyCode
                 when {
@@ -584,7 +646,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             },
     ) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = if (tvBrowse) Modifier.tvPreviewRect() else Modifier.fillMaxSize(),
             factory = { c -> PlayerView(c).apply { useController = false; player = exo; keepScreenOn = true } },
             update = { it.resizeMode = resize },
         )
@@ -705,10 +767,13 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 }
             }
         }
+        if (tvBrowse) {
+            TvBrowseLayer(vm, browseLists, browseList, browseCount, browseIndex, highlightedItem, item, nowNext.first)
+        }
         if (listOpen && request is PlayRequest.Zap) {
             Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { listOpen = false })
             ChannelPanel(
-                vm, request.source, count, index,
+                vm, playSource ?: request.source, count, index,
                 onPick = { i -> index = i; listOpen = false; overlay = false },
                 modifier = Modifier.align(Alignment.CenterStart),
             )

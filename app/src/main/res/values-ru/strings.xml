@@ -32,4 +32,5 @@
     <string name="player_fullscreen">Полный экран</string>
     <string name="epg_earlier">Раньше</string>
     <string name="epg_later">Позже</string>
+    <string name="tv_live_badge">ПРЯМОЙ ЭФИР</string>
 </resources>

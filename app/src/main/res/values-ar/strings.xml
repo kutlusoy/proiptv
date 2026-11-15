@@ -32,4 +32,5 @@
     <string name="player_fullscreen">ملء الشاشة</string>
     <string name="epg_earlier">أبكر</string>
     <string name="epg_later">أحدث</string>
+    <string name="tv_live_badge">بث مباشر</string>
 </resources>
