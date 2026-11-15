@@ -54,20 +54,38 @@ class Updater(private val downloader: UpdateDownloader = UpdateDownloader(Http.c
         val file = pkg.file
         if (!file.isFile || file.length() != pkg.size) throw UpdateException(UpdateException.Code.INSTALL_FAILED, "The file is incomplete: ${file.absolutePath}")
         if (!sha256(file).equals(pkg.sha256, ignoreCase = true)) throw UpdateException(UpdateException.Code.CHECKSUM_MISMATCH)
-        var last: String? = null
-        repeat(8) { attempt ->
-            try {
-                val process = ProcessBuilder(file.absolutePath, "/SILENT", "/SUPPRESSMSGBOXES", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS", "/NORESTART").start()
-                delay(2000)
-                if (process.isAlive || process.exitValue() == 0) return@withContext
-                last = "The setup ended with code ${process.exitValue()}"
-            } catch (e: java.io.IOException) {
-                last = e.message
-            }
-            Log.write("Update: start of the setup failed (try ${attempt + 1}): $last")
-            delay(1500)
+        // the setup must not run while the app is still alive (the files are locked and the setup rolls its changes back):
+        // a small script waits until this process has ended and then starts the setup, so the app can end at once
+        val dir = Store.defaultDir().also { it.mkdirs() }
+        val log = File(dir, "update-setup.log")
+        val result = File(dir, "update-result.txt")
+        result.delete()
+        val script = File(file.parentFile, "apply-update.cmd")
+        val pid = ProcessHandle.current().pid()
+        script.writeText(
+            listOf(
+                "@echo off",
+                "set /a tries=0",
+                ":wait",
+                "tasklist /FI \"PID eq $pid\" /NH 2>nul | find \" $pid \" >nul",
+                "if errorlevel 1 goto run",
+                "set /a tries+=1",
+                "if %tries% GEQ 60 goto run",
+                "timeout /t 1 /nobreak >nul",
+                "goto wait",
+                ":run",
+                "timeout /t 8 /nobreak >nul",
+                "\"${file.absolutePath}\" /SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /NORESTART /LOG=\"${log.absolutePath}\"",
+                "echo setup ended with code %errorlevel% > \"${result.absolutePath}\"",
+            ).joinToString("\r\n") + "\r\n",
+        )
+        try {
+            ProcessBuilder("cmd.exe", "/c", "start", "ProIPTV update", "/min", script.absolutePath).start()
+        } catch (e: java.io.IOException) {
+            Log.write("Update: the update script did not start: ${e.message}")
+            throw UpdateException(UpdateException.Code.INSTALL_FAILED, "${e.message} (${file.absolutePath})")
         }
-        throw UpdateException(UpdateException.Code.INSTALL_FAILED, "$last (${file.absolutePath})")
+        delay(700)
     }
 
     private fun sha256(file: File): String {
@@ -84,6 +102,14 @@ class Updater(private val downloader: UpdateDownloader = UpdateDownloader(Http.c
     }
 
     companion object {
+        /** At the start of the app: what the setup of an earlier update said, so a failed update can be seen in log.txt. */
+        fun reportLastResult() {
+            val result = File(Store.defaultDir(), "update-result.txt")
+            if (!result.isFile) return
+            Log.write("Update: " + runCatching { result.readText().trim() }.getOrDefault("no result") + " (details in update-setup.log)")
+            result.delete()
+        }
+
         const val LATEST_URL = "https://api.github.com/repos/kutlusoy/proiptv/releases/latest"
         const val RELEASES_URL = "https://api.github.com/repos/kutlusoy/proiptv/releases?per_page=30"
         private const val ACCEPT = "application/vnd.github+json"

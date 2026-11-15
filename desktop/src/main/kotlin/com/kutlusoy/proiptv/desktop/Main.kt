@@ -53,6 +53,7 @@ fun main() {
 private fun runApplication() = application {
     Log.trim()
     Log.write("ProIPTV ${AppInfo.label} started")
+    Updater.reportLastResult()
     val store = remember { Store(Store.defaultDir()).also { Strings.init(it.config.language) } }
     val scope = rememberCoroutineScope()
     val state = remember { AppState(store, scope) }
