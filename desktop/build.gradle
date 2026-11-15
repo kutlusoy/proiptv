@@ -27,7 +27,7 @@ tasks.register('syncShared', Copy) {
         include 'net/Http.kt', 'net/XtreamApi.kt', 'net/XtreamUrl.kt', 'net/StreamUrls.kt', 'net/Upstream.kt', 'net/Tmdb.kt', 'net/ProviderProblem.kt'
         include 'engine/*.kt'
         include 'update/Release.kt', 'update/UpdateDownloader.kt'
-        include 'ui/splash/SplashTimeline.kt', 'ui/splash/SplashParticles.kt'
+        include 'ui/splash/SplashTimeline.kt', 'ui/splash/SplashParticles.kt', 'ui/PlayerControls.kt'
     }
     into sharedDir
 }
