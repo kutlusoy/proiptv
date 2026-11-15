@@ -304,6 +304,24 @@ private fun ProgramDialog(vm: MainViewModel, channel: Item, p: Program, ids: Lis
                         modifier = Modifier.fillMaxWidth().focusHighlight(),
                     ) { Text(stringResource(R.string.rec_record)) }
                 }
+                if (future) {
+                    val existing by produceState<com.kutlusoy.proiptv.data.Reminder?>(null, p.id, message) { value = app.reminders.forProgram(channel.accountId, channel.remoteId, p.start * 1000) }
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                val have = existing
+                                if (have != null) {
+                                    app.reminders.remove(have.id)
+                                    message = null
+                                } else {
+                                    app.reminders.add(channel.accountId, channel.remoteId, channel.name, p.title.decodeEntities(), p.start * 1000)
+                                    message = ctx.getString(R.string.reminder_set)
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().focusHighlight(),
+                    ) { Text(stringResource(if (existing != null) R.string.reminder_remove_action else R.string.reminder_set_action)) }
+                }
                 message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             }
         },

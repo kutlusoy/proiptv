@@ -97,8 +97,24 @@ class MainActivity : AppCompatActivity() {
         vm.repo.sync.syncStaleGuides()
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openReminder(intent)
+    }
+
+    private fun openReminder(intent: android.content.Intent?) {
+        val account = intent?.getLongExtra(com.kutlusoy.proiptv.reminder.ReminderManager.EXTRA_ACCOUNT, -1L) ?: -1L
+        val channel = intent?.getStringExtra(com.kutlusoy.proiptv.reminder.ReminderManager.EXTRA_CHANNEL)
+        if (account >= 0 && channel != null) {
+            vm.openChannel(account, channel, intent.getStringExtra(com.kutlusoy.proiptv.reminder.ReminderManager.EXTRA_TITLE).orEmpty())
+            intent.removeExtra(com.kutlusoy.proiptv.reminder.ReminderManager.EXTRA_CHANNEL)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        openReminder(intent)
         enterImmersive()
         val systemTv = isTelevision(this)
         setContent {
@@ -112,6 +128,13 @@ class MainActivity : AppCompatActivity() {
 @Composable
 private fun AppRoot(vm: MainViewModel) {
     val request by vm.player.collectAsState()
+    // a reminder while the app is open: the app jumps to the channel
+    val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(Unit) {
+        androidx.lifecycle.RepeatOnLifecycleKt.repeatOnLifecycle(lifecycle, androidx.lifecycle.Lifecycle.State.STARTED) {
+            com.kutlusoy.proiptv.reminder.ReminderBus.events.collect { vm.openChannel(it.accountId, it.channelRemoteId, it.title) }
+        }
+    }
     val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
     var tab by rememberSaveable { mutableStateOf(Tab.values().firstOrNull { it.name == prefs.lastTab } ?: Tab.HOME) }
     LaunchedEffect(tab) { prefs.lastTab = tab.name }

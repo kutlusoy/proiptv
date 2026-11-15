@@ -37,7 +37,7 @@ sealed interface UpdateUi {
 }
 
 sealed interface PlayRequest {
-    data class Zap(val source: Source, val index: Int) : PlayRequest
+    data class Zap(val source: Source, val index: Int, val direct: Boolean = false) : PlayRequest
     data class Single(val target: PlayTarget, val fromStart: Boolean = false) : PlayRequest
 }
 
@@ -213,6 +213,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun stopRecording(id: Long) = (getApplication<Application>() as ProIptvApp).recordings.stop(id)
 
     fun deleteRecording(id: Long) = run { (getApplication<Application>() as ProIptvApp).recordings.delete(id) }
+
+    /** Opens a channel full screen, for a reminder. */
+    fun openChannel(accountId: Long, remoteId: String, title: String) {
+        viewModelScope.launch {
+            val item = repo.db.items().find(accountId, Kind.LIVE, remoteId) ?: return@launch
+            val cat = item.categoryRemoteId.ifEmpty { null }
+            val index = repo.db.items().livePosition(listOf(accountId), cat, accountId, item.ord)
+            player.value = PlayRequest.Zap(Source.Browse(Kind.LIVE, listOf(accountId), cat, ""), index, direct = true)
+            android.widget.Toast.makeText(app, app.getString(R.string.reminder_toast, title), android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
 
     fun refreshAll(restart: Boolean = false) {
         accounts.value.filter { it.enabled }.forEach {

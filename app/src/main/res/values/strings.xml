@@ -276,4 +276,10 @@
     <string name="update_install_now">Install now</string>
     <string name="update_installing_win">Starting the setup, the app closes.</string>
     <string name="continue_remove">Remove from continue watching</string>
+    <string name="reminder_channel">Reminder</string>
+    <string name="reminder_notification">Reminder: %1$s starts in 1 minute</string>
+    <string name="reminder_toast">%1$s starts in 1 minute</string>
+    <string name="reminder_set_action">Remind me 1 minute before</string>
+    <string name="reminder_remove_action">Remove the reminder</string>
+    <string name="reminder_set">Reminder set</string>
 </resources>

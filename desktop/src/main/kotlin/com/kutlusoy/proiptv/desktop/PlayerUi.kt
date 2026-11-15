@@ -472,6 +472,12 @@ private fun GuideDialog(state: AppState, controller: PlayerController, onClose: 
                         Text(p.title, fontWeight = if (running) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal)
                         Text(format.format(java.util.Date(p.start * 1000)) + " - " + format.format(java.util.Date(p.end * 1000)), style = MaterialTheme.typography.bodySmall)
                     }
+                    if (!running && entry != null) {
+                        val have = state.hasReminder(entry, p.start * 1000)
+                        androidx.compose.material3.TextButton(onClick = { state.toggleReminder(entry, p.title, p.start * 1000) }) {
+                            Text(t(if (have) "reminder_remove_action" else "reminder_set_action"), style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
                 }
                 Text(t("player_record_hint"), Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
                 message?.let { Text(it, Modifier.padding(top = 6.dp), color = Palette.WineSoft) }

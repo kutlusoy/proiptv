@@ -232,6 +232,34 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     }
 
     /** Called every few seconds: starts planned recordings when their time has come (the program has to be running). */
+    var reminderNotice by mutableStateOf<String?>(null)
+    var reminders by mutableStateOf(store.config.reminders)
+
+    fun hasReminder(e: Entry, startMs: Long) = reminders.any { it.account == e.accountId && it.channelId == e.remoteId && it.startMs == startMs }
+
+    fun toggleReminder(e: Entry, title: String, startMs: Long) {
+        store.update { c ->
+            val rest = c.reminders.filterNot { it.account == e.accountId && it.channelId == e.remoteId && it.startMs == startMs }
+            c.copy(reminders = if (rest.size == c.reminders.size) rest + ReminderDto(e.accountId, e.remoteId, e.name, title, startMs) else rest)
+        }
+        reminders = store.config.reminders
+    }
+
+    /** One minute before a show with a reminder the player jumps to its channel. */
+    fun checkReminders() {
+        val now = System.currentTimeMillis()
+        val due = reminders.filter { it.startMs - 60_000 <= now }
+        if (due.isEmpty()) return
+        store.update { c -> c.copy(reminders = c.reminders - due.toSet()) }
+        reminders = store.config.reminders
+        val last = due.filter { it.startMs > now - 5 * 60_000 }.maxByOrNull { it.startMs } ?: return
+        val entry = data.entries(Kind.LIVE).firstOrNull { it.accountId == last.account && it.remoteId == last.channelId } ?: return
+        if (compact) setCompact(false, windowRef?.bounds)
+        player = PlayRequest.Live(listOf(entry), 0)
+        reminderNotice = Strings.get("reminder_toast", last.title)
+        windowRef?.let { w -> runCatching { w.toFront(); w.requestFocus() } }
+    }
+
     fun checkScheduled() {
         if (recordingStore.all().none { it.status == RecStatus.SCHEDULED }) return
         recordingManager.startDue(System.currentTimeMillis()) { r ->

@@ -227,6 +227,12 @@ private fun DetailPanel(state: AppState, sel: Selected, channels: List<Entry>, o
                 Text(t("rec_record"), Modifier.padding(start = 6.dp))
             }
         }
+        if (future) {
+            val have = state.hasReminder(sel.entry, p.start * 1000)
+            OutlinedButton(onClick = { state.toggleReminder(sel.entry, p.title, p.start * 1000) }, Modifier.fillMaxWidth()) {
+                Text(t(if (have) "reminder_remove_action" else "reminder_set_action"))
+            }
+        }
         message?.let { Text(it, color = Palette.WineSoft) }
     }
 }

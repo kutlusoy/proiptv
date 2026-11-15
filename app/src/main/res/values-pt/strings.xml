@@ -53,4 +53,10 @@
     <string name="update_install_now">Instalar agora</string>
     <string name="update_installing_win">A iniciar a instalação, a app vai fechar.</string>
     <string name="continue_remove">Remover de continuar a ver</string>
+    <string name="reminder_channel">Lembretes</string>
+    <string name="reminder_notification">Lembrete: %1$s começa em 1 minuto</string>
+    <string name="reminder_toast">%1$s começa em 1 minuto</string>
+    <string name="reminder_set_action">Lembrar 1 minuto antes</string>
+    <string name="reminder_remove_action">Remover o lembrete</string>
+    <string name="reminder_set">Lembrete definido</string>
 </resources>

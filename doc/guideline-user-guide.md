@@ -274,3 +274,7 @@ M3U lists carry only a title, a picture and a group. Xtream providers often have
 3. Open a movie or a series. Plot, cast, director, genre, running time, rating, trailer and a backdrop picture appear.
 
 Only the cleaned title and the year of the title that you open are sent to TMDB, together with your key, nothing else. Without a key nothing is sent and the details show what the provider delivers. The answer is kept until the app is closed, so opening a title again does not ask again.
+
+## Reminder for a show
+
+In the program guide (the calendar button in the player, the EPG screen) a show that has not started yet offers **Remind me 1 minute before**. One minute before the show starts the app jumps to the channel and shows it full screen, so a show is not missed while you are busy with something else. A second tap removes the reminder. On Android the reminder is an alarm that also works when the app is closed: the app is then not opened by itself, a notification appears and a tap on it opens the channel (Android 13 and later ask for the permission to show notifications, a TV may not show notifications). On Windows the reminder works while the app is running; it brings the window to the front and opens the channel.

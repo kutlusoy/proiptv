@@ -24,6 +24,9 @@ data class AccountDto(
 )
 
 @Serializable
+data class ReminderDto(val account: String, val channelId: String, val channelName: String, val title: String, val startMs: Long)
+
+@Serializable
 data class FavoriteDto(val account: String, val kind: Int, val remoteId: String, val name: String, val listId: String = "")
 
 /** A favorites list. Live TV, movies and series each have their own lists. */
@@ -62,6 +65,7 @@ data class ConfigDto(
     val intro: Boolean = true,
     val history: List<String> = emptyList(),
     val hideAdult: Boolean = true,
+    val reminders: List<ReminderDto> = emptyList(),
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */

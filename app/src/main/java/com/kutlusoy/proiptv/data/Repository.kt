@@ -65,6 +65,7 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         db.favorites().deleteAccount(id)
         db.progress().deleteAccount(id)
         db.history().deleteAccount(id)
+        db.reminders().deleteAccount(id)
         db.recordings().deleteAccount(id)
         db.accounts().delete(id)
     }

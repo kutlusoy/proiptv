@@ -363,6 +363,27 @@ interface DownloadDao {
 }
 
 @Dao
+interface ReminderDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(reminder: Reminder): Long
+
+    @Query("SELECT * FROM reminders WHERE id = :id")
+    suspend fun get(id: Long): Reminder?
+
+    @Query("SELECT * FROM reminders WHERE accountId = :accountId AND channelRemoteId = :channel AND startMs = :startMs")
+    suspend fun find(accountId: Long, channel: String, startMs: Long): Reminder?
+
+    @Query("SELECT * FROM reminders")
+    suspend fun all(): List<Reminder>
+
+    @Query("DELETE FROM reminders WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("DELETE FROM reminders WHERE accountId = :accountId")
+    suspend fun deleteAccount(accountId: Long)
+}
+
+@Dao
 interface HistoryDao {
     @Query(
         "SELECT i.*, c.name AS listName FROM history h JOIN items i ON i.accountId = h.accountId AND i.kind = 0 AND i.remoteId = h.remoteId " +
