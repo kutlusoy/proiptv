@@ -59,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import com.kutlusoy.proiptv.ui.PlayerGlyph
 import com.kutlusoy.proiptv.ui.RoundControl
+import com.kutlusoy.proiptv.ui.TimeBar
+import com.kutlusoy.proiptv.ui.hoursMinutes
 
 /** Holds what is playing right now, so the screen and the keyboard shortcuts of the window use the same functions. */
 class PlayerController(private val state: AppState, private val request: PlayRequest) {
@@ -386,14 +388,22 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
                 androidx.compose.material3.TextButton(onClick = { controller.goLive() }) { Text("${t("player_live")}  -${clock(controller.behindMs)}") }
             }
         }
+        val liveEntry = controller.entries.getOrNull(controller.index)
+        val liveNow = if (controller.live && liveEntry != null) state.guide.nowNext(liveEntry.accountId, liveEntry.epgId, state.tick).first else null
         if (!controller.live && controller.length > 0) {
-            Text(clock(controller.position), style = MaterialTheme.typography.bodySmall)
-            Slider(
-                value = (controller.position.toFloat() / controller.length).coerceIn(0f, 1f),
-                onValueChange = { state.engine.seek((it * controller.length).toLong()); controller.poll() },
-                modifier = Modifier.weight(1f),
+            TimeBar(
+                fraction = controller.position.toFloat() / controller.length, left = hoursMinutes(0), right = hoursMinutes(controller.length),
+                mark = "-" + hoursMinutes(controller.length - controller.position), modifier = Modifier.weight(1f),
+                onSeek = { state.engine.seek((it * controller.length).toLong()); controller.poll() },
             )
-            Text(clock(controller.length), style = MaterialTheme.typography.bodySmall)
+        } else if (liveNow != null) {
+            val shortTime = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
+            val nowMs = state.tick * 1000
+            TimeBar(
+                fraction = (nowMs / 1000 - liveNow.start).toFloat() / (liveNow.end - liveNow.start).coerceAtLeast(1),
+                left = shortTime.format(java.util.Date(liveNow.start * 1000)), right = shortTime.format(java.util.Date(liveNow.end * 1000)),
+                mark = "-" + hoursMinutes((liveNow.end * 1000 - nowMs).coerceAtLeast(0)), modifier = Modifier.weight(1f),
+            )
         } else {
             Box(Modifier.weight(1f))
         }
@@ -463,6 +473,8 @@ private fun GuideDialog(state: AppState, controller: PlayerController, onClose: 
                             val item = entry?.let { state.livePlayable(it) } ?: return@clickable
                             message = if (running) {
                                 controller.record(p.end * 1000 + 60_000 - System.currentTimeMillis()) ?: Strings.get("rec_status_recording")
+                            } else if (!state.recordingManager.fits(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000)) {
+                                Strings.get("rec_refused", item.maxConnections ?: 1)
                             } else {
                                 state.recordingManager.schedule(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000)
                                 Strings.get("rec_scheduled")

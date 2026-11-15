@@ -123,10 +123,16 @@ class RecordingManager(
         return id
     }
 
-    suspend fun conflicts(item: Item, startMs: Long, endMs: Long): Boolean {
-        val max = maxConnections(item.accountId) ?: return false
-        val others = db.recordings().overlapping(item.accountId, startMs, endMs).map { it.channelRemoteId }.filter { it != item.remoteId }.distinct()
-        return others.size + 1 > max
+    /** The connections the account allows at the same time, null when it is not known. */
+    suspend fun limit(accountId: Long): Int? = maxConnections(accountId)
+
+    /** Whether a recording of this channel fits next to the planned and running ones of the account. */
+    suspend fun fits(item: Item, startMs: Long, endMs: Long): Boolean {
+        val max = maxConnections(item.accountId) ?: return true
+        val others = db.recordings().overlapping(item.accountId, startMs, endMs).map {
+            com.kutlusoy.proiptv.engine.RecordingSlot(it.channelRemoteId, it.plannedStart ?: it.startedAt, it.plannedEnd ?: Long.MAX_VALUE)
+        }
+        return com.kutlusoy.proiptv.engine.RecordingSlots.fits(max, com.kutlusoy.proiptv.engine.RecordingSlot(item.remoteId, startMs, endMs), others)
     }
 
     suspend fun startScheduled(id: Long) {

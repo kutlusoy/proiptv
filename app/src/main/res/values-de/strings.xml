@@ -281,4 +281,7 @@
     <string name="reminder_set_action">1 Minute vorher erinnern</string>
     <string name="reminder_remove_action">Erinnerung entfernen</string>
     <string name="reminder_set">Erinnerung gesetzt</string>
+    <string name="timers_title">Timer</string>
+    <string name="timers_empty">Keine Timer gesetzt</string>
+    <string name="rec_refused">Nicht möglich: zu dieser Zeit würden mehr Aufnahmen laufen, als das Konto Verbindungen hat (%1$d).</string>
 </resources>

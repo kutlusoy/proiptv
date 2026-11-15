@@ -59,4 +59,7 @@
     <string name="reminder_set_action">ذكّرني قبل دقيقة</string>
     <string name="reminder_remove_action">إزالة التذكير</string>
     <string name="reminder_set">تم ضبط التذكير</string>
+    <string name="timers_title">المؤقتات</string>
+    <string name="timers_empty">لا توجد مؤقتات</string>
+    <string name="rec_refused">غير ممكن: في ذلك الوقت ستعمل تسجيلات أكثر من اتصالات الحساب (%1$d).</string>
 </resources>

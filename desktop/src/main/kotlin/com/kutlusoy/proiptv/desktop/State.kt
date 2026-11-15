@@ -235,6 +235,11 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     var reminderNotice by mutableStateOf<String?>(null)
     var reminders by mutableStateOf(store.config.reminders)
 
+    fun removeReminder(r: ReminderDto) {
+        store.update { c -> c.copy(reminders = c.reminders - r) }
+        reminders = store.config.reminders
+    }
+
     fun hasReminder(e: Entry, startMs: Long) = reminders.any { it.account == e.accountId && it.channelId == e.remoteId && it.startMs == startMs }
 
     fun toggleReminder(e: Entry, title: String, startMs: Long) {

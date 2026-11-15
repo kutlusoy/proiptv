@@ -281,4 +281,7 @@
     <string name="reminder_set_action">1 dakika önce hatırlat</string>
     <string name="reminder_remove_action">Hatırlatmayı kaldır</string>
     <string name="reminder_set">Hatırlatma ayarlandı</string>
+    <string name="timers_title">Zamanlayıcılar</string>
+    <string name="timers_empty">Ayarlı zamanlayıcı yok</string>
+    <string name="rec_refused">Mümkün değil: o saatte hesabın bağlantı sayısından (%1$d) fazla kayıt çalışırdı.</string>
 </resources>

@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kutlusoy.proiptv.parse.TitleParser
+import com.kutlusoy.proiptv.ui.ClockGlyph
 import com.kutlusoy.proiptv.parse.XmltvProgram
 import java.text.DateFormat
 import java.util.Date
@@ -70,6 +71,7 @@ fun EpgScreen(state: AppState) {
     var category by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<Selected?>(null) }
+    var timersOpen by remember { mutableStateOf(false) }
     val live = state.data.entries(Kind.LIVE)
     val categories = state.data.categories(Kind.LIVE)
     val q = query.trim()
@@ -110,6 +112,12 @@ fun EpgScreen(state: AppState) {
                 )
                 IconButton(onClick = { coroutines.launch { scroll.animateScrollTo((scroll.value - with(density) { (HOUR_WIDTH * 2).toPx().toInt() }).coerceAtLeast(0)) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, t("epg_earlier")) }
                 OutlinedButton(onClick = { jumpToNow() }) { Text(t("epg_now")) }
+                state.recordingStore.version
+                val timerCount = state.reminders.count { it.startMs > System.currentTimeMillis() } + state.recordingStore.all().count { it.status == RecStatus.SCHEDULED && (it.plannedStart ?: it.startedAt) > System.currentTimeMillis() }
+                OutlinedButton(onClick = { timersOpen = true }) {
+                    ClockGlyph(color = Color.White)
+                    Text("  " + t("timers_title") + if (timerCount > 0) " ($timerCount)" else "")
+                }
                 IconButton(onClick = { coroutines.launch { scroll.animateScrollTo(scroll.value + with(density) { (HOUR_WIDTH * 2).toPx().toInt() }) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, t("epg_later")) }
                 IconButton(onClick = { state.refreshGuide() }, enabled = !state.guideLoading) { Icon(Icons.Filled.Refresh, t("account_sync_guide")) }
             }
@@ -140,6 +148,15 @@ fun EpgScreen(state: AppState) {
                                             .then(if (isSel) Modifier.border(2.dp, Palette.WineSoft, RoundedCornerShape(6.dp)) else Modifier)
                                             .clickable { selected = Selected(e, p) }.padding(horizontal = 8.dp, vertical = 4.dp),
                                     ) {
+                                        state.recordingStore.version
+                                        val hasReminder = state.reminders.any { it.account == e.accountId && it.channelId == e.remoteId && it.startMs == p.start * 1000 }
+                                        val hasRecording = state.recordingStore.all().any { it.status == RecStatus.SCHEDULED && it.channelRemoteId == e.remoteId && it.account == e.accountId && kotlin.math.abs((it.plannedStart ?: 0L) + 30_000L - p.start * 1000) < 10_000L }
+                                        if (hasReminder || hasRecording) {
+                                            Row(Modifier.align(Alignment.TopEnd), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                if (hasRecording) Box(Modifier.size(11.dp).background(Color(0xFFE53935), androidx.compose.foundation.shape.CircleShape))
+                                                if (hasReminder) ClockGlyph(size = 15.dp)
+                                            }
+                                        }
                                         Column {
                                             Text(p.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, fontWeight = if (running) FontWeight.SemiBold else FontWeight.Normal)
                                             Text(clockOf(p.start) + " - " + clockOf(p.end), maxLines = 1, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
@@ -155,6 +172,7 @@ fun EpgScreen(state: AppState) {
         }
         selected?.let { sel -> DetailPanel(state, sel, channels) { selected = null } }
     }
+    if (timersOpen) TimersDialog(state) { timersOpen = false }
 }
 
 private fun clockOf(secs: Long): String = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(secs * 1000))
@@ -220,6 +238,7 @@ private fun DetailPanel(state: AppState, sel: Selected, channels: List<Entry>, o
                 message = when {
                     item == null -> Strings.get("epg_empty")
                     running -> recordNow(state, item, p)
+                    !state.recordingManager.fits(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000) -> Strings.get("rec_refused", item.maxConnections ?: 1)
                     else -> { state.recordingManager.schedule(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000); Strings.get("rec_scheduled") }
                 }
             }, Modifier.fillMaxWidth()) {

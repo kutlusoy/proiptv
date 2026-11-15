@@ -42,6 +42,9 @@ class ReminderManager(private val app: Application, private val db: AppDatabase)
         db.reminders().delete(id)
     }
 
+    /** Reminders whose show has begun are used up. */
+    suspend fun removeExpired() = db.reminders().deleteBefore(System.currentTimeMillis())
+
     suspend fun rescheduleAll() {
         val now = System.currentTimeMillis()
         for (r in db.reminders().all()) {

@@ -59,4 +59,7 @@
     <string name="reminder_set_action">Напомнить за 1 минуту</string>
     <string name="reminder_remove_action">Убрать напоминание</string>
     <string name="reminder_set">Напоминание установлено</string>
+    <string name="timers_title">Таймеры</string>
+    <string name="timers_empty">Таймеры не заданы</string>
+    <string name="rec_refused">Невозможно: в это время шло бы больше записей, чем подключений у аккаунта (%1$d).</string>
 </resources>

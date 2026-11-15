@@ -35,6 +35,7 @@ import okio.Buffer
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -233,16 +234,16 @@ class RecordingTest {
     }
 
     @Test
-    fun conflictsConsiderTheConnectionLimitAndOtherChannels() = runBlocking {
+    fun fitsConsiderTheConnectionLimitAndOtherChannels() = runBlocking {
         val now = System.currentTimeMillis()
         manager.schedule(live("10"), "a", now + 1_000, now + 3_600_000)
         limit = 1
-        assertTrue(manager.conflicts(live("11", "Eleven"), now + 10_000, now + 20_000))
-        assertTrue(!manager.conflicts(live("10"), now + 10_000, now + 20_000))
-        assertTrue(!manager.conflicts(live("11", "Eleven"), now + 4_000_000, now + 5_000_000))
+        assertFalse(manager.fits(live("11", "Eleven"), now + 10_000, now + 20_000))
+        assertTrue(manager.fits(live("10"), now + 10_000, now + 20_000))
+        assertTrue(manager.fits(live("11", "Eleven"), now + 4_000_000, now + 5_000_000))
         limit = 2
-        assertTrue(!manager.conflicts(live("11", "Eleven"), now + 10_000, now + 20_000))
+        assertTrue(manager.fits(live("11", "Eleven"), now + 10_000, now + 20_000))
         limit = null
-        assertTrue(!manager.conflicts(live("11", "Eleven"), now + 10_000, now + 20_000))
+        assertTrue(manager.fits(live("11", "Eleven"), now + 10_000, now + 20_000))
     }
 }

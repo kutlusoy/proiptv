@@ -59,4 +59,7 @@
     <string name="reminder_set_action">1 minuut vooraf herinneren</string>
     <string name="reminder_remove_action">Herinnering verwijderen</string>
     <string name="reminder_set">Herinnering ingesteld</string>
+    <string name="timers_title">Timers</string>
+    <string name="timers_empty">Geen timers ingesteld</string>
+    <string name="rec_refused">Niet mogelijk: op dat moment zouden er meer opnames lopen dan het account verbindingen heeft (%1$d).</string>
 </resources>

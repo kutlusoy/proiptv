@@ -59,4 +59,7 @@
     <string name="reminder_set_action">Lembrar 1 minuto antes</string>
     <string name="reminder_remove_action">Remover o lembrete</string>
     <string name="reminder_set">Lembrete definido</string>
+    <string name="timers_title">Temporizadores</string>
+    <string name="timers_empty">Nenhum temporizador definido</string>
+    <string name="rec_refused">Não é possível: nessa hora haveria mais gravações do que ligações da conta (%1$d).</string>
 </resources>
