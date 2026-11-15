@@ -197,20 +197,26 @@ interface ProgramDao {
 
 @Dao
 interface FavoriteDao {
-    @Query("SELECT * FROM favorite_lists ORDER BY ord, id")
+    @Query("SELECT * FROM favorite_lists ORDER BY builtin DESC, lower(name), id")
     fun lists(): Flow<List<FavoriteList>>
 
-    @Query("SELECT DISTINCT kind FROM favorite_lists")
-    suspend fun listKinds(): List<Int>
+    @Query("SELECT DISTINCT kind FROM favorite_lists WHERE builtin = 1")
+    suspend fun builtinKinds(): List<Int>
+
+    @Query("UPDATE favorite_lists SET name = :name WHERE builtin = 1")
+    suspend fun nameBuiltin(name: String)
 
     @Insert
     suspend fun insertList(list: FavoriteList): Long
 
-    @Query("UPDATE favorite_lists SET name = :name WHERE id = :id")
+    @Query("UPDATE favorite_lists SET name = :name WHERE id = :id AND builtin = 0")
     suspend fun renameList(id: Long, name: String)
 
-    @Query("DELETE FROM favorite_lists WHERE id = :id")
+    @Query("DELETE FROM favorite_lists WHERE id = :id AND builtin = 0")
     suspend fun deleteList(id: Long)
+
+    @Query("SELECT COUNT(*) > 0 FROM favorite_lists WHERE id = :id AND builtin = 1")
+    suspend fun isBuiltin(id: Long): Boolean
 
     @Query("DELETE FROM favorites WHERE listId = :id")
     suspend fun deleteListEntries(id: Long)

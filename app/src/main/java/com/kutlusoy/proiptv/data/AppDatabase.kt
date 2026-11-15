@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Account::class, Category::class, Item::class, Program::class, FavoriteList::class, Favorite::class, Progress::class, Recording::class, Download::class, HistoryEntry::class],
-    version = 10,
+    version = 11,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -90,6 +90,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE favorite_lists ADD COLUMN builtin INTEGER NOT NULL DEFAULT 0")
+                // the list that the app created itself (still carrying the default name) becomes the fixed one
+                db.execSQL(
+                    "UPDATE favorite_lists SET builtin = 1 WHERE id IN (SELECT MIN(id) FROM favorite_lists " +
+                        "WHERE name IN ('Favoriten', 'Favorites', 'Favoritos', 'Favoris', 'Preferiti', 'Favoriler') GROUP BY kind)",
+                )
+            }
+        }
+
         val MIGRATION_8_9_SQL = listOf(
             "ALTER TABLE progress ADD COLUMN seriesRemoteId TEXT NOT NULL DEFAULT ''",
         )
@@ -144,6 +155,6 @@ abstract class AppDatabase : RoomDatabase() {
         )
 
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10).build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "proiptv.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11).build()
     }
 }

@@ -104,6 +104,7 @@ data class FavoriteList(
     val name: String,
     val ord: Int = 0,
     val kind: Int = 0,
+    val builtin: Boolean = false,
 )
 
 @Entity(
