@@ -42,7 +42,7 @@ import com.kutlusoy.proiptv.data.Kind
 
 internal data class TvVodEntry(val key: String, val label: String, val count: Int?)
 
-/** Android TV, movies and series: the lists in a column on the left (favorites, continue watching, all, the categories with their number of titles). */
+/** Android TV (live TV, movies and series): the lists in a column on the left (favorites, continue watching, all, the categories with their number of titles). */
 @Composable
 internal fun TvVodSidebar(entries: List<TvVodEntry>, selected: String, onSelect: (String) -> Unit) {
     LazyColumn(Modifier.width(300.dp).fillMaxHeight().padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -63,11 +63,11 @@ internal fun TvVodSidebar(entries: List<TvVodEntry>, selected: String, onSelect:
 
 /** The name of the list, the sort buttons (bit 8 A to Z, bit 16 Z to A) and the search. */
 @Composable
-internal fun TvVodTopBar(title: String, sort: Int, onSort: (Int) -> Unit, searching: Boolean, onSearch: () -> Unit) {
+internal fun TvVodTopBar(showSort: Boolean, title: String, sort: Int, onSort: (Int) -> Unit, searching: Boolean, onSearch: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        FilterChip(selected = sort == 8, onClick = { onSort(8) }, label = { Text(stringResource(R.string.sort_az)) }, modifier = Modifier.focusHighlight())
-        FilterChip(selected = sort == 16, onClick = { onSort(16) }, label = { Text(stringResource(R.string.sort_za)) }, modifier = Modifier.focusHighlight())
+        if (showSort) FilterChip(selected = sort == 8, onClick = { onSort(8) }, label = { Text(stringResource(R.string.sort_az)) }, modifier = Modifier.focusHighlight())
+        if (showSort) FilterChip(selected = sort == 16, onClick = { onSort(16) }, label = { Text(stringResource(R.string.sort_za)) }, modifier = Modifier.focusHighlight())
         IconButton(onClick = onSearch, modifier = Modifier.focusHighlight()) {
             Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, stringResource(if (searching) R.string.action_close else R.string.live_search))
         }

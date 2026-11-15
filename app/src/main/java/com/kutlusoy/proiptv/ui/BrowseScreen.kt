@@ -185,7 +185,8 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
         else kotlinx.coroutines.flow.flowOf(emptyList())
     }.collectAsState(initial = emptyList())
 
-    val tvVod = LocalTv.current && kind != Kind.LIVE
+    val tvLists = LocalTv.current
+    val tvVod = tvLists && kind != Kind.LIVE
     val contLabel = stringResource(R.string.home_continue)
     val allLabel = stringResource(R.string.live_all)
     val favLabel = stringResource(R.string.fav_title)
@@ -224,7 +225,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     }
     val counts by vm.categoryCounts(ids, kind).collectAsState(initial = emptyList())
     Row(Modifier.fillMaxSize()) {
-    if (tvVod) {
+    if (tvLists) {
         val entries = options.map { (key, label) ->
             val n = when (key) {
                 FAV_KEY, CONT_KEY -> null
@@ -237,14 +238,15 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
         TvVodSidebar(entries, current) { select(it) }
     }
     Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 12.dp)) {
-        if (tvVod) {
+        if (tvLists) {
             TvVodTopBar(
+                showSort = tvVod,
                 title = options.firstOrNull { it.first == current }?.second ?: allLabel,
                 sort = quick and 24, onSort = { bit -> quick = if (quick and bit != 0) quick and bit.inv() else (quick and 24.inv()) or bit },
                 searching = searching, onSearch = { if (searching) { query = ""; searching = false } else searching = true },
             )
         }
-        if (!tvVod) Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!tvLists) Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DropdownField(
                 top = true,
                 selected = options.firstOrNull { it.first == current }?.second ?: allLabel,
