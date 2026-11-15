@@ -65,17 +65,41 @@ fun Logo(url: String?, modifier: Modifier = Modifier, scale: ContentScale = Cont
     }
 }
 
-/** What the user sees before the first account exists: what to do next, with the button for it. */
+/**
+ * What the user sees before the first account exists. On a TV the QR code is the first choice (the account is typed on the phone), otherwise
+ * the form comes first. Both ways are one click away.
+ */
 @Composable
 fun NoAccountsPane(vm: MainViewModel) {
+    val tv = LocalTv.current
+    var phone by remember { mutableStateOf(false) }
+    val first = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
     Centered {
         androidx.compose.foundation.layout.Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
             androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.main_no_accounts_title), style = MaterialTheme.typography.headlineMedium)
             androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.main_no_accounts_text), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.padding(vertical = 8.dp))
-            androidx.compose.material3.Button(onClick = { vm.requestedTab.value = "ACCOUNTS" }, modifier = Modifier.focusHighlight()) {
-                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.onboarding_add_account))
+            if (tv) {
+                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.onboarding_tv_hint), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.padding(bottom = 12.dp))
+            }
+            androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                val qr = @Composable { first: Modifier ->
+                    androidx.compose.material3.Button(onClick = { phone = true }, modifier = first.focusHighlight()) {
+                        androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.accounts_phone))
+                    }
+                }
+                val manual = @Composable { first: Modifier ->
+                    val style: @Composable () -> Unit = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(com.kutlusoy.proiptv.R.string.onboarding_add_account)) }
+                    if (tv) androidx.compose.material3.OutlinedButton(onClick = { vm.requestedTab.value = "ACCOUNTS" }, modifier = first.focusHighlight()) { style() }
+                    else androidx.compose.material3.Button(onClick = { vm.requestedTab.value = "ACCOUNTS" }, modifier = first.focusHighlight()) { style() }
+                }
+                if (tv) { qr(Modifier.focusRequester(first)); manual(Modifier) } else { manual(Modifier.focusRequester(first)); qr(Modifier) }
             }
         }
+    }
+    if (phone) {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        RemoteSetupDialog(vm, onAdded = { name -> phone = false; android.widget.Toast.makeText(ctx, ctx.getString(com.kutlusoy.proiptv.R.string.remote_added, name), android.widget.Toast.LENGTH_LONG).show() }, onDismiss = { phone = false })
     }
 }
 

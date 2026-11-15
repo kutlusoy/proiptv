@@ -35,4 +35,9 @@
     <string name="tv_live_badge">TV AO VIVO</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
+    <string name="settings_intro">Mostrar a introdução ao iniciar</string>
+    <string name="onboarding_tv_hint">Na TV o mais fácil: leia o código QR com o telemóvel e introduza a conta lá.</string>
+    <string name="settings_debug_log">Registo de depuração</string>
+    <string name="settings_debug_log_show">Mostrar registo</string>
+    <string name="settings_debug_log_hint">Apenas em compilações de depuração. O registo fica neste dispositivo, utilizadores, palavras-passe e endereços são ocultados.</string>
 </resources>

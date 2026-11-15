@@ -35,4 +35,9 @@
     <string name="tv_live_badge">ПРЯМОЙ ЭФИР</string>
     <string name="sort_az">А–Я</string>
     <string name="sort_za">Я–А</string>
+    <string name="settings_intro">Показывать заставку при запуске</string>
+    <string name="onboarding_tv_hint">На телевизоре проще всего: отсканируйте QR-код телефоном и введите аккаунт там.</string>
+    <string name="settings_debug_log">Журнал отладки</string>
+    <string name="settings_debug_log_show">Показать журнал</string>
+    <string name="settings_debug_log_hint">Только в отладочных сборках. Журнал остаётся на устройстве, имена, пароли и адреса скрыты.</string>
 </resources>

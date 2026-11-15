@@ -135,9 +135,19 @@ private fun AppRoot(vm: MainViewModel) {
         return
     }
 
-    // on a TV Back from any screen goes to the start page first, only there it asks whether to close the app
+    // on a TV the main menu folds away when live TV, movies or series are opened, so the lists get the whole width
+    var railOpen by rememberSaveable { mutableStateOf(true) }
+    // every other screen keeps the menu (it is also needed when a screen opens another one, e.g. the Add account button)
+    LaunchedEffect(tab) { if (tab != Tab.LIVE && tab != Tab.MOVIES && tab != Tab.SERIES) railOpen = true }
+    // on a TV Back first brings the main menu back, then goes to the start page, only there it asks whether to close the app
     val tvNow = LocalTv.current
-    BackHandler { if (tvNow && tab != Tab.HOME) tab = Tab.HOME else confirmExit = true }
+    BackHandler {
+        when {
+            tvNow && !railOpen -> { railOpen = true; railFocus = true }
+            tvNow && tab != Tab.HOME -> tab = Tab.HOME
+            else -> confirmExit = true
+        }
+    }
     BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
 
     val ctx = LocalContext.current
@@ -167,7 +177,23 @@ private fun AppRoot(vm: MainViewModel) {
             // without a Scaffold the default content colour is black: texts and icons (row titles, the search symbol) would not be seen
             CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
             Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                if (!chromeHidden.value) TvRail(tab, exit, railFocus, { railFocus = false }) { tab = it }
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = railOpen && !chromeHidden.value,
+                    enter = androidx.compose.animation.expandHorizontally(),
+                    exit = androidx.compose.animation.shrinkHorizontally(),
+                ) {
+                    TvRail(tab, exit, railFocus, { railFocus = false }) {
+                        tab = it
+                        if (it == Tab.LIVE || it == Tab.MOVIES || it == Tab.SERIES) railOpen = false
+                    }
+                }
+                val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+                LaunchedEffect(railOpen) {
+                    if (!railOpen) {
+                        kotlinx.coroutines.delay(200)
+                        runCatching { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
+                    }
+                }
                 Box(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 36.dp, vertical = 24.dp)) { content() }
             }
             }

@@ -41,6 +41,7 @@ class ProIptvApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        DebugLog.init(this)
         val db = AppDatabase.create(this)
         val secrets = SecretBox()
         repo = Repository(db, secrets, SyncManager(db, secrets, scope))

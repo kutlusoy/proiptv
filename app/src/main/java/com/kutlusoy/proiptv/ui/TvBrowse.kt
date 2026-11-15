@@ -93,7 +93,8 @@ internal fun TvBrowseLayer(
     val source = lists.getOrNull(listPos)?.source
     val time = DateFormat.getTimeInstance(DateFormat.SHORT)
     Row(Modifier.fillMaxSize()) {
-        Column(Modifier.weight(LEFT).fillMaxHeight().background(Palette.Velvet)) {
+        // the TV cuts a little off the edges of the picture, so the list keeps a safe margin to the left, top and bottom
+        Column(Modifier.weight(LEFT).fillMaxHeight().background(Palette.Velvet).padding(start = 40.dp, top = 20.dp, bottom = 16.dp)) {
             Row(Modifier.fillMaxWidth().height(64.dp).background(Palette.WineDeep), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, Modifier.padding(start = 8.dp).size(36.dp), tint = Color.White)
                 Text(lists.getOrNull(listPos)?.name.orEmpty(), Modifier.weight(1f), color = Color.White, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -120,7 +121,7 @@ internal fun TvBrowseLayer(
             Row(Modifier.weight(TOP).fillMaxWidth()) {
                 // the window of the video
                 Spacer(Modifier.weight(VIDEO_OF_RIGHT).fillMaxHeight())
-                Column(Modifier.weight(1f - VIDEO_OF_RIGHT).fillMaxHeight().background(Palette.Surface).padding(16.dp), verticalArrangement = Arrangement.Center) {
+                Column(Modifier.weight(1f - VIDEO_OF_RIGHT).fillMaxHeight().background(Palette.Surface).padding(start = 16.dp, end = 32.dp, top = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.Center) {
                     Text(
                         stringResource(R.string.tv_live_badge), Modifier.background(Palette.Wine, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
                         color = Color.White, style = MaterialTheme.typography.labelLarge,
@@ -135,7 +136,7 @@ internal fun TvBrowseLayer(
             val programs by produceState<List<Program>?>(null, highlightedItem?.id) {
                 value = highlightedItem?.epgId?.let { vm.repo.guide(highlightedItem.accountId, it, 0, 2) } ?: emptyList()
             }
-            Column(Modifier.weight(1f - TOP).fillMaxWidth().background(Palette.Surface)) {
+            Column(Modifier.weight(1f - TOP).fillMaxWidth().background(Palette.Surface).padding(end = 32.dp, bottom = 16.dp)) {
                 val list = programs.orEmpty().filter { it.end > System.currentTimeMillis() / 1000 }
                 if (list.isEmpty()) {
                     Text(stringResource(R.string.epg_none), Modifier.padding(16.dp), color = Color.White.copy(alpha = 0.7f))

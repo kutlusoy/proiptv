@@ -16,10 +16,10 @@ A technical, performance and UI review of version 0.0.2 and what it led to. Stat
 | Adaptive size of the time shift buffer | done | a third of the free space at most, on Android and on Windows |
 | Stall detection of the hub data source | done | 12 s while connected but silent (was 30 s), 30 s while the hub reconnects, an immediate error when the hub gave up |
 | Provider errors to the UI | done | login (401, 403), connection limit (429, 509), blocked (451), not found (404, 410) are shown in words in the player and on the account card (`ProviderProblem`) |
-| Warm hubs for neighbouring channels | open | speeds up zapping, but every warm hub holds a provider connection, so it needs the connection budget of the account and a setting that is off by default. Planned for 0.0.4 with a device test |
-| Pre-connect for favorites | open | same reason as warm hubs |
-| Debug logging | open | Windows writes `log.txt` and `vlc.log`. Android: a small local log file for debug builds is planned, no external crash reporter |
-| Shared module for Android and Windows | open | the Windows module compiles the Android free sources of `app` (`syncShared`). A real Gradle module is the next step when the engine moves too |
+| Warm hubs for neighbouring channels | dropped | every warm hub holds a provider connection and a provider may count it as a second stream. Not built, see `guideline-todo.md` |
+| Pre-connect for favorites | dropped | same reason as warm hubs |
+| Debug logging | done (0.0.4) | Windows writes `log.txt` and `vlc.log`. Android debug builds write `debug-log.txt` (shown in the settings of debug builds, user names, passwords and addresses blacked out), no external crash reporter |
+| Shared module for Android and Windows | done (0.0.4) | Gradle module `core` (parsers, Xtream client, stream hub, update logic). Only the picture code (intro, round player controls) is still copied for Windows, see `guideline-todo.md` |
 | OkHttp debug interceptor, pool tuning | open | no measured problem yet |
 | Cold start | open | measure first (target under 4 s), then move work out of `Application.onCreate` |
 
@@ -47,7 +47,7 @@ Targets stay as in the product plan: cold start under 4 s, zapping under 1 s aft
 | Player: now and next, reconnect notice, audio and subtitles, time shift, recording | done (Windows now and next and reconnect notice new) |
 | Better error texts | done, see above |
 | Accessibility: descriptions for the icon buttons without text | done for the buttons found in this review |
-| Onboarding: QR setup as the first step | open: the empty state now points to the account screen, a first run flow with the QR code is planned |
+| Onboarding: QR setup as the first step | done (0.0.4): on a TV the empty state offers the QR code first |
 | Larger touch targets, visual polish | open, ongoing |
 
 ## Roadmap

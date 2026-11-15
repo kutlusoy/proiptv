@@ -28,6 +28,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.shape.CircleShape
@@ -177,6 +178,9 @@ private fun Context.findActivity(): Activity? {
 private class LeaseHolder {
     @Volatile
     var lease: HubLease? = null
+
+    /** The channel of the lease, to see whether the channel changed or only the same channel is opened again (retry, time shift). */
+    var key: String? = null
 }
 
 private const val LIVE_LAG_MS = 1500L
@@ -282,6 +286,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     DisposableEffect(exo) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
+                com.kutlusoy.proiptv.DebugLog.write("player error ${error.errorCodeName}: ${error.message} hub=${holder.lease?.hub?.lastError}")
                 if (error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED && !forceHls) {
                     forceHls = true
                     return
@@ -334,7 +339,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         exo.addListener(listener)
         onDispose {
             exo.removeListener(listener)
-            holder.lease?.close()
+            // leaving the player: the provider connection is closed at once, so an account with one connection can open the next channel
+            holder.lease?.closeNow()
             val t = active
             if (t != null && !t.live) {
                 val pos = exo.currentPosition
@@ -392,14 +398,18 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
 
     LaunchedEffect(active, reload, forceHls, shiftRequest) {
         val t = active ?: return@LaunchedEffect
-        holder.lease?.close()
+        // another channel: the old connection is cut at once (an account with one connection needs it). The same channel keeps its buffer.
+        val key = "${t.accountId}:${t.remoteId}"
+        if (holder.key != null && holder.key != key) holder.lease?.closeNow() else holder.lease?.close()
+        holder.key = key
         holder.lease = null
         hubActive = false
         val useHub = t.live && !forceHls && catchup == null && app.prefs.timeshift && isTransportStream(t.url)
         if (useHub) {
             val lease = try {
                 val max = vm.repo.maxConnections(t.accountId)
-                withContext(Dispatchers.IO) { app.engine.acquire(t.accountId, t.remoteId, t.title, max, Upstream.opener(t.url, t.userAgent)) }
+                // not cancellable: when the channel is switched fast, a finished acquire must not get lost (the connection would stay used for good)
+                withContext(Dispatchers.IO + kotlinx.coroutines.NonCancellable) { app.engine.acquire(t.accountId, t.remoteId, t.title, max, Upstream.opener(t.url, t.userAgent)) }
             } catch (e: BudgetExceeded) {
                 notice = ctx.getString(R.string.player_no_connection, e.limit, e.openTitles.joinToString(", "))
                 return@LaunchedEffect
@@ -510,17 +520,19 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         index = browseIndex
         playingList = browseList
     }
+    // up and down only move the highlight (and show its guide), the running picture stays
     fun browseStep(delta: Int) {
-        val next = (browseIndex + delta).coerceIn(0, browseCount - 1)
-        if (next == browseIndex) return
-        browseIndex = next
-        playHighlighted()
+        browseIndex = (browseIndex + delta).coerceIn(0, browseCount - 1)
     }
     fun confirmBrowse() {
         playHighlighted()
         tvBrowse = false
         overlay = true
         touched++
+    }
+    // OK on another channel starts it in the small window, OK on the running one opens the full screen
+    fun okInBrowser() {
+        if (browseList == playingList && browseIndex == index) confirmBrowse() else playHighlighted()
     }
     fun switchList(delta: Int) {
         if (browseLists.isEmpty()) return
@@ -589,12 +601,11 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 if (e.type != KeyEventType.KeyDown || dialogOpen) return@onPreviewKeyEvent false
                 if (tvBrowse) {
                     return@onPreviewKeyEvent when (e.key) {
-                        // up and down switch the channel of the shown list at once, the picture follows the highlight
                         Key.DirectionUp, Key.ChannelDown, Key.PageUp -> { browseStep(-1); true }
                         Key.DirectionDown, Key.ChannelUp, Key.PageDown -> { browseStep(1); true }
                         Key.DirectionLeft -> { switchList(-1); true }
                         Key.DirectionRight -> { switchList(1); true }
-                        Key.DirectionCenter, Key.Enter -> { confirmBrowse(); true }
+                        Key.DirectionCenter, Key.Enter -> { okInBrowser(); true }
                         else -> false
                     }
                 }
@@ -696,28 +707,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
         Fade(overlay, Modifier.align(Alignment.TopEnd)) {
             Row(Modifier.statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                val i = item
-                if (zapping && i != null) {
-                    val fav = Triple(i.accountId, i.kind, i.remoteId) in favKeys
-                    RoundControl(
-                        PlayerGlyph.STAR_ON.takeIf { fav } ?: PlayerGlyph.STAR_OFF,
-                        stringResource(if (fav) R.string.fav_remove else R.string.fav_add),
-                        {
-                            if (favLists.size <= 1) {
-                                val list = favLists.firstOrNull()
-                                if (list != null) {
-                                    if (fav) removeFavDialog = true else vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, true) }
-                                }
-                            } else {
-                                listsDialog = true
-                            }
-                        },
-                        diameter = 44.dp,
-                    )
-                }
-                OutlinedButton(onClick = { moreDialog = true }, modifier = Modifier.background(Color(0x99000000), CircleShape).focusHighlight()) {
-                    Text(stringResource(R.string.player_more), color = Color.White)
-                }
+                RoundControl(PlayerGlyph.GEAR, stringResource(R.string.player_more), { moreDialog = true }, diameter = 44.dp)
             }
         }
         Fade(overlay, Modifier.align(Alignment.BottomCenter)) {
@@ -753,29 +743,34 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     )
                 }
                 Box(Modifier.fillMaxWidth()) {
+                    // left: back to the live picture, right: the guide, in the middle: pause, stop (focused first) and record
                     Row(Modifier.align(Alignment.CenterStart), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        val i = item
-                        if (zapping && i?.epgId != null) {
-                            OutlinedButton(onClick = { guideDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_guide)) }
-                        }
                         if (hubActive) {
                             OutlinedButton(onClick = { goLive() }, enabled = behindMs >= LIVE_THRESHOLD_MS, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_live)) }
-                            RoundControl(
-                                if (recordingHere != null) PlayerGlyph.REC_STOP else PlayerGlyph.REC,
-                                stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record),
-                                { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
-                                diameter = 44.dp,
-                            )
                         }
                     }
                     val canSeek = active?.live == false || hubActive
                     Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.then(if (!canSeek) Modifier.focusRequester(first) else Modifier), diameter = 48.dp)
                         if (canSeek) {
                             RoundControl(
                                 if (playing) PlayerGlyph.PAUSE else PlayerGlyph.PLAY, stringResource(if (playing) R.string.player_pause else R.string.player_play),
-                                { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, Modifier.focusRequester(first), diameter = 48.dp,
+                                { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, diameter = 48.dp,
                             )
+                        }
+                        RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.focusRequester(first), diameter = 48.dp)
+                        if (hubActive) {
+                            RoundControl(
+                                if (recordingHere != null) PlayerGlyph.REC_STOP else PlayerGlyph.REC,
+                                stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record),
+                                { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
+                                diameter = 48.dp,
+                            )
+                        }
+                    }
+                    val i = item
+                    if (zapping && i?.epgId != null) {
+                        Row(Modifier.align(Alignment.CenterEnd)) {
+                            RoundControl(PlayerGlyph.GUIDE, stringResource(R.string.player_guide), { guideDialog = true }, diameter = 48.dp)
                         }
                     }
                 }
@@ -992,55 +987,6 @@ private fun Fade(visible: Boolean, modifier: Modifier = Modifier, content: @Comp
     val alpha by androidx.compose.animation.core.animateFloatAsState(if (visible) 1f else 0f, androidx.compose.animation.core.tween(140), label = "fade")
     if (visible || alpha > 0.01f) {
         Box(modifier.graphicsLayer { this.alpha = alpha }) { content() }
-    }
-}
-
-private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN, REC, REC_STOP, STAR_ON, STAR_OFF, MENU }
-
-@Composable
-private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, diameter: androidx.compose.ui.unit.Dp = 76.dp) {
-    var focused by remember { mutableStateOf(false) }
-    Box(
-        modifier.size(diameter).onFocusChanged { focused = it.hasFocus }
-            .background(Color(0xCC000000), CircleShape)
-            .border(if (focused) 3.dp else 1.5.dp, if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f), CircleShape)
-            .semantics { contentDescription = description }
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(Modifier.size(diameter * 0.4f)) {
-            val w = size.width
-            val h = size.height
-            when (glyph) {
-                PlayerGlyph.PLAY -> drawPath(Path().apply { moveTo(w * 0.12f, 0f); lineTo(w, h / 2); lineTo(w * 0.12f, h); close() }, Color.White)
-                PlayerGlyph.PAUSE -> {
-                    drawRect(Color.White, Offset(w * 0.08f, 0f), Size(w * 0.28f, h))
-                    drawRect(Color.White, Offset(w * 0.64f, 0f), Size(w * 0.28f, h))
-                }
-                PlayerGlyph.REC -> drawCircle(Color(0xFFFF3B30), radius = w / 2)
-                PlayerGlyph.REC_STOP -> drawRoundRect(Color(0xFFFF3B30), Offset(w * 0.06f, h * 0.06f), Size(w * 0.88f, h * 0.88f), androidx.compose.ui.geometry.CornerRadius(w * 0.12f))
-                PlayerGlyph.STAR_ON, PlayerGlyph.STAR_OFF -> {
-                    val cx = w / 2
-                    val cy = h / 2
-                    val star = Path().apply {
-                        for (k in 0 until 10) {
-                            val r = if (k % 2 == 0) w / 2 else w / 4.4f
-                            val a = Math.PI / 5 * k - Math.PI / 2
-                            val x = cx + (r * Math.cos(a)).toFloat()
-                            val y = cy + (r * Math.sin(a)).toFloat()
-                            if (k == 0) moveTo(x, y) else lineTo(x, y)
-                        }
-                        close()
-                    }
-                    if (glyph == PlayerGlyph.STAR_ON) drawPath(star, Color(0xFFFFC107))
-                    else drawPath(star, Color.White, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.09f))
-                }
-                PlayerGlyph.MENU -> for (k in 0..2) drawRoundRect(Color.White, Offset(0f, h * (0.08f + 0.36f * k)), Size(w, h * 0.14f), androidx.compose.ui.geometry.CornerRadius(h * 0.07f))
-                PlayerGlyph.UP -> drawPath(Path().apply { moveTo(w / 2, 0f); lineTo(w, h * 0.85f); lineTo(0f, h * 0.85f); close() }, Color.White)
-                PlayerGlyph.DOWN -> drawPath(Path().apply { moveTo(0f, h * 0.15f); lineTo(w, h * 0.15f); lineTo(w / 2, h); close() }, Color.White)
-                PlayerGlyph.STOP -> drawRoundRect(Color.White, Offset(w * 0.04f, h * 0.04f), Size(w * 0.92f, h * 0.92f), androidx.compose.ui.geometry.CornerRadius(w * 0.1f))
-            }
-        }
     }
 }
 

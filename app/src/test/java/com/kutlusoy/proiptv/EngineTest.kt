@@ -228,6 +228,16 @@ class EngineTest {
     }
 
     @Test
+    fun leavingClosesTheConnectionAtOnceSoTheNextChannelCanUseTheOnlyConnection() {
+        val manager = EngineManager(tmp.newFolder("hubs4"), scope, { 1L shl 16 }, graceMs = 60_000)
+        val a = manager.acquire(1, "10", "Ten", 1) { QueueStream() }
+        a.closeNow()
+        assertEquals(emptyList<String>(), manager.openKeys())
+        manager.acquire(1, "11", "Eleven", 1) { QueueStream() }.close()
+        manager.closeAll()
+    }
+
+    @Test
     fun managerSharesOneHubAndEnforcesTheConnectionLimit() {
         val manager = EngineManager(tmp.newFolder("hubs"), scope, { 1L shl 16 }, graceMs = 100)
         val a = manager.acquire(1, "10", "Ten", 1) { QueueStream() }

@@ -257,4 +257,9 @@
     <string name="tv_live_badge">CANLI TV</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
+    <string name="settings_intro">Başlangıçta girişi göster</string>
+    <string name="onboarding_tv_hint">Televizyonda en kolayı: QR kodunu telefonunuzla okutun ve hesabı orada girin.</string>
+    <string name="settings_debug_log">Hata ayıklama günlüğü</string>
+    <string name="settings_debug_log_show">Günlüğü göster</string>
+    <string name="settings_debug_log_hint">Yalnızca debug sürümlerinde. Günlük bu cihazda kalır, kullanıcı adları, parolalar ve adresler karartılır.</string>
 </resources>

@@ -60,6 +60,11 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
         item {
             Text(t("nav_settings"), style = MaterialTheme.typography.headlineMedium)
             Group(t("settings_group_general")) {
+                var intro by remember { mutableStateOf(state.store.config.intro) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("settings_intro"), Modifier.weight(1f))
+                    Switch(checked = intro, onCheckedChange = { intro = it; state.store.update { c -> c.copy(intro = it) } })
+                }
                 Text(t("settings_language"), style = MaterialTheme.typography.labelLarge)
                 DropdownField(
                     Strings.languages.firstOrNull { it.first == Strings.language }?.second ?: "English", Strings.languages,
