@@ -99,7 +99,11 @@ private fun runApplication() = application {
         icon = painterResource("icon.png"),
         onPreviewKeyEvent = { e ->
             val c = state.controller
-            if (c == null || e.type != KeyEventType.KeyDown) false
+            if (state.splash) {
+                // any key skips the intro
+                if (e.type == KeyEventType.KeyDown) state.splash = false
+                true
+            } else if (c == null || e.type != KeyEventType.KeyDown) false
             else when (e.key) {
                 Key.Escape -> { if (state.placement == WindowPlacement.Fullscreen) state.toggleFullscreen() else c.stop(); true }
                 Key.Spacebar -> { c.togglePause(); true }
@@ -116,7 +120,7 @@ private fun runApplication() = application {
         window.minimumSize = java.awt.Dimension(640, 420)
         ProIptvTheme {
             Surface(Modifier.fillMaxSize()) {
-                App(state, updater, update)
+                if (state.splash) SplashScreen { state.splash = false } else App(state, updater, update)
             }
         }
     }

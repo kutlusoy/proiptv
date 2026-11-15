@@ -35,6 +35,9 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     var movie by mutableStateOf<Entry?>(null)
     var controller by mutableStateOf<PlayerController?>(null)
 
+    /** The intro at the start of the program. */
+    var splash by mutableStateOf(true)
+
     /** What a list showed when the player was opened, so it looks the same after the player was closed: the search text per area and the scroll position per list view. */
     val browseQuery = HashMap<Int, String>()
     val scrollMemory = HashMap<String, IntArray>()
