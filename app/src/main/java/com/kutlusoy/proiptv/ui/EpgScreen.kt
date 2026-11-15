@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -96,7 +99,39 @@ fun EpgScreen(vm: MainViewModel) {
     val windowEnd = windowStart + SPAN_HOURS * 3600L
     val categories by (effective?.let { vm.categories(it, Kind.LIVE) } ?: flowOf(emptyList())).collectAsState(initial = emptyList())
     val q = query.trim()
-    val channels by remember(ids, category, q) { vm.guideChannels(ids, category, q, windowStart) }.collectAsState(initial = emptyList())
+    val phoneChannels by remember(ids, category, q) { vm.guideChannels(ids, category, q, windowStart) }.collectAsState(initial = emptyList())
+    // TV: the lists are a row of tabs on top, the grid shows every channel of the loaded list (also those without guide data)
+    val allLabel = stringResource(R.string.live_all)
+    val favListsNow by vm.favLists.collectAsState()
+    val tvLists by produceState(emptyList<BrowseList>(), enabled, favListsNow) { value = if (tv) browseListsFor(vm, enabled, favListsNow, allLabel) else emptyList() }
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    val tvSource = tvLists.getOrNull(tab)?.source
+    val tvChannels by remember(tvSource) {
+        when (tvSource) {
+            is Source.Favs -> vm.favoriteChannels(tvSource.listId)
+            is Source.Browse -> vm.liveChannels(tvSource.accountIds, tvSource.category)
+            null -> flowOf(emptyList())
+        }
+    }.collectAsState(initial = emptyList())
+    val channels = if (tv) tvChannels else phoneChannels
+    var focusedProgram by remember { mutableStateOf<Pair<Item, Program>?>(null) }
+
+    fun playChannel(channel: Item) {
+        if (tv && tvSource != null) {
+            vm.run {
+                val index = when (tvSource) {
+                    is Source.Favs -> tvChannels.indexOfFirst { it.id == channel.id }.coerceAtLeast(0)
+                    is Source.Browse -> vm.repo.db.items().livePosition(tvSource.accountIds, tvSource.category, channel.accountId, channel.ord)
+                }
+                vm.player.value = PlayRequest.Zap(tvSource, index)
+            }
+        } else {
+            vm.run {
+                val index = vm.repo.db.items().livePosition(ids, category, channel.accountId, channel.ord)
+                vm.player.value = PlayRequest.Zap(Source.Browse(Kind.LIVE, ids, category, ""), index)
+            }
+        }
+    }
     val scroll = rememberScrollState()
     val density = LocalDensity.current
     fun xOf(secs: Long): Dp = hourWidth * ((secs - windowStart).coerceAtLeast(0) / 3600f)
@@ -106,8 +141,10 @@ fun EpgScreen(vm: MainViewModel) {
     val timeFormat = remember { DateFormat.getTimeInstance(DateFormat.SHORT) }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
-            val allLabel = stringResource(R.string.live_all)
+        if (tv) {
+            TvEpgHeader(focusedProgram, tvLists, tab, timeFormat) { tab = it }
+        }
+        if (!tv) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
             val otherLabel = stringResource(R.string.live_other)
             if (effective != null && categories.isNotEmpty()) {
                 val options = buildList<Pair<String?, String>> {
@@ -134,14 +171,14 @@ fun EpgScreen(vm: MainViewModel) {
                 Text(stringResource(R.string.epg_now))
             }
         }
-        OutlinedTextField(
+        if (!tv) OutlinedTextField(
             query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
             placeholder = { Text(stringResource(R.string.epg_search)) },
             trailingIcon = {
                 if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, stringResource(R.string.action_close)) }
             },
         )
-        if (channels.isEmpty()) {
+        if (channels.isEmpty() && !tv) {
             Text(stringResource(R.string.epg_empty), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
         }
         Row(Modifier.fillMaxWidth().height(26.dp)) {
@@ -165,12 +202,7 @@ fun EpgScreen(vm: MainViewModel) {
                     Row(
                         Modifier.width(channelWidth).fillMaxHeight().padding(vertical = 2.dp).clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.surface)
                             .focusHighlight()
-                            .clickable {
-                                vm.run {
-                                    val index = vm.repo.db.items().livePosition(ids, category, channel.accountId, channel.ord)
-                                    vm.player.value = PlayRequest.Zap(Source.Browse(Kind.LIVE, ids, category, ""), index)
-                                }
-                            }.padding(horizontal = 6.dp),
+                            .clickable { playChannel(channel) }.padding(horizontal = 6.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Logo(channel.logo, Modifier.size(width = if (tv) 44.dp else 32.dp, height = 30.dp), name = channel.name)
@@ -190,8 +222,9 @@ fun EpgScreen(vm: MainViewModel) {
                                     Modifier.offset(x = xOf(from)).width((hourWidth * ((to - from) / 3600f) - 2.dp).coerceAtLeast(2.dp)).fillMaxHeight().padding(vertical = 2.dp)
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(if (running) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface)
+                                        .onFocusChanged { if (it.hasFocus) focusedProgram = channel to p }
                                         .focusHighlight()
-                                        .clickable { detail = channel to p }.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        .clickable { if (tv) playChannel(channel) else detail = channel to p }.padding(horizontal = 8.dp, vertical = 4.dp),
                                 ) {
                                     Column {
                                         Text(p.title.decodeEntities(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, fontWeight = if (running) FontWeight.SemiBold else FontWeight.Normal)
@@ -276,4 +309,31 @@ private fun ProgramDialog(vm: MainViewModel, channel: Item, p: Program, ids: Lis
         },
         dismissButton = { TextButton(onClick = onClose, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_close)) } },
     )
+}
+
+/** Android TV: what the focused show is (title, time, description) and the row of lists. Left and Right choose a list, OK loads it. */
+@Composable
+private fun TvEpgHeader(focused: Pair<Item, Program>?, lists: List<BrowseList>, selected: Int, timeFormat: DateFormat, onSelect: (Int) -> Unit) {
+    Column(Modifier.fillMaxWidth().height(132.dp).padding(vertical = 8.dp)) {
+        val p = focused?.second
+        if (p != null) {
+            Text(p.title.decodeEntities(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                TitleParser.parse(focused.first.name).title + "  \u00B7  " + timeFormat.format(Date(p.start * 1000)) + " - " + timeFormat.format(Date(p.end * 1000)),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary,
+            )
+            p.description?.takeIf { it.isNotBlank() }?.let { Text(it.decodeEntities(), style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis) }
+        }
+    }
+    androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        itemsIndexed(lists) { i, list ->
+            Text(
+                list.name, maxLines = 1,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                    .background(if (i == selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.45f) else Color.Transparent)
+                    .focusHighlight().clickable { onSelect(i) }.padding(horizontal = 14.dp, vertical = 8.dp),
+                fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
+            )
+        }
+    }
 }

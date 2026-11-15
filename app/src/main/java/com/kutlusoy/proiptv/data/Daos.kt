@@ -94,6 +94,9 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND name LIKE '%' || :q || '%' ORDER BY accountId, ord LIMIT :limit")
     suspend fun search(kind: Int, ids: List<Long>, q: String, limit: Int): List<Item>
 
+    @Query("SELECT * FROM items WHERE kind = 0 AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) ORDER BY accountId, ord LIMIT 400")
+    fun liveChannels(ids: List<Long>, cat: String?): Flow<List<Item>>
+
     @Query("SELECT * FROM items WHERE id = :id")
     suspend fun get(id: Long): Item?
 
@@ -222,6 +225,12 @@ interface FavoriteDao {
             "WHERE f.listId = :listId AND i.kind = 0",
     )
     suspend fun presentCount(listId: Long): Int
+
+    @Query(
+        "SELECT i.* FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
+            "WHERE f.listId = :listId AND i.kind = 0 ORDER BY f.sortKey",
+    )
+    fun channelItems(listId: Long): Flow<List<Item>>
 
     @Query("SELECT DISTINCT accountId, kind, remoteId FROM favorites")
     fun keys(): Flow<List<FavoriteKey>>

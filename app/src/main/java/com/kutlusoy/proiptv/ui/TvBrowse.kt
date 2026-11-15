@@ -44,6 +44,20 @@ import com.kutlusoy.proiptv.parse.TitleParser
 import com.kutlusoy.proiptv.parse.decodeEntities
 import java.text.DateFormat
 import java.util.Date
+import kotlinx.coroutines.flow.first
+
+/** The lists a TV screen can switch between: the favorites lists, all channels and the categories (with the account name when several accounts are on). */
+internal suspend fun browseListsFor(vm: MainViewModel, enabled: List<com.kutlusoy.proiptv.data.Account>, favLists: List<com.kutlusoy.proiptv.data.FavoriteList>, allLabel: String): List<BrowseList> {
+    val out = ArrayList<BrowseList>()
+    favLists.filter { it.kind == com.kutlusoy.proiptv.data.Kind.LIVE }.forEach { out += BrowseList(it.name, Source.Favs(it.id)) }
+    out += BrowseList(allLabel, Source.Browse(com.kutlusoy.proiptv.data.Kind.LIVE, enabled.map { it.id }, null, ""))
+    for (a in enabled) {
+        for (c in vm.repo.db.items().categories(a.id, com.kutlusoy.proiptv.data.Kind.LIVE).first()) {
+            out += BrowseList((if (enabled.size > 1) a.name + " \u00B7 " else "") + c.name.ifBlank { allLabel }, Source.Browse(com.kutlusoy.proiptv.data.Kind.LIVE, listOf(a.id), c.remoteId, ""))
+        }
+    }
+    return out
+}
 
 /** A list that the channel browser of the TV player can show: a favorites list, all channels or one category. */
 internal data class BrowseList(val name: String, val source: Source)

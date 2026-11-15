@@ -169,6 +169,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun categories(accountId: Long, kind: Int) = db.items().categories(accountId, kind)
 
+    fun liveChannels(ids: List<Long>, category: String?) = db.items().liveChannels(ids, category)
+
+    fun favoriteChannels(listId: Long) = db.favorites().channelItems(listId)
+
     fun guideChannels(ids: List<Long>, category: String?, query: String, from: Long) = db.programs().guideChannels(ids, category, query, from)
 
     fun guide(ids: List<Long>, category: String?, from: Long, to: Long, query: String) = db.programs().guide(ids, category, from, to, query)
