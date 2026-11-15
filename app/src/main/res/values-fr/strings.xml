@@ -264,4 +264,7 @@
     <string name="settings_debug_log_hint">Uniquement dans les versions de débogage. Le journal reste sur cet appareil, identifiants, mots de passe et adresses sont masqués.</string>
     <string name="history_title">Dernières chaînes</string>
     <string name="history_empty">Aucune chaîne regardée pour l\'instant</string>
+    <string name="player_compact">Petite fenêtre</string>
+    <string name="player_pin">Toujours au premier plan</string>
+    <string name="player_restore">Fenêtre normale</string>
 </resources>

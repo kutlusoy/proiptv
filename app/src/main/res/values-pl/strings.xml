@@ -42,4 +42,7 @@
     <string name="settings_debug_log_hint">Tylko w wersjach debug. Dziennik zostaje na tym urządzeniu, nazwy użytkowników, hasła i adresy są zaczernione.</string>
     <string name="history_title">Ostatnie kanały</string>
     <string name="history_empty">Nie oglądano jeszcze żadnych kanałów</string>
+    <string name="player_compact">Małe okno</string>
+    <string name="player_pin">Zawsze na wierzchu</string>
+    <string name="player_restore">Zwykłe okno</string>
 </resources>

@@ -42,4 +42,7 @@
     <string name="settings_debug_log_hint">Только в отладочных сборках. Журнал остаётся на устройстве, имена, пароли и адреса скрыты.</string>
     <string name="history_title">Последние каналы</string>
     <string name="history_empty">Каналы ещё не смотрели</string>
+    <string name="player_compact">Маленькое окно</string>
+    <string name="player_pin">Поверх всех окон</string>
+    <string name="player_restore">Обычное окно</string>
 </resources>

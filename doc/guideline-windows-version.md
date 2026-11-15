@@ -189,3 +189,7 @@ The Windows app is Compose for Desktop on the JVM, so the same module can run on
 | Update | the same download and checksum logic, then package manager or AppImage replacement | the same, then replace the app in `/Applications` |
 
 Order: Linux first (small steps: file naming, secret service, `.deb` and AppImage jobs, libVLC from the system), then macOS when a Mac is available for tests, because the video path and the notarization cannot be checked on a build server alone. Until then macOS and Linux are not supported, even though `./gradlew :desktop:run` may already start on them for development.
+
+## Small window
+
+The player button "Small window" (or the key P) turns the player into a borderless window that stays on top of other windows, so a spreadsheet can be used next to it. With the mouse over the window a strip appears at the top: drag it to move the window, choose a size (1/2, 1/4, 1/8, 1/16 of the screen, 16:9), switch "always on top" on or off, or go back to the normal window. The corner handles resize the window and keep the 16:9 proportion. Escape also returns to the normal window.

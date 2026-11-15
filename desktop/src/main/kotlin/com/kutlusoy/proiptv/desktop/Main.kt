@@ -84,7 +84,7 @@ private fun runApplication() = application {
     LaunchedEffect(state.placement) { windowState.placement = state.placement }
 
     // AWT cannot make a shown window undecorated, so the window is created again when full screen changes (the state lives in AppState)
-    androidx.compose.runtime.key(state.placement == WindowPlacement.Fullscreen) {
+    androidx.compose.runtime.key(state.placement == WindowPlacement.Fullscreen, state.compact) {
     Window(
         onCloseRequest = {
             state.recordingManager.stopAll()
@@ -95,7 +95,8 @@ private fun runApplication() = application {
         },
         title = "ProIPTV",
         state = windowState,
-        undecorated = state.placement == WindowPlacement.Fullscreen,
+        undecorated = state.placement == WindowPlacement.Fullscreen || state.compact,
+        alwaysOnTop = state.compact && state.pinned,
         icon = painterResource("icon.png"),
         onPreviewKeyEvent = { e ->
             val c = state.controller
@@ -105,7 +106,8 @@ private fun runApplication() = application {
                 true
             } else if (c == null || e.type != KeyEventType.KeyDown) false
             else when (e.key) {
-                Key.Escape -> { if (state.placement == WindowPlacement.Fullscreen) state.toggleFullscreen() else c.stop(); true }
+                Key.Escape -> { if (state.compact) { state.setCompact(false, state.windowRef?.bounds); true } else if (state.placement == WindowPlacement.Fullscreen) { state.toggleFullscreen(); true } else { c.stop(); true } }
+                Key.P -> { state.setCompact(!state.compact, state.windowRef?.bounds); true }
                 Key.Spacebar -> { c.togglePause(); true }
                 Key.F, Key.F11 -> { state.toggleFullscreen(); true }
                 Key.DirectionUp -> { c.zap(-1); true }
@@ -117,10 +119,17 @@ private fun runApplication() = application {
             }
         },
     ) {
-        window.minimumSize = java.awt.Dimension(640, 420)
+        state.windowRef = window
+        window.minimumSize = if (state.compact) java.awt.Dimension(240, 135) else java.awt.Dimension(640, 420)
+        androidx.compose.runtime.LaunchedEffect(state.compact) {
+            state.pendingBounds?.let { window.bounds = it; state.pendingBounds = null }
+        }
         ProIptvTheme {
             Surface(Modifier.fillMaxSize()) {
-                if (state.splash) SplashScreen { state.splash = false } else App(state, updater, update)
+                if (state.splash) SplashScreen { state.splash = false } else Box(Modifier.fillMaxSize()) {
+                    App(state, updater, update)
+                    if (state.compact && state.player != null) CompactOverlay(state)
+                }
             }
         }
     }

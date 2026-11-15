@@ -251,7 +251,27 @@ class AppState(val store: Store, val scope: CoroutineScope) {
 
     fun newAccountId(): String = UUID.randomUUID().toString()
 
+    var windowRef: java.awt.Window? = null
+    var compact by mutableStateOf(false)
+    var pinned by mutableStateOf(true)
+    private var normalBounds: java.awt.Rectangle? = null
+    var pendingBounds: java.awt.Rectangle? = null
+
+    /** The small borderless window for watching next to other work: always on top (pin), movable, resizable. */
+    fun setCompact(on: Boolean, bounds: java.awt.Rectangle?) {
+        if (on == compact) return
+        if (on) {
+            normalBounds = bounds
+            if (placement == WindowPlacement.Fullscreen) placement = WindowPlacement.Floating
+            pendingBounds = compactBounds(0.25, null)
+        } else {
+            pendingBounds = normalBounds
+        }
+        compact = on
+    }
+
     fun toggleFullscreen() {
+        if (compact) { compact = false; pendingBounds = normalBounds }
         placement = if (placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
     }
 }

@@ -264,4 +264,7 @@
     <string name="settings_debug_log_hint">Nur in Debug-Builds. Das Protokoll bleibt auf diesem Gerät, Benutzernamen, Passwörter und Adressen sind geschwärzt.</string>
     <string name="history_title">Letzte Sender</string>
     <string name="history_empty">Noch keine Sender angesehen</string>
+    <string name="player_compact">Kleines Fenster</string>
+    <string name="player_pin">Immer im Vordergrund</string>
+    <string name="player_restore">Normales Fenster</string>
 </resources>

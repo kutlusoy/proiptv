@@ -42,4 +42,7 @@
     <string name="settings_debug_log_hint">Alleen in debugversies. Het logboek blijft op dit apparaat, gebruikersnamen, wachtwoorden en adressen zijn zwartgemaakt.</string>
     <string name="history_title">Laatste zenders</string>
     <string name="history_empty">Nog geen zenders bekeken</string>
+    <string name="player_compact">Klein venster</string>
+    <string name="player_pin">Altijd op de voorgrond</string>
+    <string name="player_restore">Normaal venster</string>
 </resources>
