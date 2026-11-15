@@ -316,7 +316,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                     }
                 }
             } else {
-                LazyVerticalGrid(GridCells.Adaptive(if (LocalTv.current) 175.dp else 130.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LazyVerticalGrid(if (tvVod) GridCells.Fixed(4) else GridCells.Adaptive(if (LocalTv.current) 175.dp else 130.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(paged.itemCount, key = paged.itemKey { it.id }) { i ->
                         val item = paged[i] ?: return@items
                         PosterCard(item, favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { toggleFavorite(item) }) { if (item.kind == Kind.SERIES) series = item else movie = item }

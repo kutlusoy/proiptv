@@ -93,7 +93,7 @@ internal fun ContinuePane(vm: MainViewModel, kind: Int, favKeys: Set<Triple<Long
         Text(stringResource(R.string.live_no_results), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
     }
     LazyVerticalGrid(
-        GridCells.Adaptive(175.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp),
+        GridCells.Fixed(4), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items(items, key = { it.id }) { item ->
