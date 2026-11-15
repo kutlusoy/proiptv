@@ -1,0 +1,18 @@
+// The part of ProIPTV that does not depend on Android or on a window system: parsers, the Xtream client, stream addresses, the stream hub
+// (ring buffer, recorder), the update logic. The Android app and the Windows app both use it.
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+dependencies {
+    api 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+    api 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1'
+    api 'com.squareup.okhttp3:okhttp:4.12.0'
+    // XmlPullParser: Android has it built in, the Windows app brings kxml2
+    compileOnly 'net.sf.kxml:kxml2:2.3.0'
+}

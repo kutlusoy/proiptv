@@ -21,12 +21,9 @@ def sharedDir = layout.buildDirectory.dir('generated/shared')
 def stringsDir = layout.buildDirectory.dir('generated/strings')
 def infoDir = layout.buildDirectory.dir('generated/appinfo')
 
+// Only the picture code (Compose) is still copied from the app module: the intro timeline and the round player controls
 tasks.register('syncShared', Copy) {
     from(sharedRoot) {
-        include 'parse/Entities.kt', 'parse/M3uParser.kt', 'parse/TitleParser.kt', 'parse/XmltvParser.kt'
-        include 'net/Http.kt', 'net/XtreamApi.kt', 'net/XtreamUrl.kt', 'net/StreamUrls.kt', 'net/Upstream.kt', 'net/Tmdb.kt', 'net/ProviderProblem.kt'
-        include 'engine/*.kt'
-        include 'update/Release.kt', 'update/UpdateDownloader.kt'
         include 'ui/splash/SplashTimeline.kt', 'ui/splash/SplashParticles.kt', 'ui/PlayerControls.kt'
     }
     into sharedDir
@@ -74,6 +71,7 @@ tasks.named('compileKotlin') { dependsOn 'syncShared' }
 tasks.named('processResources') { dependsOn 'syncStrings', 'writeAppInfo', 'syncSplash' }
 
 dependencies {
+    implementation project(':core')
     implementation compose.desktop.currentOs
     implementation compose.material3
     implementation compose.materialIconsExtended
