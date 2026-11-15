@@ -84,7 +84,6 @@ fun BrowseScreen(state: AppState, kind: Int) {
     }
     var query by remember(kind) { mutableStateOf(state.browseQuery[kind] ?: "") }
     androidx.compose.runtime.LaunchedEffect(query) { state.browseQuery[kind] = query }
-    var hdOnly by remember(kind) { mutableStateOf(false) }
     var favOnly by remember(kind) { mutableStateOf(false) }
     var historyOnly by remember(kind) { mutableStateOf(false) }
     var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
@@ -105,9 +104,8 @@ fun BrowseScreen(state: AppState, kind: Int) {
     androidx.compose.runtime.LaunchedEffect(scrollKey) {
         androidx.compose.runtime.snapshotFlow { intArrayOf(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset) }.collect { state.scrollMemory["$scrollKey|g"] = it }
     }
-    val shown = remember(all, category, q, hdOnly, favOnly, state.favorites, state.guide, state.tick / 60) {
+    val shown = remember(all, category, q, favOnly, state.favorites, state.guide, state.tick / 60) {
         all.asSequence()
-            .filter { e -> !hdOnly || e.name.contains("HD", ignoreCase = true) || e.name.contains("4K", ignoreCase = true) }
             .filter { e -> !favOnly || state.isFavorite(e) }
             .filter { e ->
                 when {
@@ -163,11 +161,9 @@ fun BrowseScreen(state: AppState, kind: Int) {
         }
         if (kind == Kind.LIVE && !inFavorites) {
             Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!historyOnly) {
-                    androidx.compose.material3.FilterChip(selected = hdOnly, onClick = { hdOnly = !hdOnly }, label = { Text(t("filter_hd")) })
-                    androidx.compose.material3.FilterChip(selected = favOnly, onClick = { favOnly = !favOnly }, label = { Text(t("filter_favorites")) })
-                }
-                androidx.compose.material3.FilterChip(selected = historyOnly, onClick = { historyOnly = !historyOnly }, label = { Text(t("history_title")) })
+                // both stay in view, the one that is on can be switched to the other or off
+                androidx.compose.material3.FilterChip(selected = favOnly, onClick = { favOnly = !favOnly; if (favOnly) historyOnly = false }, label = { Text(t("filter_favorites")) })
+                androidx.compose.material3.FilterChip(selected = historyOnly, onClick = { historyOnly = !historyOnly; if (historyOnly) favOnly = false }, label = { Text(t("history_title")) })
             }
         }
         if (inFavorites && currentList != null) {
