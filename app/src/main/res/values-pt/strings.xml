@@ -48,4 +48,8 @@
     <string name="settings_group_content">Conteúdo</string>
     <string name="settings_hide_adult">Ocultar canais adultos</string>
     <string name="settings_hide_adult_hint">Oculta os títulos que o fornecedor Xtream marca como adultos. As listas são recarregadas quando isto é alterado.</string>
+    <string name="update_download">Baixar atualização</string>
+    <string name="update_ready">A atualização %1$s foi baixada e verificada. Instalar agora?</string>
+    <string name="update_install_now">Instalar agora</string>
+    <string name="update_installing_win">A iniciar a instalação, a app vai fechar.</string>
 </resources>

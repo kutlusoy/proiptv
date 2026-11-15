@@ -212,10 +212,11 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
     }
 
     suspend fun ensureDefaultLists(name: String) {
-        val have = db.favorites().listKinds().toSet()
+        val have = db.favorites().builtinKinds().toSet()
         for (kind in listOf(Kind.LIVE, Kind.MOVIE, Kind.SERIES)) {
-            if (kind !in have) db.favorites().insertList(FavoriteList(name = name, kind = kind))
+            if (kind !in have) db.favorites().insertList(FavoriteList(name = name, kind = kind, builtin = true))
         }
+        db.favorites().nameBuiltin(name)
     }
 
     suspend fun createList(name: String, kind: Int = Kind.LIVE): Long = db.favorites().insertList(FavoriteList(name = name.trim(), kind = kind))
@@ -223,6 +224,7 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
     suspend fun renameList(id: Long, name: String) = db.favorites().renameList(id, name.trim())
 
     suspend fun deleteList(id: Long) {
+        if (db.favorites().isBuiltin(id)) return
         db.favorites().deleteListEntries(id)
         db.favorites().deleteList(id)
     }

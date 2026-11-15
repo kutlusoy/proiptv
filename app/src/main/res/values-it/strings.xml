@@ -270,4 +270,8 @@
     <string name="settings_group_content">Contenuti</string>
     <string name="settings_hide_adult">Nascondi i canali per adulti</string>
     <string name="settings_hide_adult_hint">Nasconde i titoli che il fornitore Xtream contrassegna come per adulti. Le liste vengono ricaricate quando cambi l\'impostazione.</string>
+    <string name="update_download">Scarica l\'aggiornamento</string>
+    <string name="update_ready">L\'aggiornamento %1$s è scaricato e verificato. Installarlo ora?</string>
+    <string name="update_install_now">Installa ora</string>
+    <string name="update_installing_win">Avvio dell\'installazione, l\'app si chiude.</string>
 </resources>

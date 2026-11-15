@@ -38,6 +38,8 @@ sealed interface UpdateUi {
     data class UpToDate(val version: String) : UpdateUi
     data class Available(val release: ReleaseInfo) : UpdateUi
     data class Downloading(val percent: Int) : UpdateUi
+    data class Downloaded(val release: ReleaseInfo, val pkg: Updater.Package) : UpdateUi
+    data object Installing : UpdateUi
     data class Error(val code: UpdateException.Code, val detail: String?) : UpdateUi
 }
 
@@ -133,7 +135,7 @@ class UpdateState(private val updater: Updater, private val scope: kotlinx.corou
     var announce by mutableStateOf<ReleaseInfo?>(null)
 
     fun check(background: Boolean = false) {
-        if (ui is UpdateUi.Checking || ui is UpdateUi.Downloading) return
+        if (ui is UpdateUi.Checking || ui is UpdateUi.Downloading || ui is UpdateUi.Installing) return
         if (!background) ui = UpdateUi.Checking
         scope.launch {
             try {
@@ -157,16 +159,33 @@ class UpdateState(private val updater: Updater, private val scope: kotlinx.corou
         }
     }
 
-    fun install(release: ReleaseInfo) {
+    /** Step one: download and check the file. Nothing is started yet. */
+    fun download(release: ReleaseInfo) {
         ui = UpdateUi.Downloading(0)
         scope.launch {
             try {
-                val file = updater.download(release) { ui = UpdateUi.Downloading(it) }
-                Updater.runInstaller(file)
-                exitProcess(0)
+                val pkg = updater.download(release) { ui = UpdateUi.Downloading(it) }
+                ui = UpdateUi.Downloaded(release, pkg)
             } catch (e: UpdateException) {
                 ui = UpdateUi.Error(e.code, e.message)
             } catch (e: Exception) {
+                ui = UpdateUi.Error(UpdateException.Code.NETWORK, e.message)
+            }
+        }
+    }
+
+    /** Step two, when the person asks for it: the file is checked again and the setup is started, then the app ends. */
+    fun install(release: ReleaseInfo, pkg: Updater.Package) {
+        ui = UpdateUi.Installing
+        scope.launch {
+            try {
+                updater.install(pkg)
+                exitProcess(0)
+            } catch (e: UpdateException) {
+                Log.write("Update: ${e.code} ${e.message}")
+                ui = UpdateUi.Error(e.code, e.message)
+            } catch (e: Exception) {
+                Log.write("Update: ${e.message}")
                 ui = UpdateUi.Error(UpdateException.Code.INSTALL_FAILED, e.message)
             }
         }
@@ -198,7 +217,7 @@ private fun UpdateGroup(state: AppState, updater: Updater, update: UpdateState) 
             }
             Switch(checked = auto, onCheckedChange = { auto = it; state.store.update { c -> c.copy(autoUpdate = it) } })
         }
-        val busy = update.ui is UpdateUi.Checking || update.ui is UpdateUi.Downloading
+        val busy = update.ui is UpdateUi.Checking || update.ui is UpdateUi.Downloading || update.ui is UpdateUi.Installing
         OutlinedButton(onClick = { update.check() }, enabled = !busy) { Text(t("update_check")) }
         Hint(if (last > 0) t("update_last_check", java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(last))) else t("update_never"))
         when (val st = update.ui) {
@@ -207,8 +226,13 @@ private fun UpdateGroup(state: AppState, updater: Updater, update: UpdateState) 
             is UpdateUi.UpToDate -> Text(t("update_up_to_date", st.version), color = Palette.WineSoft)
             is UpdateUi.Available -> {
                 Text(t("update_available", st.release.version), color = Palette.WineSoft)
-                Button(onClick = { update.install(st.release) }) { Text(t("update_install")) }
+                Button(onClick = { update.download(st.release) }) { Text(t("update_download")) }
             }
+            is UpdateUi.Downloaded -> {
+                Text(t("update_ready", st.release.version), color = Palette.WineSoft)
+                Button(onClick = { update.install(st.release, st.pkg) }) { Text(t("update_install_now")) }
+            }
+            UpdateUi.Installing -> Text(t("update_installing_win"))
             is UpdateUi.Downloading -> {
                 Text(t("update_downloading", st.percent))
                 LinearProgressIndicator(progress = { st.percent / 100f }, modifier = Modifier.fillMaxWidth())

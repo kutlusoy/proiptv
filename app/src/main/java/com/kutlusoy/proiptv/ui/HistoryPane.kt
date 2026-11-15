@@ -73,3 +73,17 @@ fun HistoryPane(vm: MainViewModel) {
         }
     }
 }
+
+/** Shown on a TV while the cursor rests on live TV, movies or series in the main menu: the titles that were watched last. */
+@Composable
+fun TvPreview(vm: MainViewModel, kind: Int, onOpen: (com.kutlusoy.proiptv.data.Item) -> Unit) {
+    val favKeys by vm.favKeys.collectAsState()
+    androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+        Text(
+            stringResource(if (kind == com.kutlusoy.proiptv.data.Kind.LIVE) R.string.history_title else R.string.home_continue),
+            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 10.dp),
+        )
+        if (kind == com.kutlusoy.proiptv.data.Kind.LIVE) HistoryPane(vm)
+        else ContinuePane(vm, kind, favKeys, onToggleFavorite = {}, onOpen = onOpen)
+    }
+}

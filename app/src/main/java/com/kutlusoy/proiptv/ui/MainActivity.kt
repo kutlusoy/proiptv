@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import com.kutlusoy.proiptv.BuildConfig
 import com.kutlusoy.proiptv.R
 import com.kutlusoy.proiptv.data.Kind
+import androidx.compose.ui.focus.onFocusChanged
 import kotlinx.coroutines.launch
 
 private enum class Tab(val label: Int, val icon: ImageVector) {
@@ -120,6 +121,10 @@ private fun AppRoot(vm: MainViewModel) {
     val chromeHidden = remember { mutableStateOf(false) }
     var confirmExit by remember { mutableStateOf(false) }
     var railFocus by rememberSaveable { mutableStateOf(true) }
+    // on a TV the main menu folds away when live TV, movies or series are opened, so the lists get the whole width
+    var railOpen by rememberSaveable { mutableStateOf(true) }
+    // the menu item the cursor rests on: live TV, movies and series show their last watched titles there already
+    var focusedTab by rememberSaveable { mutableStateOf<Tab?>(null) }
     if (confirmExit) {
         val activity = androidx.activity.compose.LocalActivity.current
         androidx.compose.material3.AlertDialog(
@@ -132,12 +137,16 @@ private fun AppRoot(vm: MainViewModel) {
 
     request?.let { r ->
         val tvNow = LocalTv.current
-        key(r) { PlayerScreen(vm, r) { if (tvNow && r is PlayRequest.Zap) vm.historyOnReturn = true; vm.player.value = null } }
+        key(r) {
+            PlayerScreen(vm, r) {
+                // back from a TV channel: live TV in the main menu with the last channels
+                if (tvNow && r is PlayRequest.Zap) { tab = Tab.LIVE; railOpen = true; railFocus = true; focusedTab = Tab.LIVE }
+                vm.player.value = null
+            }
+        }
         return
     }
 
-    // on a TV the main menu folds away when live TV, movies or series are opened, so the lists get the whole width
-    var railOpen by rememberSaveable { mutableStateOf(true) }
     // every other screen keeps the menu (it is also needed when a screen opens another one, e.g. the Add account button)
     LaunchedEffect(tab) { if (tab != Tab.LIVE && tab != Tab.MOVIES && tab != Tab.SERIES) railOpen = true }
     // on a TV Back first brings the main menu back, then goes to the start page, only there it asks whether to close the app
@@ -183,7 +192,7 @@ private fun AppRoot(vm: MainViewModel) {
                     enter = androidx.compose.animation.expandHorizontally(),
                     exit = androidx.compose.animation.shrinkHorizontally(),
                 ) {
-                    TvRail(tab, exit, railFocus, { railFocus = false }) {
+                    TvRail(tab, exit, railFocus, { railFocus = false }, { focusedTab = it }) {
                         tab = it
                         if (it == Tab.LIVE || it == Tab.MOVIES || it == Tab.SERIES) railOpen = false
                     }
@@ -195,7 +204,18 @@ private fun AppRoot(vm: MainViewModel) {
                         runCatching { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }
                     }
                 }
-                Box(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 36.dp, vertical = 24.dp)) { content() }
+                val previewTab = if (railOpen) (focusedTab?.takeIf { it.preview() } ?: tab.takeIf { it.preview() }) else null
+                Box(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 36.dp, vertical = 24.dp)) {
+                    if (previewTab != null) {
+                        TvPreview(vm, previewTab.kind(), onOpen = { item ->
+                            vm.pendingOpen.value = item
+                            tab = if (item.kind == Kind.SERIES) Tab.SERIES else Tab.MOVIES
+                            railOpen = false
+                        })
+                    } else {
+                        content()
+                    }
+                }
             }
             }
         }
@@ -268,8 +288,16 @@ private fun AppRoot(vm: MainViewModel) {
     }
 }
 
+private fun Tab.preview() = this == Tab.LIVE || this == Tab.MOVIES || this == Tab.SERIES
+
+private fun Tab.kind() = when (this) {
+    Tab.LIVE -> Kind.LIVE
+    Tab.MOVIES -> Kind.MOVIE
+    else -> Kind.SERIES
+}
+
 @Composable
-private fun TvRail(selected: Tab, exit: () -> Unit, takeFocus: Boolean, onFocusTaken: () -> Unit, onSelect: (Tab) -> Unit) {
+private fun TvRail(selected: Tab, exit: () -> Unit, takeFocus: Boolean, onFocusTaken: () -> Unit, onFocused: (Tab) -> Unit, onSelect: (Tab) -> Unit) {
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         if (takeFocus) {
@@ -293,7 +321,7 @@ private fun TvRail(selected: Tab, exit: () -> Unit, takeFocus: Boolean, onFocusT
                         selectedTextColor = Color.White,
                         unselectedContainerColor = Color.Transparent,
                     ),
-                    modifier = Modifier.height(50.dp).then(if (selected == t) Modifier.focusRequester(first) else Modifier).focusHighlight(),
+                    modifier = Modifier.height(50.dp).then(if (selected == t) Modifier.focusRequester(first) else Modifier).onFocusChanged { if (it.hasFocus) onFocused(t) }.focusHighlight(),
                 )
             }
         }

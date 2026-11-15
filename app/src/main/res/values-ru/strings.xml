@@ -48,4 +48,8 @@
     <string name="settings_group_content">Контент</string>
     <string name="settings_hide_adult">Скрывать каналы для взрослых</string>
     <string name="settings_hide_adult_hint">Скрывает названия, которые поставщик Xtream помечает как для взрослых. При изменении списки загружаются заново.</string>
+    <string name="update_download">Скачать обновление</string>
+    <string name="update_ready">Обновление %1$s скачано и проверено. Установить сейчас?</string>
+    <string name="update_install_now">Установить сейчас</string>
+    <string name="update_installing_win">Запускается установка, приложение закроется.</string>
 </resources>

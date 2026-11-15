@@ -32,6 +32,11 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,14 +49,17 @@ internal data class TvVodEntry(val key: String, val label: String, val count: In
 
 /** Android TV (live TV, movies and series): the lists in a column on the left (favorites, continue watching, all, the categories with their number of titles). */
 @Composable
-internal fun TvVodSidebar(entries: List<TvVodEntry>, selected: String, onSelect: (String) -> Unit) {
+internal fun TvVodSidebar(entries: List<TvVodEntry>, selected: String, contentEntry: androidx.compose.ui.focus.FocusRequester, onSelect: (String) -> Unit) {
     LazyColumn(Modifier.width(300.dp).fillMaxHeight().padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         items(entries, key = { it.key }) { e ->
             val on = e.key == selected
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
                     .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.45f) else androidx.compose.ui.graphics.Color.Transparent)
-                    .focusHighlight().clickable { onSelect(e.key) }.padding(horizontal = 12.dp, vertical = 10.dp),
+                    .focusHighlight()
+                    // Right goes to the first entry of the content, not to the search or the menu above it
+                    .onPreviewKeyEvent { k -> k.type == KeyEventType.KeyDown && k.key == Key.DirectionRight && contentEntry.requestFocus() }
+                    .clickable { onSelect(e.key) }.padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(e.label, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = if (on) FontWeight.Bold else FontWeight.Normal)
@@ -63,7 +71,7 @@ internal fun TvVodSidebar(entries: List<TvVodEntry>, selected: String, onSelect:
 
 /** The name of the list, the sort buttons (bit 8 A to Z, bit 16 Z to A) and the search. */
 @Composable
-internal fun TvVodTopBar(showSort: Boolean, title: String, sort: Int, onSort: (Int) -> Unit, searching: Boolean, onSearch: () -> Unit) {
+internal fun TvVodTopBar(showSort: Boolean, title: String, sort: Int, onSort: (Int) -> Unit, searching: Boolean, onSearch: () -> Unit, menu: @Composable () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (showSort) FilterChip(selected = sort == 8, onClick = { onSort(8) }, label = { Text(stringResource(R.string.sort_az)) }, modifier = Modifier.focusHighlight())
@@ -71,6 +79,7 @@ internal fun TvVodTopBar(showSort: Boolean, title: String, sort: Int, onSort: (I
         IconButton(onClick = onSearch, modifier = Modifier.focusHighlight()) {
             Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, stringResource(if (searching) R.string.action_close else R.string.live_search))
         }
+        menu()
     }
 }
 
