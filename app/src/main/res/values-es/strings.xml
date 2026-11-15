@@ -248,4 +248,7 @@
     <string name="player_err_limit">El proveedor no permite más conexiones. Cierra otros streams o dispositivos de esta cuenta.</string>
     <string name="player_err_blocked">El proveedor bloquea esta emisión para tu red o región.</string>
     <string name="player_err_notfound">Este canal o título no está disponible en el proveedor.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Catch-up</string>
+    <string name="filter_favorites">Favoritos</string>
 </resources>

@@ -248,4 +248,7 @@
     <string name="player_err_limit">Le fournisseur n\'autorise plus de connexion. Fermez d\'autres flux ou appareils de ce compte.</string>
     <string name="player_err_blocked">Le fournisseur bloque ce flux pour votre réseau ou votre région.</string>
     <string name="player_err_notfound">Cette chaîne ou ce titre n\'est pas disponible chez le fournisseur.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Rattrapage</string>
+    <string name="filter_favorites">Favoris</string>
 </resources>

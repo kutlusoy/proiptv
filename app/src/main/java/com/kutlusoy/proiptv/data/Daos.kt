@@ -39,6 +39,11 @@ private const val NAME_OR_NOW_PLAYING =
         "WHERE p.accountId = items.accountId AND p.epgId = items.epgId AND p.start <= " + NOW_SECS + " AND p.`end` > " + NOW_SECS +
         " AND p.title LIKE '%' || :q || '%')))"
 
+/** Quick filters of the channel list: bit 1 HD, bit 2 catch-up available, bit 4 only favorites. */
+private const val QUICK_FILTERS =
+    " AND (:flags & 1 = 0 OR name LIKE '%HD%' OR name LIKE '%4K%') AND (:flags & 2 = 0 OR archiveDays > 0) " +
+        "AND (:flags & 4 = 0 OR EXISTS (SELECT 1 FROM favorites f WHERE f.accountId = items.accountId AND f.kind = items.kind AND f.remoteId = items.remoteId))"
+
 @Dao
 interface ItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -56,23 +61,23 @@ interface ItemDao {
     @Query(
         "SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
-            "AND " + NAME_OR_NOW_PLAYING + " ORDER BY accountId, ord",
+            "AND " + NAME_OR_NOW_PLAYING + QUICK_FILTERS + " ORDER BY accountId, ord",
     )
-    fun paging(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?): PagingSource<Int, Item>
+    fun paging(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, flags: Int): PagingSource<Int, Item>
 
     @Query(
         "SELECT COUNT(*) FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
-            "AND " + NAME_OR_NOW_PLAYING,
+            "AND " + NAME_OR_NOW_PLAYING + QUICK_FILTERS,
     )
-    suspend fun count(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?): Int
+    suspend fun count(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, flags: Int): Int
 
     @Query(
         "SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
-            "AND " + NAME_OR_NOW_PLAYING + " ORDER BY accountId, ord LIMIT 1 OFFSET :offset",
+            "AND " + NAME_OR_NOW_PLAYING + QUICK_FILTERS + " ORDER BY accountId, ord LIMIT 1 OFFSET :offset",
     )
-    suspend fun at(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, offset: Int): Item?
+    suspend fun at(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, flags: Int, offset: Int): Item?
 
     @Query(
         "SELECT COUNT(*) FROM items WHERE kind = 0 AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +

@@ -26,4 +26,7 @@
     <string name="player_err_limit">Поставщик не разрешает больше подключений. Закройте другие потоки или устройства этого аккаунта.</string>
     <string name="player_err_blocked">Поставщик блокирует этот поток для вашей сети или региона.</string>
     <string name="player_err_notfound">Этот канал или название недоступны у поставщика.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Архив</string>
+    <string name="filter_favorites">Избранное</string>
 </resources>

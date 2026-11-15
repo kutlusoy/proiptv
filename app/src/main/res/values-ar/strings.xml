@@ -26,4 +26,7 @@
     <string name="player_err_limit">لا يسمح المزوّد باتصال إضافي. أغلق البثوث أو الأجهزة الأخرى لهذا الحساب.</string>
     <string name="player_err_blocked">يحظر المزوّد هذا البث على شبكتك أو منطقتك.</string>
     <string name="player_err_notfound">هذه القناة أو العنوان غير متوفر لدى المزوّد.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">إعادة المشاهدة</string>
+    <string name="filter_favorites">المفضلة</string>
 </resources>

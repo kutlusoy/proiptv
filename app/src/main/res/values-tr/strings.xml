@@ -248,4 +248,7 @@
     <string name="player_err_limit">Sağlayıcı başka bağlantıya izin vermiyor. Bu hesabın diğer yayınlarını veya cihazlarını kapatın.</string>
     <string name="player_err_blocked">Sağlayıcı bu yayını ağınız veya bölgeniz için engelliyor.</string>
     <string name="player_err_notfound">Bu kanal veya başlık sağlayıcıda mevcut değil.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Geriye dönük</string>
+    <string name="filter_favorites">Favoriler</string>
 </resources>

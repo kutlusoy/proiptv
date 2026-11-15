@@ -82,6 +82,8 @@ fun BrowseScreen(state: AppState, kind: Int) {
     }
     var query by remember(kind) { mutableStateOf(state.browseQuery[kind] ?: "") }
     androidx.compose.runtime.LaunchedEffect(query) { state.browseQuery[kind] = query }
+    var hdOnly by remember(kind) { mutableStateOf(false) }
+    var favOnly by remember(kind) { mutableStateOf(false) }
     var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
     androidx.compose.runtime.LaunchedEffect(accountFilter) {
         // the chosen account is kept, so the list is the same after the player was closed
@@ -100,8 +102,10 @@ fun BrowseScreen(state: AppState, kind: Int) {
     androidx.compose.runtime.LaunchedEffect(scrollKey) {
         androidx.compose.runtime.snapshotFlow { intArrayOf(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset) }.collect { state.scrollMemory["$scrollKey|g"] = it }
     }
-    val shown = remember(all, category, q, state.favorites, state.guide, state.tick / 60) {
+    val shown = remember(all, category, q, hdOnly, favOnly, state.favorites, state.guide, state.tick / 60) {
         all.asSequence()
+            .filter { e -> !hdOnly || e.name.contains("HD", ignoreCase = true) || e.name.contains("4K", ignoreCase = true) }
+            .filter { e -> !favOnly || state.isFavorite(e) }
             .filter { e ->
                 when {
                     category == ALL_KEY -> true
@@ -153,6 +157,12 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, null) } },
             )
             IconButton(onClick = { state.reload() }, enabled = !state.loading && !state.guideLoading) { Icon(Icons.Filled.Refresh, t("settings_refresh")) }
+        }
+        if (kind == Kind.LIVE && !inFavorites) {
+            Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.FilterChip(selected = hdOnly, onClick = { hdOnly = !hdOnly }, label = { Text(t("filter_hd")) })
+                androidx.compose.material3.FilterChip(selected = favOnly, onClick = { favOnly = !favOnly }, label = { Text(t("filter_favorites")) })
+            }
         }
         if (inFavorites && currentList != null) {
             var menu by remember { mutableStateOf(false) }

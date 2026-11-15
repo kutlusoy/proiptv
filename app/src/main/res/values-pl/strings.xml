@@ -26,4 +26,7 @@
     <string name="player_err_limit">Dostawca nie zezwala na kolejne połączenie. Zamknij inne strumienie lub urządzenia tego konta.</string>
     <string name="player_err_blocked">Dostawca blokuje ten strumień dla Twojej sieci lub regionu.</string>
     <string name="player_err_notfound">Ten kanał lub tytuł nie jest dostępny u dostawcy.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Catch-up</string>
+    <string name="filter_favorites">Ulubione</string>
 </resources>

@@ -182,11 +182,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // the loaded pages of the last list per area are kept, so the list is the same (and at the same place) after the player was closed
     private val pagers = HashMap<Int, Pair<List<Any?>, kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>>>>()
 
-    fun pager(kind: Int, ids: List<Long>, category: String?, query: String): kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>> {
-        val key = listOf(kind, ids, category, query)
+    fun pager(kind: Int, ids: List<Long>, category: String?, query: String, flags: Int = 0): kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>> {
+        val key = listOf(kind, ids, category, query, flags)
         pagers[kind]?.takeIf { it.first == key }?.let { return it.second }
         val flow = Pager(PagingConfig(pageSize = 60, enablePlaceholders = false)) {
-            db.items().paging(kind, ids, category, query, null, null)
+            db.items().paging(kind, ids, category, query, null, null, flags)
         }.flow.cachedIn(viewModelScope)
         pagers[kind] = key to flow
         return flow

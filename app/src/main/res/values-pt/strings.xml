@@ -26,4 +26,7 @@
     <string name="player_err_limit">O fornecedor não permite mais ligações. Feche outras transmissões ou dispositivos desta conta.</string>
     <string name="player_err_blocked">O fornecedor bloqueia esta transmissão para a sua rede ou região.</string>
     <string name="player_err_notfound">Este canal ou título não está disponível no fornecedor.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Catch-up</string>
+    <string name="filter_favorites">Favoritos</string>
 </resources>

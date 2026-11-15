@@ -249,4 +249,7 @@
     <string name="player_err_limit">The provider allows no further connection. Close other streams or devices of this account.</string>
     <string name="player_err_blocked">The provider blocks this stream for your network or region.</string>
     <string name="player_err_notfound">This channel or title is not available at the provider.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Catch-up</string>
+    <string name="filter_favorites">Favorites</string>
 </resources>

@@ -26,4 +26,7 @@
     <string name="player_err_limit">De aanbieder staat geen extra verbinding toe. Sluit andere streams of apparaten van dit account.</string>
     <string name="player_err_blocked">De aanbieder blokkeert deze stream voor jouw netwerk of regio.</string>
     <string name="player_err_notfound">Deze zender of titel is niet beschikbaar bij de aanbieder.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Terugkijken</string>
+    <string name="filter_favorites">Favorieten</string>
 </resources>

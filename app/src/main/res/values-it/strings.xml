@@ -248,4 +248,7 @@
     <string name="player_err_limit">Il fornitore non consente altre connessioni. Chiudi altri stream o dispositivi di questo account.</string>
     <string name="player_err_blocked">Il fornitore blocca questo stream per la tua rete o regione.</string>
     <string name="player_err_notfound">Questo canale o titolo non è disponibile presso il fornitore.</string>
+    <string name="filter_hd">HD</string>
+    <string name="filter_catchup">Catch-up</string>
+    <string name="filter_favorites">Preferiti</string>
 </resources>

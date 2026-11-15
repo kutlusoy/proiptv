@@ -134,6 +134,8 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val effective = selected ?: enabled.singleOrNull()?.id
     var category by rememberSaveable(kind, effective) { mutableStateOf<String?>(prefs.browseCategory(kind, effective)) }
     var query by rememberSaveable(kind) { mutableStateOf("") }
+    // quick filters of the channel list (bit 1 HD, 2 catch-up, 4 favorites), not combined with the favorites view
+    var quick by rememberSaveable(kind) { mutableIntStateOf(0) }
     var favMode by rememberSaveable(kind) { mutableStateOf(prefs.browseFav(kind)) }
     var favList by rememberSaveable { mutableStateOf<Long?>(prefs.browseFavList(kind)) }
     LaunchedEffect(accountSel, effective, category, favMode, favList) { if (enabled.isNotEmpty()) prefs.saveBrowse(kind, accountSel, effective, category, favMode, favList) }
@@ -240,6 +242,17 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             )
         }
 
+        if (kind == Kind.LIVE && !favMode) {
+            androidx.compose.foundation.layout.Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(1 to R.string.filter_hd, 2 to R.string.filter_catchup, 4 to R.string.filter_favorites).forEach { (bit, label) ->
+                    androidx.compose.material3.FilterChip(
+                        selected = quick and bit != 0, onClick = { quick = quick xor bit },
+                        label = { Text(stringResource(label)) }, modifier = Modifier.focusHighlight(),
+                    )
+                }
+            }
+        }
+
         val useRows = kind != Kind.LIVE && !favMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
         if (favMode) {
             FavoritesPane(vm, kind, favList, onSelect = { favList = it }, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it })
@@ -251,9 +264,9 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             }
         } else {
             val cat = if (effective != null) category else null
-            val flow = remember(kind, ids, cat, query) { vm.pager(kind, ids, cat, query) }
+            val flow = remember(kind, ids, cat, query, quick) { vm.pager(kind, ids, cat, query, quick) }
             val paged = flow.collectAsLazyPagingItems()
-            val source = Source.Browse(kind, ids, cat, query)
+            val source = Source.Browse(kind, ids, cat, query, flags = quick)
             if (paged.itemCount == 0) {
                 Text(stringResource(R.string.live_no_results), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
             }
