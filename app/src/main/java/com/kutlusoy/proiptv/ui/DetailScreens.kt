@@ -59,6 +59,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -470,8 +471,7 @@ private fun DownloadButton(dl: Download?, onStart: () -> Unit, onRetry: () -> Un
     }
     OutlinedButton(
         onClick = { if (dl == null) onStart() else if (dl.status == DlStatus.FAILED) onRetry() },
-        enabled = dl == null || dl.status == DlStatus.FAILED,
-        modifier = Modifier.focusHighlight(),
+        modifier = Modifier.alpha(if (dl == null || dl.status == DlStatus.FAILED) 1f else 0.45f).focusHighlight(),
     ) { Text(label) }
 }
 

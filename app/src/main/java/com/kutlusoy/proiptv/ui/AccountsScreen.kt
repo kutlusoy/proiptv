@@ -44,6 +44,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -194,8 +195,8 @@ private fun AccountCard(
                     }
                     account.lastError?.let { Text(friendlyError(it), color = MaterialTheme.colorScheme.error) }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
-                        OutlinedButton(onClick = { vm.repo.sync.sync(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync)) }
-                        OutlinedButton(onClick = { vm.repo.sync.refreshGuide(account.id) }, enabled = state == null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_sync_guide)) }
+                        OutlinedButton(onClick = { if (state == null) vm.repo.sync.sync(account.id) }, modifier = Modifier.alpha(if (state == null) 1f else 0.45f).focusHighlight()) { Text(stringResource(R.string.account_sync)) }
+                        OutlinedButton(onClick = { if (state == null) vm.repo.sync.refreshGuide(account.id) }, modifier = Modifier.alpha(if (state == null) 1f else 0.45f).focusHighlight()) { Text(stringResource(R.string.account_sync_guide)) }
                         OutlinedButton(onClick = onEdit, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_edit)) }
                         OutlinedButton(onClick = onDelete, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
                     }
