@@ -47,5 +47,5 @@
     <string name="player_restore">Janela normal</string>
     <string name="settings_group_content">Conteúdo</string>
     <string name="settings_hide_adult">Ocultar canais adultos</string>
-    <string name="settings_hide_adult_hint">Oculta categorias e canais marcados como XXX ou adultos. As listas são recarregadas quando isto é alterado.</string>
+    <string name="settings_hide_adult_hint">Oculta os títulos que o fornecedor Xtream marca como adultos. As listas são recarregadas quando isto é alterado.</string>
 </resources>

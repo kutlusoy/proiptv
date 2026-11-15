@@ -47,5 +47,5 @@
     <string name="player_restore">Обычное окно</string>
     <string name="settings_group_content">Контент</string>
     <string name="settings_hide_adult">Скрывать каналы для взрослых</string>
-    <string name="settings_hide_adult_hint">Скрывает категории и каналы с пометкой XXX или для взрослых. При изменении списки загружаются заново.</string>
+    <string name="settings_hide_adult_hint">Скрывает названия, которые поставщик Xtream помечает как для взрослых. При изменении списки загружаются заново.</string>
 </resources>

@@ -269,5 +269,5 @@
     <string name="player_restore">Fenêtre normale</string>
     <string name="settings_group_content">Contenu</string>
     <string name="settings_hide_adult">Masquer les chaînes pour adultes</string>
-    <string name="settings_hide_adult_hint">Masque les catégories et chaînes marquées XXX ou adulte. Les listes sont rechargées lors d\'un changement.</string>
+    <string name="settings_hide_adult_hint">Masque les titres que le fournisseur Xtream marque comme adultes. Les listes sont rechargées lors d\'un changement.</string>
 </resources>

@@ -6,7 +6,6 @@ import com.kutlusoy.proiptv.net.XtreamApi
 import com.kutlusoy.proiptv.net.SeriesDetail
 import com.kutlusoy.proiptv.net.SeriesInfo
 import com.kutlusoy.proiptv.net.Tmdb
-import com.kutlusoy.proiptv.parse.AdultFilter
 import com.kutlusoy.proiptv.parse.TitleParser
 import com.kutlusoy.proiptv.net.VodInfo
 import com.kutlusoy.proiptv.net.XtreamEpisode
@@ -107,17 +106,16 @@ class Library(private val store: Store) {
             Triple(Kind.SERIES, "get_series_categories", "get_series"),
         )
         for ((kind, catAction, streamAction) in kinds) {
-            val adultCats = HashSet<String>()
             api.stream(catAction).use { s ->
                 s.items.forEach { o ->
-                    val c = Category(a.id, o.str("category_id").orEmpty(), o.str("category_name").orEmpty().decodeEntities())
-                    if (hide && AdultFilter.isAdult(c.name)) adultCats += c.id else categories.getOrPut(kind) { mutableListOf() } += c
+                    categories.getOrPut(kind) { mutableListOf() } +=
+                        Category(a.id, o.str("category_id").orEmpty(), o.str("category_name").orEmpty().decodeEntities())
                 }
             }
             api.stream(streamAction).use { s ->
                 for (o in s.items) {
                     val id = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
-                    if (hide && (o.str("category_id").orEmpty() in adultCats || o.str("is_adult") == "1")) continue
+                    if (hide && o.str("is_adult") == "1") continue
                     entries.getOrPut(kind) { mutableListOf() } += Entry(
                         a.id, kind, id, o.str("name").orEmpty().decodeEntities(), o.str("category_id").orEmpty(),
                         (o.str("stream_icon") ?: o.str("cover"))?.takeIf { it.isNotBlank() },
@@ -139,7 +137,6 @@ class Library(private val store: Store) {
             val groups = LinkedHashSet<String>()
             var n = 0
             for (e in M3uParser.parse(reader) { header -> header.epgUrl?.split(',')?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { m3uGuide[a.id] = it } }) {
-                if (store.config.hideAdult && AdultFilter.isAdult(e.group)) continue
                 val vod = e.url.contains("/movie/") || e.url.contains("/series/") || e.url.substringBefore('?').let { u -> VOD_EXT.any { x -> u.endsWith(x) } }
                 val kind = if (vod) Kind.MOVIE else Kind.LIVE
                 groups += "$kind|${e.group}"

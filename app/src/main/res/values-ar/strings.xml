@@ -47,5 +47,5 @@
     <string name="player_restore">نافذة عادية</string>
     <string name="settings_group_content">المحتوى</string>
     <string name="settings_hide_adult">إخفاء قنوات البالغين</string>
-    <string name="settings_hide_adult_hint">يخفي الفئات والقنوات المصنفة XXX أو للبالغين. تُعاد تحميل القوائم عند التغيير.</string>
+    <string name="settings_hide_adult_hint">يخفي العناوين التي يصنفها مزود Xtream على أنها للبالغين. تُعاد تحميل القوائم عند التغيير.</string>
 </resources>
