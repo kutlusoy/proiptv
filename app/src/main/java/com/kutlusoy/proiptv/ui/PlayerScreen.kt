@@ -28,6 +28,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.shape.CircleShape
@@ -699,28 +700,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
         Fade(overlay, Modifier.align(Alignment.TopEnd)) {
             Row(Modifier.statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                val i = item
-                if (zapping && i != null) {
-                    val fav = Triple(i.accountId, i.kind, i.remoteId) in favKeys
-                    RoundControl(
-                        PlayerGlyph.STAR_ON.takeIf { fav } ?: PlayerGlyph.STAR_OFF,
-                        stringResource(if (fav) R.string.fav_remove else R.string.fav_add),
-                        {
-                            if (favLists.size <= 1) {
-                                val list = favLists.firstOrNull()
-                                if (list != null) {
-                                    if (fav) removeFavDialog = true else vm.run { vm.repo.setFavorite(list.id, i.accountId, i.kind, i.remoteId, i.name, true) }
-                                }
-                            } else {
-                                listsDialog = true
-                            }
-                        },
-                        diameter = 44.dp,
-                    )
-                }
-                OutlinedButton(onClick = { moreDialog = true }, modifier = Modifier.background(Color(0x99000000), CircleShape).focusHighlight()) {
-                    Text(stringResource(R.string.player_more), color = Color.White)
-                }
+                RoundControl(PlayerGlyph.GEAR, stringResource(R.string.player_more), { moreDialog = true }, diameter = 44.dp)
             }
         }
         Fade(overlay, Modifier.align(Alignment.BottomCenter)) {
@@ -756,29 +736,34 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     )
                 }
                 Box(Modifier.fillMaxWidth()) {
+                    // left: back to the live picture, right: the guide, in the middle: pause, stop (focused first) and record
                     Row(Modifier.align(Alignment.CenterStart), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        val i = item
-                        if (zapping && i?.epgId != null) {
-                            OutlinedButton(onClick = { guideDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_guide)) }
-                        }
                         if (hubActive) {
                             OutlinedButton(onClick = { goLive() }, enabled = behindMs >= LIVE_THRESHOLD_MS, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_live)) }
-                            RoundControl(
-                                if (recordingHere != null) PlayerGlyph.REC_STOP else PlayerGlyph.REC,
-                                stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record),
-                                { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
-                                diameter = 44.dp,
-                            )
                         }
                     }
                     val canSeek = active?.live == false || hubActive
                     Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.then(if (!canSeek) Modifier.focusRequester(first) else Modifier), diameter = 48.dp)
                         if (canSeek) {
                             RoundControl(
                                 if (playing) PlayerGlyph.PAUSE else PlayerGlyph.PLAY, stringResource(if (playing) R.string.player_pause else R.string.player_play),
-                                { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, Modifier.focusRequester(first), diameter = 48.dp,
+                                { if (exo.isPlaying) exo.pause() else exo.play(); touched++ }, diameter = 48.dp,
                             )
+                        }
+                        RoundControl(PlayerGlyph.STOP, stringResource(R.string.player_stop), onClose, Modifier.focusRequester(first), diameter = 48.dp)
+                        if (hubActive) {
+                            RoundControl(
+                                if (recordingHere != null) PlayerGlyph.REC_STOP else PlayerGlyph.REC,
+                                stringResource(if (recordingHere != null) R.string.rec_stop else R.string.rec_record),
+                                { if (recordingHere != null) app.recordings.stop(recordingHere.id) else recordDialog = true },
+                                diameter = 48.dp,
+                            )
+                        }
+                    }
+                    val i = item
+                    if (zapping && i?.epgId != null) {
+                        Row(Modifier.align(Alignment.CenterEnd)) {
+                            RoundControl(PlayerGlyph.GUIDE, stringResource(R.string.player_guide), { guideDialog = true }, diameter = 48.dp)
                         }
                     }
                 }
@@ -998,7 +983,7 @@ private fun Fade(visible: Boolean, modifier: Modifier = Modifier, content: @Comp
     }
 }
 
-private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN, REC, REC_STOP, STAR_ON, STAR_OFF, MENU }
+private enum class PlayerGlyph { PLAY, PAUSE, STOP, UP, DOWN, REC, REC_STOP, STAR_ON, STAR_OFF, MENU, GEAR, GUIDE }
 
 @Composable
 private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, diameter: androidx.compose.ui.unit.Dp = 76.dp) {
@@ -1008,7 +993,8 @@ private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () ->
             .background(Color(0xCC000000), CircleShape)
             .border(if (focused) 3.dp else 1.5.dp, if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f), CircleShape)
             .semantics { contentDescription = description }
-            .clickable(onClick = onClick),
+            // no square focus frame: the round border shows the focus
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(diameter * 0.4f)) {
@@ -1042,6 +1028,23 @@ private fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () ->
                 PlayerGlyph.UP -> drawPath(Path().apply { moveTo(w / 2, 0f); lineTo(w, h * 0.85f); lineTo(0f, h * 0.85f); close() }, Color.White)
                 PlayerGlyph.DOWN -> drawPath(Path().apply { moveTo(0f, h * 0.15f); lineTo(w, h * 0.15f); lineTo(w / 2, h); close() }, Color.White)
                 PlayerGlyph.STOP -> drawRoundRect(Color.White, Offset(w * 0.04f, h * 0.04f), Size(w * 0.92f, h * 0.92f), androidx.compose.ui.geometry.CornerRadius(w * 0.1f))
+                PlayerGlyph.GEAR -> {
+                    // a gear: eight teeth around a ring
+                    val c = Offset(w / 2, h / 2)
+                    for (k in 0 until 8) {
+                        rotate(k * 45f, c) {
+                            drawRoundRect(Color.White, Offset(w * 0.4f, 0f), Size(w * 0.2f, h * 0.24f), androidx.compose.ui.geometry.CornerRadius(w * 0.04f))
+                        }
+                    }
+                    drawCircle(Color.White, radius = w * 0.34f, center = c, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.16f))
+                }
+                PlayerGlyph.GUIDE -> {
+                    // a calendar: frame, header bar, two rings
+                    drawRoundRect(Color.White, Offset(w * 0.04f, h * 0.14f), Size(w * 0.92f, h * 0.82f), androidx.compose.ui.geometry.CornerRadius(w * 0.1f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = w * 0.09f))
+                    drawRect(Color.White, Offset(w * 0.04f, h * 0.34f), Size(w * 0.92f, h * 0.09f))
+                    drawRoundRect(Color.White, Offset(w * 0.26f, 0f), Size(w * 0.1f, h * 0.3f), androidx.compose.ui.geometry.CornerRadius(w * 0.04f))
+                    drawRoundRect(Color.White, Offset(w * 0.64f, 0f), Size(w * 0.1f, h * 0.3f), androidx.compose.ui.geometry.CornerRadius(w * 0.04f))
+                }
             }
         }
     }

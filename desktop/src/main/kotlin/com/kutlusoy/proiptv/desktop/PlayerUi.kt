@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Star
@@ -359,9 +360,15 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (controller.canZap) IconButton(onClick = { controller.listOpen = !controller.listOpen }) { Icon(Icons.Filled.Menu, t("player_channel_list")) }
-        IconButton(onClick = { controller.stop() }) { Icon(Icons.Filled.Stop, t("player_stop")) }
         IconButton(onClick = { controller.togglePause() }) {
             Icon(if (controller.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, t(if (controller.paused) "player_play" else "player_pause"))
+        }
+        IconButton(onClick = { controller.stop() }) { Icon(Icons.Filled.Stop, t("player_stop")) }
+        if (controller.live) {
+            val recording = controller.recordingId != null
+            IconButton(onClick = { if (recording) controller.stopRecording() else recordOpen = true }) {
+                Icon(Icons.Filled.FiberManualRecord, t(if (recording) "rec_stop" else "rec_record"), tint = if (recording) Color(0xFFE53935) else LocalContentColor.current)
+            }
         }
         if (controller.canZap) {
             IconButton(onClick = { controller.zap(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("player_channel_prev")) }
@@ -372,19 +379,6 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             IconButton(enabled = controller.behindMs > 3_000, onClick = { controller.shift(30_000) }) { Icon(Icons.Filled.Forward30, t("player_forward_30")) }
             if (controller.behindMs > 3_000) {
                 androidx.compose.material3.TextButton(onClick = { controller.goLive() }) { Text("${t("player_live")}  -${clock(controller.behindMs)}") }
-            }
-        }
-        if (controller.live) {
-            controller.entries.getOrNull(controller.index)?.let { entry ->
-                val fav = state.isFavorite(entry)
-                IconButton(onClick = { state.toggleFavorite(entry) }) {
-                    Icon(if (fav) Icons.Filled.Star else Icons.Filled.StarBorder, t(if (fav) "fav_remove" else "fav_add"), tint = if (fav) Color(0xFFFFC107) else LocalContentColor.current)
-                }
-            }
-            IconButton(onClick = { guideOpen = true }) { Icon(Icons.Filled.Event, t("player_guide")) }
-            val recording = controller.recordingId != null
-            IconButton(onClick = { if (recording) controller.stopRecording() else recordOpen = true }) {
-                Icon(Icons.Filled.FiberManualRecord, t(if (recording) "rec_stop" else "rec_record"), tint = if (recording) Color(0xFFE53935) else LocalContentColor.current)
             }
         }
         if (floating) Text(controller.title, Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
@@ -401,7 +395,8 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         }
         Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp))
         Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(120.dp))
-        IconButton(onClick = { tracksOpen = true }) { Icon(Icons.Filled.Subtitles, t("player_tracks")) }
+        if (controller.live) IconButton(onClick = { guideOpen = true }) { Icon(Icons.Filled.Event, t("player_guide")) }
+        IconButton(onClick = { tracksOpen = true }) { Icon(Icons.Filled.Settings, t("player_more")) }
         IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) }
     }
 }
