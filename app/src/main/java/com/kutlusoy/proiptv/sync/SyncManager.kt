@@ -205,7 +205,7 @@ class SyncManager(
             for (o in s.items) {
                 val remote = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
                 val name = o.str("name").orEmpty().decodeEntities()
-                if (hide && o.str("category_id").orEmpty() in adultCats) continue
+                if (hide && (o.str("category_id").orEmpty() in adultCats || o.str("is_adult") == "1")) continue
                 val info = TitleParser.parse(name, groupNames[o.str("category_id").orEmpty()].orEmpty())
                 batch += Item(
                     accountId = account.id, kind = kind, remoteId = remote,

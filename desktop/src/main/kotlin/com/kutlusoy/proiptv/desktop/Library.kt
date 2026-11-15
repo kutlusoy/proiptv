@@ -117,7 +117,7 @@ class Library(private val store: Store) {
             api.stream(streamAction).use { s ->
                 for (o in s.items) {
                     val id = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
-                    if (hide && o.str("category_id").orEmpty() in adultCats) continue
+                    if (hide && (o.str("category_id").orEmpty() in adultCats || o.str("is_adult") == "1")) continue
                     entries.getOrPut(kind) { mutableListOf() } += Entry(
                         a.id, kind, id, o.str("name").orEmpty().decodeEntities(), o.str("category_id").orEmpty(),
                         (o.str("stream_icon") ?: o.str("cover"))?.takeIf { it.isNotBlank() },
