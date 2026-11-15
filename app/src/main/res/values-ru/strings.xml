@@ -29,4 +29,7 @@
     <string name="filter_hd">HD</string>
     <string name="filter_catchup">Архив</string>
     <string name="filter_favorites">Избранное</string>
+    <string name="player_fullscreen">Полный экран</string>
+    <string name="epg_earlier">Раньше</string>
+    <string name="epg_later">Позже</string>
 </resources>

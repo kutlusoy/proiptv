@@ -63,7 +63,7 @@ fun HomeScreen(state: AppState) {
             query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             placeholder = { Text(t("home_search")) },
             leadingIcon = { Icon(Icons.Filled.Search, null) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, null) } },
+            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
         )
         if (rows.isEmpty() && q.isEmpty() && (state.loading || state.guideLoading)) SkeletonRows()
         if (rows.isEmpty() && !(q.isEmpty() && (state.loading || state.guideLoading))) {

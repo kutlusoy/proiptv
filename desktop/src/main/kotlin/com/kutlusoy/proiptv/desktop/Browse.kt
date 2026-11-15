@@ -154,7 +154,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
             OutlinedTextField(
                 query, { query = it }, singleLine = true, modifier = Modifier.weight(0.55f),
                 placeholder = { Text(t(if (kind == Kind.LIVE) "live_search" else "live_search")) },
-                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, null) } },
+                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
             )
             IconButton(onClick = { state.reload() }, enabled = !state.loading && !state.guideLoading) { Icon(Icons.Filled.Refresh, t("settings_refresh")) }
         }

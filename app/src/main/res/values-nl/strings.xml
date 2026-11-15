@@ -29,4 +29,7 @@
     <string name="filter_hd">HD</string>
     <string name="filter_catchup">Terugkijken</string>
     <string name="filter_favorites">Favorieten</string>
+    <string name="player_fullscreen">Volledig scherm</string>
+    <string name="epg_earlier">Eerder</string>
+    <string name="epg_later">Later</string>
 </resources>

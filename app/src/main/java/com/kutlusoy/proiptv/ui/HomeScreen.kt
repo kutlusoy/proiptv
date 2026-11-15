@@ -189,7 +189,7 @@ fun HomeScreen(vm: MainViewModel) {
             query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             placeholder = { Text(stringResource(R.string.home_search)) },
             leadingIcon = { Icon(Icons.Filled.Search, null) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, null) } },
+            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, stringResource(R.string.action_close)) } },
         )
         val syncing by vm.syncState.collectAsState()
         if (rows.isEmpty() && q.length < 2 && syncing.isNotEmpty()) SkeletonRows()

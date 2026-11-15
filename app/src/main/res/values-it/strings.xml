@@ -251,4 +251,7 @@
     <string name="filter_hd">HD</string>
     <string name="filter_catchup">Catch-up</string>
     <string name="filter_favorites">Preferiti</string>
+    <string name="player_fullscreen">Schermo intero</string>
+    <string name="epg_earlier">Prima</string>
+    <string name="epg_later">Dopo</string>
 </resources>

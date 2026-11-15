@@ -29,4 +29,7 @@
     <string name="filter_hd">HD</string>
     <string name="filter_catchup">إعادة المشاهدة</string>
     <string name="filter_favorites">المفضلة</string>
+    <string name="player_fullscreen">ملء الشاشة</string>
+    <string name="epg_earlier">أبكر</string>
+    <string name="epg_later">أحدث</string>
 </resources>

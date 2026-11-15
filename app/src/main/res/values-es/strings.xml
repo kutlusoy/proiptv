@@ -251,4 +251,7 @@
     <string name="filter_hd">HD</string>
     <string name="filter_catchup">Catch-up</string>
     <string name="filter_favorites">Favoritos</string>
+    <string name="player_fullscreen">Pantalla completa</string>
+    <string name="epg_earlier">Antes</string>
+    <string name="epg_later">Después</string>
 </resources>

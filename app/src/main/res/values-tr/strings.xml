@@ -251,4 +251,7 @@
     <string name="filter_hd">HD</string>
     <string name="filter_catchup">Geriye dönük</string>
     <string name="filter_favorites">Favoriler</string>
+    <string name="player_fullscreen">Tam ekran</string>
+    <string name="epg_earlier">Daha erken</string>
+    <string name="epg_later">Daha geç</string>
 </resources>

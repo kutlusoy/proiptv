@@ -29,4 +29,7 @@
     <string name="filter_hd">HD</string>
     <string name="filter_catchup">Catch-up</string>
     <string name="filter_favorites">Favoritos</string>
+    <string name="player_fullscreen">Ecrã inteiro</string>
+    <string name="epg_earlier">Mais cedo</string>
+    <string name="epg_later">Mais tarde</string>
 </resources>

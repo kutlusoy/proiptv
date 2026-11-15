@@ -393,7 +393,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp))
         Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(120.dp))
         IconButton(onClick = { tracksOpen = true }) { Icon(Icons.Filled.Subtitles, t("player_tracks")) }
-        IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, null) }
+        IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) }
     }
 }
 
