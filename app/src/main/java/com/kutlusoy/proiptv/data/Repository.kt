@@ -178,6 +178,10 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         )
     }
 
+    suspend fun dismissContinue(item: Item) {
+        if (item.kind == Kind.SERIES) db.progress().dismissSeries(item.accountId, item.remoteId) else db.progress().dismissMovie(item.accountId, item.remoteId)
+    }
+
     suspend fun setWatched(accountId: Long, kind: Int, remoteIds: List<String>, watched: Boolean) {
         val now = System.currentTimeMillis()
         for (id in remoteIds) {

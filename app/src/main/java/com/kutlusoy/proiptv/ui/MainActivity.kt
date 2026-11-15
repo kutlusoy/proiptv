@@ -66,6 +66,10 @@ import com.kutlusoy.proiptv.BuildConfig
 import com.kutlusoy.proiptv.R
 import com.kutlusoy.proiptv.data.Kind
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import kotlinx.coroutines.launch
 
 private enum class Tab(val label: Int, val icon: ImageVector) {
@@ -186,13 +190,30 @@ private fun AppRoot(vm: MainViewModel) {
         CompositionLocalProvider(LocalChromeHidden provides chromeHidden) {
             // without a Scaffold the default content colour is black: texts and icons (row titles, the search symbol) would not be seen
             CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
-            Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            // when a control disappears (a download is stopped, a recording is deleted) the focus must not jump to the main menu:
+            // if the menu gets the focus shortly after a key that did not mean "go to the menu", it goes back to the content
+            val lastKey = remember { longArrayOf(0, 0) }
+            val railHad = remember { booleanArrayOf(false) }
+            val contentFocus = remember { FocusRequester() }
+            Row(
+                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).onPreviewKeyEvent { e ->
+                    if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                        lastKey[0] = System.currentTimeMillis()
+                        lastKey[1] = if (e.key == androidx.compose.ui.input.key.Key.DirectionLeft || e.key == androidx.compose.ui.input.key.Key.Back) 1 else 0
+                    }
+                    false
+                },
+            ) {
                 androidx.compose.animation.AnimatedVisibility(
                     visible = railOpen && !chromeHidden.value,
                     enter = androidx.compose.animation.expandHorizontally(),
                     exit = androidx.compose.animation.shrinkHorizontally(),
                 ) {
-                    TvRail(tab, exit, railFocus, { railFocus = false }, { focusedTab = it }) {
+                    TvRail(tab, exit, railFocus, { railFocus = false }, { focusedTab = it }, { has ->
+                        val unexpected = has && !railHad[0] && lastKey[1] == 0L && System.currentTimeMillis() - lastKey[0] < 700
+                        railHad[0] = has
+                        if (unexpected) runCatching { contentFocus.requestFocus() }
+                    }) {
                         tab = it
                         if (it == Tab.LIVE || it == Tab.MOVIES || it == Tab.SERIES) railOpen = false
                     }
@@ -205,7 +226,7 @@ private fun AppRoot(vm: MainViewModel) {
                     }
                 }
                 val previewTab = if (railOpen) (focusedTab?.takeIf { it.preview() } ?: tab.takeIf { it.preview() }) else null
-                Box(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 36.dp, vertical = 24.dp)) {
+                Box(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 36.dp, vertical = 24.dp).focusRequester(contentFocus).focusGroup()) {
                     if (previewTab != null) {
                         TvPreview(vm, previewTab.kind(), onOpen = { item ->
                             vm.pendingOpen.value = item
@@ -297,7 +318,7 @@ private fun Tab.kind() = when (this) {
 }
 
 @Composable
-private fun TvRail(selected: Tab, exit: () -> Unit, takeFocus: Boolean, onFocusTaken: () -> Unit, onFocused: (Tab) -> Unit, onSelect: (Tab) -> Unit) {
+private fun TvRail(selected: Tab, exit: () -> Unit, takeFocus: Boolean, onFocusTaken: () -> Unit, onFocused: (Tab) -> Unit, onRailFocus: (Boolean) -> Unit, onSelect: (Tab) -> Unit) {
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         if (takeFocus) {
@@ -305,7 +326,7 @@ private fun TvRail(selected: Tab, exit: () -> Unit, takeFocus: Boolean, onFocusT
             onFocusTaken()
         }
     }
-    Column(Modifier.width(250.dp).fillMaxHeight().background(Palette.Surface).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 14.dp, vertical = 16.dp)) {
+    Column(Modifier.width(250.dp).fillMaxHeight().onFocusChanged { onRailFocus(it.hasFocus) }.background(Palette.Surface).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 14.dp, vertical = 16.dp)) {
         Text("ProIPTV", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Palette.WineSoft, modifier = Modifier.padding(start = 10.dp))
         Text(stringResource(R.string.main_version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(start = 10.dp, bottom = 10.dp))
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {

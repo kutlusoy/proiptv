@@ -208,3 +208,10 @@ val GuideIcon: androidx.compose.ui.graphics.vector.ImageVector by lazy {
         )
         .build()
 }
+
+/** Moves the focus to a neighbour (next, else previous) before a control removes its own row, so the focus stays in the screen. */
+@Composable
+fun rememberLeaveFocus(): () -> Unit {
+    val manager = androidx.compose.ui.platform.LocalFocusManager.current
+    return { if (!manager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down)) manager.moveFocus(androidx.compose.ui.focus.FocusDirection.Up) }
+}

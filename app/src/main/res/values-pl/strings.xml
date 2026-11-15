@@ -52,4 +52,5 @@
     <string name="update_ready">Aktualizacja %1$s została pobrana i sprawdzona. Zainstalować teraz?</string>
     <string name="update_install_now">Zainstaluj teraz</string>
     <string name="update_installing_win">Uruchamianie instalatora, aplikacja się zamknie.</string>
+    <string name="continue_remove">Usuń z kontynuuj oglądanie</string>
 </resources>

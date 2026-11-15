@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -81,6 +82,8 @@ fun RecordingsScreen(vm: MainViewModel) {
                     }
                     Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                     note?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                    val leave = rememberLeaveFocus()
+                    val deleteFocus = remember { androidx.compose.ui.focus.FocusRequester() }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
                         if (size > 0 && !scheduled) {
                             OutlinedButton(
@@ -93,9 +96,9 @@ fun RecordingsScreen(vm: MainViewModel) {
                             ) { Text(stringResource(R.string.rec_play)) }
                         }
                         if (running) {
-                            OutlinedButton(onClick = { vm.stopRecording(r.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.rec_stop)) }
+                            OutlinedButton(onClick = { runCatching { deleteFocus.requestFocus() }; vm.stopRecording(r.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.rec_stop)) }
                         }
-                        OutlinedButton(onClick = { if (scheduled) vm.deleteRecording(r.id) else deleting = r }, modifier = Modifier.focusHighlight()) {
+                        OutlinedButton(onClick = { if (scheduled) { leave(); vm.deleteRecording(r.id) } else deleting = r }, modifier = Modifier.focusRequester(deleteFocus).focusHighlight()) {
                             Text(stringResource(if (scheduled) R.string.action_cancel else R.string.action_delete))
                         }
                     }

@@ -286,8 +286,17 @@ interface ProgressDao {
     @Query("SELECT * FROM progress WHERE accountId = :accountId AND kind = :kind AND remoteId IN (:ids)")
     suspend fun forIds(accountId: Long, kind: Int, ids: List<String>): List<Progress>
 
-    @Query("SELECT * FROM progress WHERE watched = 0 AND positionMs > 5000 AND kind IN (1, 3) ORDER BY updated DESC LIMIT 60")
+    @Query(
+        "SELECT * FROM progress WHERE dismissed = 0 AND ((kind = 1 AND watched = 0 AND positionMs > 5000) " +
+            "OR (kind = 3 AND seriesRemoteId <> '' AND (positionMs > 5000 OR watched = 1))) ORDER BY updated DESC LIMIT 300",
+    )
     fun continueWatching(): Flow<List<Progress>>
+
+    @Query("UPDATE progress SET dismissed = 1 WHERE accountId = :accountId AND kind = 1 AND remoteId = :remoteId")
+    suspend fun dismissMovie(accountId: Long, remoteId: String)
+
+    @Query("UPDATE progress SET dismissed = 1 WHERE accountId = :accountId AND kind = 3 AND seriesRemoteId = :seriesRemoteId")
+    suspend fun dismissSeries(accountId: Long, seriesRemoteId: String)
 
     @Query("DELETE FROM progress WHERE accountId = :accountId")
     suspend fun deleteAccount(accountId: Long)

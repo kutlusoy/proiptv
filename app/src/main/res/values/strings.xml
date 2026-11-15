@@ -275,4 +275,5 @@
     <string name="update_ready">Update %1$s is downloaded and checked. Install it now?</string>
     <string name="update_install_now">Install now</string>
     <string name="update_installing_win">Starting the setup, the app closes.</string>
+    <string name="continue_remove">Remove from continue watching</string>
 </resources>
