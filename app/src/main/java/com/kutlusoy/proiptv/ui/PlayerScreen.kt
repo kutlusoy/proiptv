@@ -204,6 +204,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap) }
     var playSource by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
     var browseList by remember { mutableIntStateOf(0) }
+    // the list the browser opened with (always first) and the position of the list that the running channel comes from
+    var browseOrigin by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
+    var playingList by remember { mutableIntStateOf(0) }
     var browseIndex by remember { mutableIntStateOf((request as? PlayRequest.Zap)?.index ?: 0) }
     var browseCount by remember { mutableIntStateOf(1) }
     var item by remember { mutableStateOf<Item?>(null) }
@@ -473,9 +476,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
 
     val accountsNow by vm.accounts.collectAsState()
     val allLabel = stringResource(R.string.live_all)
-    val browseLists by produceState(emptyList<BrowseList>(), playSource, tvBrowse, allFavLists, accountsNow) {
+    val browseLists by produceState(emptyList<BrowseList>(), browseOrigin, tvBrowse, allFavLists, accountsNow) {
         if (!tvBrowse) return@produceState
-        val current = playSource ?: return@produceState
+        val current = browseOrigin ?: return@produceState
         val enabled = accountsNow.filter { it.enabled }
         val ids = enabled.map { it.id }
         val out = ArrayList<BrowseList>()
@@ -502,9 +505,19 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val highlightedItem by produceState<Item?>(null, browseLists, browseList, browseIndex, tvBrowse) {
         value = if (!tvBrowse) null else browseLists.getOrNull(browseList)?.source?.let { vm.repo.at(it, browseIndex) }
     }
-    fun confirmBrowse() {
+    fun playHighlighted() {
         browseLists.getOrNull(browseList)?.source?.let { playSource = it }
         index = browseIndex
+        playingList = browseList
+    }
+    fun browseStep(delta: Int) {
+        val next = (browseIndex + delta).coerceIn(0, browseCount - 1)
+        if (next == browseIndex) return
+        browseIndex = next
+        playHighlighted()
+    }
+    fun confirmBrowse() {
+        playHighlighted()
         tvBrowse = false
         overlay = true
         touched++
@@ -512,7 +525,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     fun switchList(delta: Int) {
         if (browseLists.isEmpty()) return
         browseList = ((browseList + delta) % browseLists.size + browseLists.size) % browseLists.size
-        browseIndex = if (browseList == 0) index else 0
+        browseIndex = if (browseList == playingList) index else 0
     }
     val tvBack = LocalTv.current && request is PlayRequest.Zap
     BackHandler {
@@ -520,7 +533,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             // the browser is left to the list of channels (the grid), the full player goes back to the browser
             tvBrowse -> onClose()
             listOpen -> listOpen = false
-            tvBack -> { browseList = 0; browseIndex = index; tvBrowse = true }
+            tvBack -> { browseOrigin = playSource; browseList = 0; playingList = 0; browseIndex = index; tvBrowse = true }
             else -> onClose()
         }
     }
@@ -576,8 +589,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 if (e.type != KeyEventType.KeyDown || dialogOpen) return@onPreviewKeyEvent false
                 if (tvBrowse) {
                     return@onPreviewKeyEvent when (e.key) {
-                        Key.DirectionUp, Key.ChannelDown, Key.PageUp -> { browseIndex = (browseIndex - 1).coerceAtLeast(0); true }
-                        Key.DirectionDown, Key.ChannelUp, Key.PageDown -> { browseIndex = (browseIndex + 1).coerceAtMost(browseCount - 1); true }
+                        // up and down switch the channel of the shown list at once, the picture follows the highlight
+                        Key.DirectionUp, Key.ChannelDown, Key.PageUp -> { browseStep(-1); true }
+                        Key.DirectionDown, Key.ChannelUp, Key.PageDown -> { browseStep(1); true }
                         Key.DirectionLeft -> { switchList(-1); true }
                         Key.DirectionRight -> { switchList(1); true }
                         Key.DirectionCenter, Key.Enter -> { confirmBrowse(); true }
