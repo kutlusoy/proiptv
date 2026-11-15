@@ -165,7 +165,7 @@ private fun ChannelCell(e: Entry, account: String?, onClick: () -> Unit) {
         Modifier.width(CHANNEL_WIDTH).fillMaxHeight().padding(vertical = 2.dp).clip(RoundedCornerShape(6.dp)).background(Palette.Surface).clickable(onClick = onClick).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Logo(e.logo, Modifier.size(width = 44.dp, height = 32.dp))
+        Logo(e.logo, Modifier.size(width = 44.dp, height = 32.dp), name = e.name)
         Column {
             Text(TitleParser.parse(e.name).title.ifBlank { e.name }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
             account?.let { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f)) }

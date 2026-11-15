@@ -158,12 +158,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     DisposableEffect(Unit) { onDispose { chrome.value = false } }
 
     if (enabled.isEmpty()) {
-        Centered {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                Text(stringResource(R.string.main_no_accounts_title), style = MaterialTheme.typography.headlineMedium)
-                Text(stringResource(R.string.main_no_accounts_text), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-            }
-        }
+        NoAccountsPane(vm)
         return
     }
 
@@ -326,7 +321,7 @@ fun ChannelRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (tall) Logo(logo, Modifier.size(width = 48.dp, height = 70.dp), ContentScale.Crop) else Logo(logo, Modifier.size(width = 64.dp, height = 40.dp))
+            if (tall) Logo(logo, Modifier.size(width = 48.dp, height = 70.dp), ContentScale.Crop, name) else Logo(logo, Modifier.size(width = 64.dp, height = 40.dp), name = name)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (info.country.isNotEmpty()) Badge(info.country)
@@ -384,7 +379,7 @@ internal fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boo
             .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(2.dp),
     ) {
         Box {
-            Logo(item.logo, Modifier.fillMaxWidth().aspectRatio(0.68f).clip(RoundedCornerShape(8.dp)), ContentScale.Crop)
+            Logo(item.logo, Modifier.fillMaxWidth().aspectRatio(0.68f).clip(RoundedCornerShape(8.dp)), ContentScale.Crop, item.name)
             if (favorite) {
                 Icon(Icons.Filled.Star, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = StarOn)
             }

@@ -70,10 +70,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val data = state.data
     val enabled = state.accounts.filter { it.enabled }
     if (enabled.isEmpty()) {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(t("main_no_accounts_title"), style = MaterialTheme.typography.headlineMedium)
-            Text(t("main_no_accounts_text"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-        }
+        NoAccountsPane(state)
         return
     }
     state.series?.takeIf { kind == Kind.SERIES }?.let { SeriesDetail(state, it); return }
@@ -222,7 +219,7 @@ private fun ChannelRow(state: AppState, e: Entry, onMove: ((Int) -> Unit)? = nul
         Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Logo(e.logo, Modifier.size(width = 64.dp, height = 40.dp))
+        Logo(e.logo, Modifier.size(width = 64.dp, height = 40.dp), name = e.name)
         if (info.country.isNotEmpty()) Badge(info.country)
         state.accountLabel(e.accountId)?.let { Badge(it) }
         val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
@@ -260,7 +257,7 @@ private fun Poster(state: AppState, e: Entry, onClick: () -> Unit) {
     val info = remember(e.name) { TitleParser.parse(e.name) }
     Column(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(2.dp)) {
         Box {
-            Logo(e.logo, Modifier.fillMaxWidth().aspectRatio(0.68f), ContentScale.Crop)
+            Logo(e.logo, Modifier.fillMaxWidth().aspectRatio(0.68f), ContentScale.Crop, e.name)
             if (state.isFavorite(e)) Icon(Icons.Filled.Star, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = Color(0xFFFFC107))
         }
         Text(info.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))

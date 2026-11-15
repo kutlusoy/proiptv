@@ -110,6 +110,10 @@ private fun AppRoot(vm: MainViewModel) {
     val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
     var tab by rememberSaveable { mutableStateOf(Tab.values().firstOrNull { it.name == prefs.lastTab } ?: Tab.HOME) }
     LaunchedEffect(tab) { prefs.lastTab = tab.name }
+    val requested by vm.requestedTab.collectAsState()
+    LaunchedEffect(requested) {
+        requested?.let { name -> Tab.values().firstOrNull { it.name == name }?.let { tab = it }; vm.requestedTab.value = null }
+    }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()

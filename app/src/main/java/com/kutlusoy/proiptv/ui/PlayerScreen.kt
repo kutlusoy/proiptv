@@ -971,7 +971,7 @@ private fun ChannelPanel(vm: MainViewModel, source: Source, count: Int, selected
                     .focusHighlight().clickable { onPick(i) }.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Logo(channel?.logo, Modifier.size(width = 56.dp, height = 36.dp))
+                Logo(channel?.logo, Modifier.size(width = 56.dp, height = 36.dp), name = channel?.name)
                 Text(
                     channel?.let { TitleParser.parse(it.name).title } ?: "", color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),

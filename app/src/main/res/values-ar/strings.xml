@@ -21,4 +21,5 @@
     <string name="settings_tmdb">معلومات الأفلام (TMDB)</string>
     <string name="settings_tmdb_hint">اختياري. بمفتاح API المجاني الخاص بك من themoviedb.org يحمّل التطبيق القصة والممثلين والمقطع الدعائي للعناوين التي لا تحتوي على معلومات (مثل قوائم M3U). يتم إرسال العنوان والسنة فقط.</string>
     <string name="settings_tmdb_key">مفتاح API</string>
+    <string name="onboarding_add_account">إضافة حساب</string>
 </resources>

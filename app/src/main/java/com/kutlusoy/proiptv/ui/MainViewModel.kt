@@ -58,6 +58,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val favKeys = db.favorites().keys().map { list -> list.map { Triple(it.accountId, it.kind, it.remoteId) }.toSet() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     val player = MutableStateFlow<PlayRequest?>(null)
+
+    /** A screen asks the main screen to open a tab (for example the button in the empty state). */
+    val requestedTab = MutableStateFlow<String?>(null)
     val activeRecordings = (app as ProIptvApp).recordings.active
     val downloads = db.downloads().all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 

@@ -86,12 +86,7 @@ fun HomeScreen(vm: MainViewModel) {
         return
     }
     if (enabled.isEmpty()) {
-        Centered {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                Text(stringResource(R.string.main_no_accounts_title), style = MaterialTheme.typography.headlineMedium)
-                Text(stringResource(R.string.main_no_accounts_text), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-            }
-        }
+        NoAccountsPane(vm)
         return
     }
     val ids = enabled.map { it.id }
@@ -196,6 +191,8 @@ fun HomeScreen(vm: MainViewModel) {
             leadingIcon = { Icon(Icons.Filled.Search, null) },
             trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, null) } },
         )
+        val syncing by vm.syncState.collectAsState()
+        if (rows.isEmpty() && q.length < 2 && syncing.isNotEmpty()) SkeletonRows()
         if (q.length >= 2 && rows.isEmpty()) Text(stringResource(R.string.home_no_results), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
             itemsIndexed(rows) { rowIndex, row ->
@@ -220,7 +217,7 @@ private fun HomeCard(card: Card, requester: FocusRequester? = null) {
             .clickable(onClick = card.open),
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (card.live) 16f / 9f else 0.68f).clip(RoundedCornerShape(8.dp))) {
-            Logo(card.logo, Modifier.fillMaxSize(), if (card.live) ContentScale.Fit else ContentScale.Crop)
+            Logo(card.logo, Modifier.fillMaxSize(), if (card.live) ContentScale.Fit else ContentScale.Crop, card.title)
             card.progress?.let { LinearProgressIndicator(progress = { it }, Modifier.align(Alignment.BottomCenter).fillMaxWidth()) }
         }
         Text(card.title, Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
