@@ -38,7 +38,7 @@ class UpdateDownloader(private val client: OkHttpClient, private val requireHttp
                 var total = 0L
                 var lastPercent = -1
                 body.byteStream().use { input ->
-                    part.outputStream().use { output ->
+                    java.io.FileOutputStream(part).use { output ->
                         val buffer = ByteArray(64 * 1024)
                         while (true) {
                             val read = input.read(buffer)
@@ -55,6 +55,9 @@ class UpdateDownloader(private val client: OkHttpClient, private val requireHttp
                                 }
                             }
                         }
+                        // the data must be on the disk before the file is used
+                        output.flush()
+                        output.fd.sync()
                     }
                 }
                 if (length > 0 && total != length) throw UpdateException(UpdateException.Code.NETWORK, "Incomplete download")

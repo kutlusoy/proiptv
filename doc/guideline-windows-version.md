@@ -193,3 +193,7 @@ Order: Linux first (small steps: file naming, secret service, `.deb` and AppImag
 ## Small window
 
 The player button "Small window" (or the key P) turns the player into a borderless window that stays on top of other windows, so a spreadsheet can be used next to it. With the mouse over the window a strip appears at the top: drag it to move the window, choose a size (1/2, 1/4, 1/8, 1/16 of the screen, 16:9), switch "always on top" on or off, or go back to the normal window. The corner handles resize the window and keep the 16:9 proportion. Escape also returns to the normal window.
+
+## Updating in two steps
+
+The update is first downloaded (button **Download update**, with progress). The data is written to the disk completely before the file is used, and the SHA-256 from SHA256SUMS.txt is checked. Only then the button **Install now** appears. When it is pressed the file is checked again (size and SHA-256 from the disk), and the setup is started. If the setup is still locked, for example by a virus scanner, or ends at once, the start is repeated up to 8 times. The app only closes when the setup is running. If it still fails, the message names the path of the file so it can be started by hand, and log.txt has the details.

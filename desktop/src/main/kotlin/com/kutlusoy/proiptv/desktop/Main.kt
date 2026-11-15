@@ -203,7 +203,7 @@ private fun App(state: AppState, updater: Updater, update: UpdateState) {
             onDismissRequest = { update.announce = null },
             title = { Text(t("update_notification_title")) },
             text = { Text(t("update_available", release.version)) },
-            confirmButton = { TextButton(onClick = { update.announce = null; state.tab = Tab.SETTINGS; state.player = null; update.install(release) }) { Text(t("update_install")) } },
+            confirmButton = { TextButton(onClick = { update.announce = null; state.tab = Tab.SETTINGS; state.player = null; update.download(release) }) { Text(t("update_download")) } },
             dismissButton = { TextButton(onClick = { update.announce = null }) { Text(t("action_cancel")) } },
         )
     }
