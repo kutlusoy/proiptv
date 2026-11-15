@@ -104,7 +104,8 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         title = item.title
         paused = false
         failed = null
-        releaseHub()
+        // another channel: the old connection is cut at once
+        releaseHub(now = true)
         if (request is PlayRequest.Live) {
             val entry = request.entries[index]
             val a = state.store.config.accounts.firstOrNull { it.id == entry.accountId }

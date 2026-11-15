@@ -178,6 +178,9 @@ private fun Context.findActivity(): Activity? {
 private class LeaseHolder {
     @Volatile
     var lease: HubLease? = null
+
+    /** The channel of the lease, to see whether the channel changed or only the same channel is opened again (retry, time shift). */
+    var key: String? = null
 }
 
 private const val LIVE_LAG_MS = 1500L
@@ -394,7 +397,10 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
 
     LaunchedEffect(active, reload, forceHls, shiftRequest) {
         val t = active ?: return@LaunchedEffect
-        holder.lease?.close()
+        // another channel: the old connection is cut at once (an account with one connection needs it). The same channel keeps its buffer.
+        val key = "${t.accountId}:${t.remoteId}"
+        if (holder.key != null && holder.key != key) holder.lease?.closeNow() else holder.lease?.close()
+        holder.key = key
         holder.lease = null
         hubActive = false
         val useHub = t.live && !forceHls && catchup == null && app.prefs.timeshift && isTransportStream(t.url)
