@@ -117,7 +117,7 @@ class Library(private val store: Store) {
             api.stream(streamAction).use { s ->
                 for (o in s.items) {
                     val id = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
-                    if (hide && (o.str("category_id").orEmpty() in adultCats || AdultFilter.isAdult(o.str("name")))) continue
+                    if (hide && o.str("category_id").orEmpty() in adultCats) continue
                     entries.getOrPut(kind) { mutableListOf() } += Entry(
                         a.id, kind, id, o.str("name").orEmpty().decodeEntities(), o.str("category_id").orEmpty(),
                         (o.str("stream_icon") ?: o.str("cover"))?.takeIf { it.isNotBlank() },
@@ -139,7 +139,7 @@ class Library(private val store: Store) {
             val groups = LinkedHashSet<String>()
             var n = 0
             for (e in M3uParser.parse(reader) { header -> header.epgUrl?.split(',')?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { m3uGuide[a.id] = it } }) {
-                if (store.config.hideAdult && AdultFilter.isAdult(e.group, e.name)) continue
+                if (store.config.hideAdult && AdultFilter.isAdult(e.group)) continue
                 val vod = e.url.contains("/movie/") || e.url.contains("/series/") || e.url.substringBefore('?').let { u -> VOD_EXT.any { x -> u.endsWith(x) } }
                 val kind = if (vod) Kind.MOVIE else Kind.LIVE
                 groups += "$kind|${e.group}"

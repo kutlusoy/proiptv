@@ -1,6 +1,6 @@
 package com.kutlusoy.proiptv.parse
 
-/** Recognises adult categories and channels by their names. */
+/** Recognises adult categories by their names. Titles are never checked, so films like "xXx" stay. */
 object AdultFilter {
     private val WORDS = Regex("""(^|[^\p{L}\p{N}])(xxx|adults?|porn\w*|erotic\w*|18\+|sex)($|[^\p{L}\p{N}])""", RegexOption.IGNORE_CASE)
 

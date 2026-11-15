@@ -205,7 +205,7 @@ class SyncManager(
             for (o in s.items) {
                 val remote = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
                 val name = o.str("name").orEmpty().decodeEntities()
-                if (hide && (o.str("category_id").orEmpty() in adultCats || AdultFilter.isAdult(name))) continue
+                if (hide && o.str("category_id").orEmpty() in adultCats) continue
                 val info = TitleParser.parse(name, groupNames[o.str("category_id").orEmpty()].orEmpty())
                 batch += Item(
                     accountId = account.id, kind = kind, remoteId = remote,
@@ -239,7 +239,7 @@ class SyncManager(
         open(account.url, account.userAgent).use { raw ->
             val reader = BufferedReader(InputStreamReader(raw.maybeGunzip(), Charsets.UTF_8), 64 * 1024)
             for (e in M3uParser.parse(reader) { epgFromHeader = it.epgUrl }) {
-                if (hideAdult() && AdultFilter.isAdult(e.group, e.name)) continue
+                if (hideAdult() && AdultFilter.isAdult(e.group)) continue
                 val kind = detectKind(e.url)
                 val map = groups.getValue(kind)
                 map.getOrPut(e.group) { map.size }

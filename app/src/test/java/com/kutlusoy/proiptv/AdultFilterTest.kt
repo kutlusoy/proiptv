@@ -10,7 +10,6 @@ class AdultFilterTest {
     fun matchesAdultNames() {
         assertTrue(AdultFilter.isAdult("XXX | Adults"))
         assertTrue(AdultFilter.isAdult("DE: 18+ Movies"))
-        assertTrue(AdultFilter.isAdult("Some Channel", "ADULT"))
     }
 
     @Test
