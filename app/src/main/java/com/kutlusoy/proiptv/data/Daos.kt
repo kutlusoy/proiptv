@@ -39,6 +39,9 @@ private const val NAME_OR_NOW_PLAYING =
         "WHERE p.accountId = items.accountId AND p.epgId = items.epgId AND p.start <= " + NOW_SECS + " AND p.`end` > " + NOW_SECS +
         " AND p.title LIKE '%' || :q || '%')))"
 
+/** How many titles a category has, for the list column of the TV layout. */
+data class CategoryCount(val accountId: Long, val categoryRemoteId: String, val n: Int)
+
 /** Quick filters of the channel list: bit 1 HD, bit 2 catch-up available, bit 4 only favorites. */
 private const val QUICK_FILTERS =
     " AND (:flags & 1 = 0 OR name LIKE '%HD%' OR name LIKE '%4K%') AND (:flags & 2 = 0 OR archiveDays > 0) " +
@@ -61,7 +64,7 @@ interface ItemDao {
     @Query(
         "SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
-            "AND " + NAME_OR_NOW_PLAYING + QUICK_FILTERS + " ORDER BY accountId, ord",
+            "AND " + NAME_OR_NOW_PLAYING + QUICK_FILTERS + " ORDER BY CASE WHEN :flags & 8 <> 0 THEN name END COLLATE NOCASE ASC, CASE WHEN :flags & 16 <> 0 THEN name END COLLATE NOCASE DESC, accountId, ord",
     )
     fun paging(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, flags: Int): PagingSource<Int, Item>
 
@@ -93,6 +96,9 @@ interface ItemDao {
 
     @Query("SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND name LIKE '%' || :q || '%' ORDER BY accountId, ord LIMIT :limit")
     suspend fun search(kind: Int, ids: List<Long>, q: String, limit: Int): List<Item>
+
+    @Query("SELECT accountId, categoryRemoteId, COUNT(*) AS n FROM items WHERE kind = :kind AND accountId IN (:ids) GROUP BY accountId, categoryRemoteId")
+    fun categoryCounts(ids: List<Long>, kind: Int): Flow<List<CategoryCount>>
 
     @Query("SELECT * FROM items WHERE kind = 0 AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) ORDER BY accountId, ord LIMIT 400")
     fun liveChannels(ids: List<Long>, cat: String?): Flow<List<Item>>

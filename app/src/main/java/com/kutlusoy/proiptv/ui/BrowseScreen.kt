@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -119,6 +120,7 @@ private val ItemSaver = Saver<Item?, Any>(
 private val StarOn = Color(0xFFFFC107)
 private const val FAV_KEY = "__fav"
 private const val ALL_KEY = "__all"
+private const val CONT_KEY = "__continue"
 
 @Composable
 fun BrowseScreen(kind: Int, vm: MainViewModel) {
@@ -137,6 +139,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     // quick filters of the channel list (bit 1 HD, 2 catch-up, 4 favorites), not combined with the favorites view
     var quick by rememberSaveable(kind) { mutableIntStateOf(0) }
     var favMode by rememberSaveable(kind) { mutableStateOf(prefs.browseFav(kind)) }
+    var contMode by rememberSaveable(kind) { mutableStateOf(false) }
     var favList by rememberSaveable { mutableStateOf<Long?>(prefs.browseFavList(kind)) }
     LaunchedEffect(accountSel, effective, category, favMode, favList) { if (enabled.isNotEmpty()) prefs.saveBrowse(kind, accountSel, effective, category, favMode, favList) }
     var series by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
@@ -182,43 +185,71 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
         else kotlinx.coroutines.flow.flowOf(emptyList())
     }.collectAsState(initial = emptyList())
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-        Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val allLabel = stringResource(R.string.live_all)
-            val favLabel = stringResource(R.string.fav_title)
-            val otherLabel = stringResource(R.string.live_other)
-            val options = buildList<Pair<String, String>> {
-                add(FAV_KEY to favLabel)
-                add(ALL_KEY to allLabel)
-                if (effective != null) categories.forEach { add(it.remoteId to it.name.ifBlank { otherLabel }) }
-                else everyCategory.forEach { c -> add("${c.accountId}|${c.remoteId}" to ((enabled.firstOrNull { it.id == c.accountId }?.name?.let { "$it \u00B7 " } ?: "") + c.name.ifBlank { otherLabel })) }
+    val tvVod = LocalTv.current && kind != Kind.LIVE
+    val contLabel = stringResource(R.string.home_continue)
+    val allLabel = stringResource(R.string.live_all)
+    val favLabel = stringResource(R.string.fav_title)
+    val otherLabel = stringResource(R.string.live_other)
+    val options = buildList<Pair<String, String>> {
+        add(FAV_KEY to favLabel)
+        if (tvVod) add(CONT_KEY to contLabel)
+        add(ALL_KEY to allLabel)
+        if (effective != null) categories.forEach { add(it.remoteId to it.name.ifBlank { otherLabel }) }
+        else everyCategory.forEach { c -> add("${c.accountId}|${c.remoteId}" to ((enabled.firstOrNull { it.id == c.accountId }?.name?.let { "$it \u00B7 " } ?: "") + c.name.ifBlank { otherLabel })) }
+    }
+    val current = when {
+        contMode -> CONT_KEY
+        favMode -> FAV_KEY
+        category == null -> ALL_KEY
+        else -> category!!
+    }
+    fun select(v: String) {
+        when (v) {
+            FAV_KEY -> { contMode = false; favMode = true }
+            CONT_KEY -> { favMode = false; contMode = true }
+            ALL_KEY -> { favMode = false; contMode = false; category = null }
+            else -> {
+                contMode = false
+                val account = if (effective == null) v.substringBefore('|').toLongOrNull() else null
+                if (account != null) {
+                    // a category of one account: switch to that account and open the category
+                    prefs.saveBrowse(kind, account, account, v.substringAfter('|'), false, favList)
+                    favMode = false
+                    accountSel = account
+                } else {
+                    favMode = false; category = v
+                }
             }
-            val current = when {
-                favMode -> FAV_KEY
-                category == null -> ALL_KEY
-                else -> category!!
+        }
+    }
+    val counts by vm.categoryCounts(ids, kind).collectAsState(initial = emptyList())
+    Row(Modifier.fillMaxSize()) {
+    if (tvVod) {
+        val entries = options.map { (key, label) ->
+            val n = when (key) {
+                FAV_KEY, CONT_KEY -> null
+                ALL_KEY -> counts.sumOf { it.n }
+                else -> if (effective != null) counts.firstOrNull { it.accountId == effective && it.categoryRemoteId == key }?.n
+                else counts.firstOrNull { "${it.accountId}|${it.categoryRemoteId}" == key }?.n
             }
+            TvVodEntry(key, label, n)
+        }
+        TvVodSidebar(entries, current) { select(it) }
+    }
+    Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 12.dp)) {
+        if (tvVod) {
+            TvVodTopBar(
+                title = options.firstOrNull { it.first == current }?.second ?: allLabel,
+                sort = quick and 24, onSort = { bit -> quick = if (quick and bit != 0) quick and bit.inv() else (quick and 24.inv()) or bit },
+                searching = searching, onSearch = { if (searching) { query = ""; searching = false } else searching = true },
+            )
+        }
+        if (!tvVod) Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DropdownField(
                 top = true,
                 selected = options.firstOrNull { it.first == current }?.second ?: allLabel,
                 options = options,
-                onSelect = { v ->
-                    when (v) {
-                        FAV_KEY -> favMode = true
-                        ALL_KEY -> { favMode = false; category = null }
-                        else -> {
-                            val account = if (effective == null) v.substringBefore('|').toLongOrNull() else null
-                            if (account != null) {
-                                // a category of one account: switch to that account and open the category
-                                prefs.saveBrowse(kind, account, account, v.substringAfter('|'), false, favList)
-                                favMode = false
-                                accountSel = account
-                            } else {
-                                favMode = false; category = v
-                            }
-                        }
-                    }
-                },
+                onSelect = { select(it) },
                 modifier = Modifier.weight(1f),
             )
             if (enabled.size > 1) {
@@ -253,8 +284,10 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             }
         }
 
-        val useRows = kind != Kind.LIVE && !favMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
-        if (favMode) {
+        val useRows = kind != Kind.LIVE && !favMode && !contMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
+        if (contMode) {
+            ContinuePane(vm, kind, favKeys, onToggleFavorite = toggleFavorite) { if (it.kind == Kind.SERIES) series = it else movie = it }
+        } else if (favMode) {
             FavoritesPane(vm, kind, favList, onSelect = { favList = it }, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it })
         } else if (useRows) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -291,6 +324,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                 }
             }
         }
+    }
     }
 
     favDialog?.let { item -> ListsDialog(vm, item) { favDialog = null } }

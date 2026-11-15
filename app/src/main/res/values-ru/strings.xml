@@ -33,4 +33,6 @@
     <string name="epg_earlier">Раньше</string>
     <string name="epg_later">Позже</string>
     <string name="tv_live_badge">ПРЯМОЙ ЭФИР</string>
+    <string name="sort_az">А–Я</string>
+    <string name="sort_za">Я–А</string>
 </resources>

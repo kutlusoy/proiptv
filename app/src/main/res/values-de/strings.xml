@@ -255,4 +255,6 @@
     <string name="epg_earlier">Früher</string>
     <string name="epg_later">Später</string>
     <string name="tv_live_badge">LIVE-TV</string>
+    <string name="sort_az">A–Z</string>
+    <string name="sort_za">Z–A</string>
 </resources>

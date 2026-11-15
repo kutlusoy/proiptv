@@ -79,6 +79,26 @@ class EpgSearchTest {
     }
 
     @Test
+    fun theListCanBeSortedFromAToZAndFromZToA() = runBlocking {
+        val ids = listOf(account)
+        suspend fun names(flags: Int): List<String> {
+            val source = db.items().paging(Kind.LIVE, ids, null, "", null, null, flags)
+            val page = source.load(androidx.paging.PagingSource.LoadParams.Refresh(null, 50, false)) as androidx.paging.PagingSource.LoadResult.Page
+            return page.data.map { it.name }
+        }
+        assertEquals(listOf("Erstes", "Zweites", "Sport 1"), names(0))
+        assertEquals(listOf("Erstes", "Sport 1", "Zweites"), names(8))
+        assertEquals(listOf("Zweites", "Sport 1", "Erstes"), names(16))
+    }
+
+    @Test
+    fun categoriesAreCounted() = runBlocking {
+        val counts = db.items().categoryCounts(listOf(account), Kind.LIVE).first()
+        assertEquals(2, counts.first { it.categoryRemoteId == "n" }.n)
+        assertEquals(1, counts.first { it.categoryRemoteId == "s" }.n)
+    }
+
+    @Test
     fun guideFiltersByTimeCategoryAndText() = runBlocking {
         val now = System.currentTimeMillis() / 1000
         val ids = listOf(account)

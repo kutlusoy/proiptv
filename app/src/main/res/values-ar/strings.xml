@@ -33,4 +33,6 @@
     <string name="epg_earlier">أبكر</string>
     <string name="epg_later">أحدث</string>
     <string name="tv_live_badge">بث مباشر</string>
+    <string name="sort_az">أ–ي</string>
+    <string name="sort_za">ي–أ</string>
 </resources>

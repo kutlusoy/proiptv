@@ -255,4 +255,6 @@
     <string name="epg_earlier">Daha erken</string>
     <string name="epg_later">Daha geç</string>
     <string name="tv_live_badge">CANLI TV</string>
+    <string name="sort_az">A–Z</string>
+    <string name="sort_za">Z–A</string>
 </resources>
