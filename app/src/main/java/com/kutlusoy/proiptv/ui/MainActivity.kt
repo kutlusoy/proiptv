@@ -85,7 +85,21 @@ private enum class Tab(val label: Int, val icon: ImageVector) {
     SETTINGS(R.string.nav_settings, Icons.Filled.Settings),
 }
 
+/** The time of the last key and whether it meant to leave a screen (left, back). Dialogs have their own window, so this is taken at the activity. */
+object LastKey {
+    @Volatile var time = 0L
+    @Volatile var leaving = false
+}
+
 class MainActivity : AppCompatActivity() {
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+            LastKey.time = System.currentTimeMillis()
+            LastKey.leaving = event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == android.view.KeyEvent.KEYCODE_BACK || event.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     private val vm: MainViewModel by viewModels()
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -216,25 +230,16 @@ private fun AppRoot(vm: MainViewModel) {
             CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
             // when a control disappears (a download is stopped, a recording is deleted) the focus must not jump to the main menu:
             // if the menu gets the focus shortly after a key that did not mean "go to the menu", it goes back to the content
-            val lastKey = remember { longArrayOf(0, 0) }
             val railHad = remember { booleanArrayOf(false) }
             val contentFocus = remember { FocusRequester() }
-            Row(
-                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).onPreviewKeyEvent { e ->
-                    if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
-                        lastKey[0] = System.currentTimeMillis()
-                        lastKey[1] = if (e.key == androidx.compose.ui.input.key.Key.DirectionLeft || e.key == androidx.compose.ui.input.key.Key.Back) 1 else 0
-                    }
-                    false
-                },
-            ) {
+            Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 androidx.compose.animation.AnimatedVisibility(
                     visible = railOpen && !chromeHidden.value,
                     enter = androidx.compose.animation.expandHorizontally(),
                     exit = androidx.compose.animation.shrinkHorizontally(),
                 ) {
                     TvRail(tab, exit, railFocus, { railFocus = false }, { focusedTab = it }, { has ->
-                        val unexpected = has && !railHad[0] && lastKey[1] == 0L && System.currentTimeMillis() - lastKey[0] < 700
+                        val unexpected = has && !railHad[0] && !LastKey.leaving && System.currentTimeMillis() - LastKey.time < 1200
                         railHad[0] = has
                         if (unexpected) runCatching { contentFocus.requestFocus() }
                     }) {

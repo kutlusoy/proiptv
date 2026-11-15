@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -217,7 +218,8 @@ private fun UpdateGroup(vm: MainViewModel) {
             )
         }
         val busy = state is UpdateUi.Checking || state is UpdateUi.Working
-        OutlinedButton(onClick = { vm.checkUpdate() }, enabled = !busy, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.update_check)) }
+        // the buttons are not switched off while busy (a switched off button loses the focus and the cursor jumps away)
+        OutlinedButton(onClick = { if (!busy) vm.checkUpdate() }, modifier = Modifier.alpha(if (busy) 0.45f else 1f).focusHighlight()) { Text(stringResource(R.string.update_check)) }
         Hint(
             if (lastCheck > 0) stringResource(R.string.update_last_check, android.text.format.DateUtils.getRelativeTimeSpanString(lastCheck, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString())
             else stringResource(R.string.update_never),
@@ -228,7 +230,6 @@ private fun UpdateGroup(vm: MainViewModel) {
             is UpdateUi.UpToDate -> Text(stringResource(R.string.update_up_to_date, st.version), color = Palette.WineSoft)
             is UpdateUi.Available -> {
                 Text(stringResource(R.string.update_available, st.release.version), color = Palette.WineSoft, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-                androidx.compose.material3.Button(onClick = { vm.installUpdate(st.release) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.update_install)) }
             }
             is UpdateUi.Working -> {
                 Text(
@@ -244,6 +245,13 @@ private fun UpdateGroup(vm: MainViewModel) {
                 )
             }
             is UpdateUi.Error -> Text(updateErrorText(st), color = MaterialTheme.colorScheme.error)
+        }
+        if (state is UpdateUi.Available || state is UpdateUi.Working) {
+            val st = state
+            androidx.compose.material3.Button(
+                onClick = { if (st is UpdateUi.Available) vm.installUpdate(st.release) },
+                modifier = Modifier.alpha(if (st is UpdateUi.Available) 1f else 0.45f).focusHighlight(),
+            ) { Text(stringResource(R.string.update_install)) }
         }
     }
 }

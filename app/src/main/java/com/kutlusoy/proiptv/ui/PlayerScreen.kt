@@ -73,6 +73,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -765,7 +766,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     // left: back to the live picture, right: the guide, in the middle: pause, stop (focused first) and record
                     Row(Modifier.align(Alignment.CenterStart), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (hubActive) {
-                            OutlinedButton(onClick = { goLive() }, enabled = behindMs >= LIVE_THRESHOLD_MS, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_live)) }
+                            OutlinedButton(onClick = { if (behindMs >= LIVE_THRESHOLD_MS) goLive() }, modifier = Modifier.alpha(if (behindMs >= LIVE_THRESHOLD_MS) 1f else 0.45f).focusHighlight()) { Text(stringResource(R.string.player_live)) }
                         }
                     }
                     val canSeek = active?.live == false || hubActive
