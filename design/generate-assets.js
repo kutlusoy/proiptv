@@ -16,6 +16,7 @@ const logoUri = dataUri(read('ProIPTV_logo.svg'));
 const MARK_RATIO = 518 / 662;
 const WORD_RATIO = 886 / 148;
 const BLACK = '#000';
+const BRIGHT = 'brightness(1.22) saturate(1.1)';
 const DEBUG_BACKGROUND = '#FFB300';
 const DEBUG_LABEL = '#7A0F25';
 const DENSITIES = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
@@ -50,7 +51,7 @@ const page = (w, h, body, background = 'transparent') =>
       `box-sizing:border-box;border:${bw}px solid ${RED};border-radius:${radius}px;` +
       `background:radial-gradient(ellipse at 50% 50%,#2a0a14 0%,#120408 60%,#000 100%);` +
       `box-shadow:0 0 ${blur}px ${blur * 0.2}px rgba(224,0,60,.85),inset 0 0 ${blur * 1.3}px rgba(224,0,60,.5);` +
-      `display:flex;align-items:center;justify-content:center">${mark(s * (circle ? 0.68 : 0.6), circle ? 'brightness(1.22) saturate(1.1)' : '')}</div></div>`;
+      `display:flex;align-items:center;justify-content:center">${mark(s * (circle ? 0.68 : 0.6), BRIGHT)}</div></div>`;
   };
   // Adaptive launcher icon: 108dp canvas at 4x, the framed circle (phones mask it to many shapes, a circle is never cut off)
   await shot(`${res}/drawable-nodpi/ic_launcher_foreground.png`, 432, 432, iconTile(268, true));
@@ -76,7 +77,7 @@ const page = (w, h, body, background = 'transparent') =>
       `border:${1.5 * f}px solid ${RED};border-radius:${6 * f}px;` +
       `background:radial-gradient(ellipse at 50% 50%,#2a0a14 0%,#120408 60%,#000 100%);` +
       `box-shadow:0 0 ${7 * f}px ${f}px rgba(224,0,60,.85),0 0 ${16 * f}px ${2 * f}px rgba(224,0,60,.45),inset 0 0 ${9 * f}px rgba(224,0,60,.5);` +
-      `display:flex;align-items:center;justify-content:center;gap:${16 * f}px">${mark(118 * f)}${word(150 * f)}</div>`;
+      `display:flex;align-items:center;justify-content:center;gap:${16 * f}px">${mark(118 * f, BRIGHT)}${word(150 * f)}</div>`;
     await shot(`${res}/drawable-${name}/tv_banner.png`, 320 * f, 180 * f, `<div style="position:relative;width:${320 * f}px;height:${180 * f}px">${frame}</div>`);
   }
 
