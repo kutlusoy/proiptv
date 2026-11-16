@@ -48,6 +48,19 @@ object Upstream {
         }
     }
 
+    /** Whether the stream hub can take this HLS playlist (no encryption, no fragmented MP4). False also when the playlist cannot be read. */
+    suspend fun hlsUsable(url: String, userAgent: String?): Boolean = withContext(Dispatchers.IO) {
+        val stream = HlsStream(url, HlsSource { blocking(it, userAgent) })
+        try {
+            stream.prepare()
+            true
+        } catch (e: Exception) {
+            false
+        } finally {
+            stream.close()
+        }
+    }
+
     private fun blocking(url: String, userAgent: String?): InputStream {
         val call = liveClient.newCall(Http.request(url, userAgent))
         val response = call.execute()
