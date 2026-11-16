@@ -306,8 +306,8 @@ private fun Poster(state: AppState, e: Entry, onClick: () -> Unit) {
             Logo(e.logo, Modifier.fillMaxWidth().aspectRatio(0.68f), ContentScale.Crop, e.name)
             if (state.isFavorite(e)) Icon(Icons.Filled.Star, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = Color(0xFFFFC107))
         }
-        // every card reserves two lines for the title and one for the tags, so all cards are equally high
-        Text(info.title, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+        // every card reserves three lines for the title and one for the tags, so all cards are equally high
+        Text(info.title, minLines = 3, maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
         val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "", state.accountLabel(e.accountId) ?: "").filter { it.isNotEmpty() }.joinToString("  ")
         Text(tags.ifEmpty { " " }, maxLines = 1, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f))
     }
