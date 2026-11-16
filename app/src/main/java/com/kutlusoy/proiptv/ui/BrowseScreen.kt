@@ -524,9 +524,9 @@ internal fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boo
         }
         val info = remember(item.name) { TitleParser.parse(item.name) }
         val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "", LocalAccountNames.current[item.accountId] ?: "").filter { it.isNotEmpty() }.joinToString("  ")
-        // country and year come right below the picture, then the title; every card reserves one line for the tags and three for the title, so all cards are equally high
+        // country and year come right below the picture, then the title; every card reserves one line for the tags and two for the title, so all cards are equally high
         Text(tags.ifEmpty { " " }, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f), modifier = Modifier.padding(top = 6.dp, start = 3.dp))
-        Text(info.title, minLines = 3, maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp, start = 3.dp, end = 3.dp, bottom = 3.dp))
+        Text(info.title, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp, start = 3.dp, end = 3.dp, bottom = 3.dp))
     }
 }
 
