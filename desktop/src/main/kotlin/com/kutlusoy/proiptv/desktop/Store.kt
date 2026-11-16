@@ -66,6 +66,7 @@ data class ConfigDto(
     val history: List<String> = emptyList(),
     val hideAdult: Boolean = true,
     val reminders: List<ReminderDto> = emptyList(),
+    val playerSearchAll: Boolean = false,
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */

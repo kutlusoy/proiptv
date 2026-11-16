@@ -32,6 +32,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.PictureInPictureAlt
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
@@ -78,7 +86,9 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var listOpen by mutableStateOf(false)
 
     val live: Boolean get() = request is PlayRequest.Live
-    val canZap: Boolean get() = request is PlayRequest.Live && request.entries.size > 1
+    /** The channels that zapping and the next and previous keys walk through. It becomes the list the user clicked a channel in. */
+    var playEntries by mutableStateOf((request as? PlayRequest.Live)?.entries.orEmpty())
+    val canZap: Boolean get() = request is PlayRequest.Live && playEntries.size > 1
 
     var current: Playable? = null
         private set
@@ -102,7 +112,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         saveProgress()
         val item = when (request) {
             is PlayRequest.Single -> request.item
-            is PlayRequest.Live -> state.library.playable(request.entries[index])
+            is PlayRequest.Live -> playEntries.getOrNull(index)?.let { state.library.playable(it) }
         }
         if (item == null) { failed = "No address"; return }
         current = item
@@ -112,7 +122,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         // another channel: the old connection is cut at once
         releaseHub(now = true)
         if (request is PlayRequest.Live) {
-            val entry = request.entries[index]
+            val entry = playEntries[index]
             state.recordHistory(entry)
             val a = state.store.config.accounts.firstOrNull { it.id == entry.accountId }
             val live = item.copy(accountNumber = (a?.id ?: "").hashCode().toLong(), channelId = entry.remoteId, maxConnections = state.data.status[entry.accountId]?.info?.maxConnections)
@@ -184,21 +194,20 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         )
     }
 
-    /** Plays the channel at this position of the list the player was started from. */
-    fun jump(i: Int) {
-        val r = request as? PlayRequest.Live ?: return
-        if (i !in r.entries.indices) return
+    /** Plays the channel at this position of [list]. From now on zapping walks through that list. */
+    fun play(list: List<Entry>, i: Int) {
+        if (request !is PlayRequest.Live || i !in list.indices) return
+        playEntries = list
         index = i
         listOpen = false
         start()
     }
 
-    val entries: List<Entry> get() = (request as? PlayRequest.Live)?.entries.orEmpty()
+    val entries: List<Entry> get() = playEntries
 
     fun zap(delta: Int) {
-        val r = request as? PlayRequest.Live ?: return
-        if (r.entries.size < 2) return
-        index = ((index + delta) % r.entries.size + r.entries.size) % r.entries.size
+        if (request !is PlayRequest.Live || playEntries.size < 2) return
+        index = ((index + delta) % playEntries.size + playEntries.size) % playEntries.size
         start()
     }
 
@@ -320,31 +329,122 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             ControlBar(state, controller, Modifier, floating = false)
         }
     }
-    if (controller.listOpen && controller.canZap) {
+    if (controller.listOpen && controller.live) {
         Box(Modifier.fillMaxSize().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { controller.listOpen = false })
         ChannelPanel(state, controller, Modifier.align(Alignment.CenterStart))
     }
     }
 }
 
-/** The channels of the list the player was started from, at the left edge. The channel keeps playing while the list is open. */
+private class PanelList(val name: String, val entries: () -> List<Entry>)
+
+/**
+ * The channel list at the left edge, bound to the mouse: the header shows the name of the list with arrows to switch between the lists,
+ * the magnifier at the bottom opens a search field. With "All channels" the search looks through all accounts and lists.
+ * The channel keeps playing while the list is open.
+ */
 @Composable
 private fun ChannelPanel(state: AppState, controller: PlayerController, modifier: Modifier) {
-    val list = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (controller.index - 3).coerceAtLeast(0))
-    androidx.compose.foundation.lazy.LazyColumn(modifier.fillMaxHeight().width(340.dp).background(Palette.Velvet), state = list) {
-        itemsIndexed(controller.entries, key = { _, e -> e.key }) { i, e ->
-            val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
-            Row(
-                Modifier.fillMaxWidth().background(if (i == controller.index) Palette.WineDeep.copy(alpha = 0.7f) else Color.Transparent)
-                    .clickable { controller.jump(i) }.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Logo(e.logo, Modifier.size(width = 56.dp, height = 36.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White)
-                    if (now != null) Text(now.title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+    val live = state.data.entries(Kind.LIVE)
+    val byKey = remember(live) { live.associateBy { it.key } }
+    val favLists = state.listsOf(Kind.LIVE)
+    val favName = t("fav_title")
+    val historyName = t("history_title")
+    val allName = t("live_all")
+    val currentName = t("player_list_current")
+    val otherName = t("live_other")
+    val lists = remember(controller.playEntries, state.favorites, state.history, favLists, live, state.data.categories(Kind.LIVE)) {
+        val out = ArrayList<PanelList>()
+        favLists.forEach { l ->
+            out += PanelList(if (favLists.size == 1) favName else "\u2605 ${l.name}") {
+                val order = state.favoriteOrder(l.id)
+                live.filter { state.inList(it, l.id) }.sortedBy { order[it.key] ?: Int.MAX_VALUE }
+            }
+        }
+        out += PanelList(historyName) { state.history.mapNotNull { byKey[it] } }
+        out += PanelList(allName) { live }
+        state.data.categories(Kind.LIVE).forEach { c ->
+            out += PanelList((state.accountLabel(c.accountId)?.let { "$it \u00B7 " } ?: "") + c.name.ifBlank { otherName }) {
+                live.filter { it.accountId == c.accountId && it.categoryId == c.id }
+            }
+        }
+        // the list the player was started from comes first, under its own name when it is one of the lists
+        val start = controller.playEntries.map { it.key }
+        val same = out.indexOfFirst { l -> l.entries().map { it.key } == start }
+        if (same > 0) out.add(0, out.removeAt(same)) else if (same < 0) out.add(0, PanelList(currentName) { controller.playEntries })
+        out
+    }
+    var listIndex by remember(lists.size) { mutableIntStateOf(0) }
+    val listNow = lists[listIndex.coerceIn(0, lists.lastIndex)]
+    var searchOpen by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    val everywhere = state.store.config.playerSearchAll
+    val q = query.trim()
+    val shown = remember(listNow, listIndex, searchOpen, q, everywhere, live, state.tick / 60) {
+        val base = if (searchOpen && q.isNotEmpty() && everywhere) live else listNow.entries()
+        if (!searchOpen || q.isEmpty()) base
+        else base.filter { e ->
+            e.name.contains(q, ignoreCase = true) || com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title.contains(q, ignoreCase = true) ||
+                state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true
+        }
+    }
+    val playingKey = controller.playEntries.getOrNull(controller.index)?.key
+    val list = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(listNow, searchOpen, q, everywhere) {
+        val at = shown.indexOfFirst { it.key == playingKey }
+        list.scrollToItem(if (at > 3) at - 3 else 0)
+    }
+    val previousText = t("player_list_previous")
+    val nextText = t("player_list_next")
+    val searchText = t("player_search")
+    Column(modifier.fillMaxHeight().width(340.dp).background(Palette.Velvet)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { listIndex = (listIndex - 1 + lists.size) % lists.size }, enabled = lists.size > 1, modifier = Modifier.semantics { contentDescription = previousText }) {
+                Icon(Icons.Filled.KeyboardArrowLeft, null)
+            }
+            Text(
+                if (searchOpen && q.isNotEmpty() && everywhere) t("player_search_all") else listNow.name,
+                Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+            )
+            IconButton(onClick = { listIndex = (listIndex + 1) % lists.size }, enabled = lists.size > 1, modifier = Modifier.semantics { contentDescription = nextText }) {
+                Icon(Icons.Filled.KeyboardArrowRight, null)
+            }
+        }
+        androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list) {
+            itemsIndexed(shown, key = { _, e -> e.key }) { i, e ->
+                val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
+                Row(
+                    Modifier.fillMaxWidth().background(if (e.key == playingKey) Palette.WineDeep.copy(alpha = 0.7f) else Color.Transparent)
+                        .clickable { controller.play(shown, i) }.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Logo(e.logo, Modifier.size(width = 56.dp, height = 36.dp), name = e.name)
+                    Column(Modifier.weight(1f)) {
+                        Text(com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White)
+                        val account = if (everywhere && searchOpen) state.accountLabel(e.accountId) else null
+                        val sub = listOfNotNull(account, now?.title).joinToString(" \u00B7 ")
+                        if (sub.isNotEmpty()) Text(sub, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                    }
                 }
             }
+        }
+        if (searchOpen) {
+            Column(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 8.dp, vertical = 6.dp)) {
+                val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+                LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+                androidx.compose.material3.OutlinedTextField(
+                    query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                    placeholder = { Text(t("live_search")) },
+                    trailingIcon = { IconButton(onClick = { query = ""; searchOpen = false }) { Icon(Icons.Filled.Close, t("action_close")) } },
+                )
+                Row(Modifier.fillMaxWidth().clickable { state.store.update { c -> c.copy(playerSearchAll = !c.playerSearchAll) } }, verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(checked = everywhere, onCheckedChange = { on -> state.store.update { c -> c.copy(playerSearchAll = on) } })
+                    Text(t("player_search_all"), color = Color.White)
+                }
+            }
+        } else {
+            IconButton(onClick = { searchOpen = true }, modifier = Modifier.align(Alignment.CenterHorizontally).semantics { contentDescription = searchText }) { Icon(Icons.Filled.Search, null) }
         }
     }
 }
@@ -370,7 +470,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // the same round controls and symbols as in the Android player: pause, stop, record
-        if (controller.canZap) RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp)
+        if (controller.live) RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp)
         RoundControl(if (controller.paused) PlayerGlyph.PLAY else PlayerGlyph.PAUSE, t(if (controller.paused) "player_play" else "player_pause"), { controller.togglePause() }, diameter = 38.dp)
         RoundControl(PlayerGlyph.STOP, t("player_stop"), { controller.stop() }, diameter = 38.dp)
         if (controller.live) {

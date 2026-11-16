@@ -97,6 +97,11 @@
     <string name="rec_record">Aufnehmen</string>
     <string name="rec_stop">Aufnahme beenden</string>
     <string name="rec_go_channel">Zum Sender</string>
+    <string name="player_list_current">Aktuelle Liste</string>
+    <string name="player_search">Sender suchen</string>
+    <string name="player_search_all">Alle Sender</string>
+    <string name="player_list_previous">Vorherige Liste</string>
+    <string name="player_list_next">Nächste Liste</string>
     <string name="rec_until_stopped">Bis ich sie beende</string>
     <string name="rec_minutes">%1$d Minuten</string>
     <string name="rec_until_program_end">Bis die aktuelle Sendung endet</string>
