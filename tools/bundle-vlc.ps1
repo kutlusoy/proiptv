@@ -10,7 +10,11 @@ $work = Join-Path $env:RUNNER_TEMP 'vlc'
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 $zip = Join-Path $work 'vlc.zip'
 
-Invoke-WebRequest -Uri $url -OutFile $zip -UserAgent 'ProIPTV-build'
+# the download server is sometimes slow: try again a few times
+for ($try = 1; $try -le 4; $try++) {
+    try { Invoke-WebRequest -Uri $url -OutFile $zip -UserAgent 'ProIPTV-build' -TimeoutSec 300; break }
+    catch { if ($try -eq 4) { throw }; Write-Warning "Download failed (try $try): $_"; Start-Sleep -Seconds (15 * $try) }
+}
 $actual = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
 if ($actual -ne $sha256) { throw "libVLC download has the wrong checksum: $actual (size $((Get-Item $zip).Length) bytes)" }
 Expand-Archive -Path $zip -DestinationPath $work -Force
@@ -35,7 +39,8 @@ Copy-Item (Join-Path $src 'vlc-cache-gen.exe') $dest
 try { & (Join-Path $dest 'vlc-cache-gen.exe') (Join-Path $dest 'plugins') } catch { Write-Warning "vlc-cache-gen failed: $_" }
 Remove-Item (Join-Path $dest 'vlc-cache-gen.exe') -Force
 
-Invoke-WebRequest -Uri 'https://www.gnu.org/licenses/lgpl-2.1.txt' -OutFile (Join-Path $dest 'LICENSE-LGPL-2.1.txt')
+# the license text is part of the repository, so the build does not depend on another server
+Copy-Item (Join-Path $PSScriptRoot '..\desktop\vlc\LICENSE-LGPL-2.1.txt') (Join-Path $dest 'LICENSE-LGPL-2.1.txt')
 @"
 This folder contains libVLC $version, unmodified, from https://download.videolan.org/pub/videolan/vlc/$version/win64/
 libVLC is licensed under the GNU Lesser General Public License 2.1 or later (see LICENSE-LGPL-2.1.txt).
