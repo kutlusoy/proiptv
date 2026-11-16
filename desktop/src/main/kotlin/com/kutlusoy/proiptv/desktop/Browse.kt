@@ -205,7 +205,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
                                     else -> e.categoryId == category.substringAfter('|') && e.accountId == category.substringBefore('|')
                                 }
                             }
-                            state.player = PlayRequest.Live(shown, index, query = q, origin = origin)
+                            state.player = PlayRequest.Live(shown, index, query = q, origin = origin, allScope = category == ALL_KEY && activeAccount == null && !favOnly)
                         }
                         else if (kind == Kind.SERIES) state.series = e else state.movie = e
                     }

@@ -111,8 +111,8 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var playFromSearch by mutableStateOf(liveRequest?.query?.isNotBlank() == true)
     var searchOrigin: List<Entry> = liveRequest?.origin.orEmpty()
 
-    /** The search looks through all channels. A search that comes from a list starts inside that list, whatever was chosen last time. */
-    var searchAll by mutableStateOf(if (liveRequest?.query.isNullOrBlank()) state.store.config.playerSearchAll else false)
+    /** The search looks through all channels. A search that comes from a list starts inside that list (all channels only when that list is "All"), whatever was chosen last time. */
+    var searchAll by mutableStateOf(if (liveRequest?.query.isNullOrBlank()) state.store.config.playerSearchAll else liveRequest?.allScope == true)
 
     /** Empties the search and closes it everywhere: the list goes back to the one that the search started from. */
     fun clearSearch() {
