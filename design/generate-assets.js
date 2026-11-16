@@ -44,27 +44,27 @@ const page = (w, h, body, background = 'transparent') =>
   const RED = '#E0003C';
   // Windows icon (design/ProIPTV.ico and the window icon): the mark on black in the same thin glowing red frame as the TV banner,
   // transparent outside of the rounded corners. Every size is drawn on its own so the frame stays sharp.
-  const iconTile = (s) => {
-    const inset = Math.max(1, s * 0.035), bw = Math.max(1, s * 0.022), radius = s * 0.1, blur = s * 0.035;
+  const iconTile = (s, circle = false) => {
+    const inset = Math.max(1, s * 0.035), bw = Math.max(1, s * 0.022), radius = circle ? s : s * 0.1, blur = s * 0.035;
     return `<div style="position:relative;width:${s}px;height:${s}px"><div style="position:absolute;left:${inset}px;top:${inset}px;right:${inset}px;bottom:${inset}px;` +
       `box-sizing:border-box;border:${bw}px solid ${RED};border-radius:${radius}px;` +
       `background:radial-gradient(ellipse at 50% 50%,#2a0a14 0%,#120408 60%,#000 100%);` +
       `box-shadow:0 0 ${blur}px ${blur * 0.2}px rgba(224,0,60,.85),inset 0 0 ${blur * 1.3}px rgba(224,0,60,.5);` +
-      `display:flex;align-items:center;justify-content:center">${mark(s * 0.6)}</div></div>`;
+      `display:flex;align-items:center;justify-content:center">${mark(s * (circle ? 0.52 : 0.6))}</div></div>`;
   };
-  // Adaptive launcher icon: 108dp canvas at 4x, the framed tile inside the safe zone
-  await shot(`${res}/drawable-nodpi/ic_launcher_foreground.png`, 432, 432, iconTile(204));
+  // Adaptive launcher icon: 108dp canvas at 4x, the framed circle (phones mask it to many shapes, a circle is never cut off)
+  await shot(`${res}/drawable-nodpi/ic_launcher_foreground.png`, 432, 432, iconTile(268, true));
   await shot(`${res}/drawable-nodpi/ic_launcher_monochrome.png`, 432, 432, mark(244, 'brightness(0)'));
 
   // Legacy launcher icons (API 24 and 25)
   for (const [name, factor] of Object.entries(DENSITIES)) {
     const s = 48 * factor;
     await shot(`${res}/mipmap-${name}/ic_launcher.png`, s, s, iconTile(s));
-    await shot(`${res}/mipmap-${name}/ic_launcher_round.png`, s, s, iconTile(s));
+    await shot(`${res}/mipmap-${name}/ic_launcher_round.png`, s, s, iconTile(s, true));
   }
 
   // Store icon, full bleed black with the framed tile
-  await shot('app/src/main/ic_launcher-playstore.png', 512, 512, iconTile(512 * 0.84), BLACK);
+  await shot('app/src/main/ic_launcher-playstore.png', 512, 512, iconTile(512 * 0.84, true), BLACK);
 
   // Android TV banner: 320x180dp, mark and lettering side by side, in a thin glowing red frame with slightly rounded corners
   // (transparent outside of the frame, a faint red shimmer inside so the banner is not too dark on the home screen)
