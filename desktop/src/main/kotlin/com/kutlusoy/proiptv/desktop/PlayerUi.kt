@@ -111,6 +111,25 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var playFromSearch by mutableStateOf(liveRequest?.query?.isNotBlank() == true)
     var searchOrigin: List<Entry> = liveRequest?.origin.orEmpty()
 
+    /** The search looks through all channels. A search that comes from a list starts inside that list, whatever was chosen last time. */
+    var searchAll by mutableStateOf(if (liveRequest?.query.isNullOrBlank()) state.store.config.playerSearchAll else false)
+
+    /** Empties the search and closes it everywhere: the list goes back to the one that the search started from. */
+    fun clearSearch() {
+        searchText = ""
+        searchOpen = false
+        if (playFromSearch) {
+            val key = playEntries.getOrNull(index)?.key
+            val origin = searchOrigin
+            if (origin.isNotEmpty()) {
+                playEntries = origin
+                index = origin.indexOfFirst { it.key == key }.coerceAtLeast(0)
+            }
+            playFromSearch = false
+            searchOrigin = emptyList()
+        }
+    }
+
     val canZap: Boolean get() = request is PlayRequest.Live && playEntries.size > 1
 
     var current: Playable? = null
@@ -483,9 +502,8 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     val listNow = lists[listIndex.coerceIn(0, lists.lastIndex)]
     val searchOpen = controller.searchOpen
     val query = controller.searchText
-    // the settings file is no Compose state, so the value is held here too and saved on every change
-    var everywhere by remember { mutableStateOf(state.store.config.playerSearchAll) }
-    val setEverywhere: (Boolean) -> Unit = { on -> everywhere = on; state.store.update { c -> c.copy(playerSearchAll = on) } }
+    val everywhere = controller.searchAll
+    val setEverywhere: (Boolean) -> Unit = { on -> controller.searchAll = on; state.store.update { c -> c.copy(playerSearchAll = on) } }
     val q = query.trim()
     val shown = remember(listNow, listIndex, searchOpen, q, everywhere, live, state.tick / 60) {
         val searching = searchOpen && q.isNotEmpty()
@@ -556,7 +574,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                 TextInput(
                     query, { controller.searchText = it }, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged { state.typing = it.isFocused },
                     placeholder = { Text(t("live_search")) },
-                    trailingIcon = { IconButton(onClick = { controller.searchText = ""; controller.searchOpen = false }) { Icon(Icons.Filled.Close, t("action_close")) } },
+                    trailingIcon = { IconButton(onClick = { controller.clearSearch() }) { Icon(Icons.Filled.Close, t("action_close")) } },
                 )
                 Row(Modifier.fillMaxWidth().clickable { setEverywhere(!everywhere) }, verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(checked = everywhere, onCheckedChange = setEverywhere)
