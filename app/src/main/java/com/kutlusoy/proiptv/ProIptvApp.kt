@@ -70,7 +70,7 @@ class ProIptvApp : Application() {
                 delay(GUIDE_CHECK_MS)
             }
         }
-        runCatching { com.kutlusoy.proiptv.update.UpdateWorker.schedule(this, prefs.autoUpdate) }
+        if (BuildConfig.SELF_UPDATE) runCatching { com.kutlusoy.proiptv.update.UpdateWorker.schedule(this, prefs.autoUpdate) }
         runCatching {
             val request = PeriodicWorkRequestBuilder<GuideWorker>(6, TimeUnit.HOURS)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())

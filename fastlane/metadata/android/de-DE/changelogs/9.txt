@@ -1,0 +1,1 @@
+Version 0.0.9: Alarme für Aufnahmen und Erinnerungen, Zeiten an der Leiste des Players, Timerliste im Programmführer.

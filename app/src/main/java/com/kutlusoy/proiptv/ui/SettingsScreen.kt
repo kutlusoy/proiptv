@@ -174,7 +174,7 @@ fun SettingsScreen(vm: MainViewModel) {
                 )
             }
 
-            UpdateGroup(vm)
+            if (BuildConfig.SELF_UPDATE) UpdateGroup(vm)
             Group(stringResource(R.string.settings_tmdb)) {
                 val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
                 var key by remember { mutableStateOf(prefs.tmdbKey) }

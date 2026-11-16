@@ -1,0 +1,1 @@
+Version 0.0.9: alarms for recordings and reminders, times at the bar of the player, timers list in the guide.

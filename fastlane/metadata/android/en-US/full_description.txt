@@ -1,0 +1,19 @@
+ProIPTV plays the streams of your own IPTV provider on phones, tablets and Android TV. No content is included, there is no account with us, no ads and no analytics.
+
+<b>Sources</b>
+• Xtream Codes accounts and M3U playlists with XMLTV guides, several accounts side by side
+• Passwords are encrypted with the Android Keystore
+
+<b>Features</b>
+• Live TV with groups, search, now and next, zapping and number keys
+• Program guide that keeps itself current, catch-up
+• Movies and series with info pages, seasons, progress and watched marks
+• Favorites with several lists and manual sorting
+• Pause and rewind live TV, recording and scheduled recordings
+• Downloads for offline use
+• Set up accounts with the phone by QR code
+• TV layout with remote control navigation
+• Backup and restore of accounts, favorites and settings
+• Eleven languages
+
+The app is free software under the MIT license.

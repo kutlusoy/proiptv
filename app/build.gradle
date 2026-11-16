@@ -15,6 +15,9 @@ if (!versionMatch.matches()) {
 def computedVersionCode = versionMatch.group(1).toInteger() * 1_000_000 +
         versionMatch.group(2).toInteger() * 1_000 + versionMatch.group(3).toInteger()
 
+// -PstoreBuild=1 builds the variant for app stores (F-Droid): no self update, no install permission
+def storeBuild = project.hasProperty('storeBuild')
+
 ksp {
     arg('room.schemaLocation', "$projectDir/schemas")
 }
@@ -33,6 +36,7 @@ android {
         targetSdk rootProject.ext.targetSdkVersion
         versionCode computedVersionCode
         versionName versionText
+        buildConfigField 'boolean', 'SELF_UPDATE', (!storeBuild).toString()
         buildConfigField 'int', 'TEST_BUILD', (project.findProperty('testBuild') ?: '0').toString()
     }
 
@@ -73,6 +77,16 @@ android {
             versionNameSuffix = "-debug"
             debuggable = true
         }
+    }
+
+    if (storeBuild) {
+        sourceSets.release.manifest.srcFile 'src/store/AndroidManifest.xml'
+    }
+
+    // the dependency block signed by Google is not reproducible and not wanted by F-Droid
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 
     compileOptions {
