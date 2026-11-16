@@ -92,6 +92,14 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     val live: Boolean get() = request is PlayRequest.Live
     /** The channels that zapping and the next and previous keys walk through. It becomes the list the user clicked a channel in. */
     var playEntries by mutableStateOf((request as? PlayRequest.Live)?.entries.orEmpty())
+
+    /** The search of the channel list lives here, so it is still there when the list is opened again. */
+    var searchOpen by mutableStateOf(false)
+    var searchText by mutableStateOf("")
+
+    /** The playing list is the result of a search, and the list that the search started from. */
+    var playFromSearch by mutableStateOf(false)
+    var searchOrigin: List<Entry> = emptyList()
     val canZap: Boolean get() = request is PlayRequest.Live && playEntries.size > 1
 
     var current: Playable? = null
@@ -200,9 +208,11 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     /** Plays the channel at this position of [list]. From now on zapping walks through that list. */
-    fun play(list: List<Entry>, i: Int) {
+    fun play(list: List<Entry>, i: Int, fromSearch: Boolean = false, origin: List<Entry> = emptyList()) {
         if (request !is PlayRequest.Live || i !in list.indices) return
         playEntries = list
+        playFromSearch = fromSearch
+        searchOrigin = origin
         index = i
         listOpen = false
         start()
@@ -417,7 +427,7 @@ private fun ChannelBrowser(state: AppState, controller: PlayerController, video:
     }
 }
 
-private class PanelList(val name: String, val entries: () -> List<Entry>)
+private class PanelList(val name: String, val isSearch: Boolean = false, val entries: () -> List<Entry>)
 
 /**
  * The channel list at the left edge, bound to the mouse: the header shows the name of the list with arrows to switch between the lists,
@@ -434,8 +444,9 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     val historyName = t("history_title")
     val allName = t("live_all")
     val currentName = t("player_list_current")
+    val searchName = t("player_list_search")
     val otherName = t("live_other")
-    val lists = remember(controller.playEntries, state.favorites, state.history, favLists, live, state.data.categories(Kind.LIVE)) {
+    val lists = remember(controller.playEntries, controller.playFromSearch, state.favorites, state.history, favLists, live, state.data.categories(Kind.LIVE)) {
         val out = ArrayList<PanelList>()
         favLists.forEach { l ->
             out += PanelList(if (favLists.size == 1) favName else "\u2605 ${l.name}") {
@@ -452,21 +463,24 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
         }
         // the list the player was started from comes first, under its own name when it is one of the lists
         val start = controller.playEntries.map { it.key }
-        val same = out.indexOfFirst { l -> l.entries().map { it.key } == start }
-        if (same > 0) out.add(0, out.removeAt(same)) else if (same < 0) out.add(0, PanelList(currentName) { controller.playEntries })
+        val same = if (controller.playFromSearch) -1 else out.indexOfFirst { l -> l.entries().map { it.key } == start }
+        if (same > 0) out.add(0, out.removeAt(same))
+        else if (same < 0) out.add(0, PanelList(if (controller.playFromSearch) searchName else currentName, controller.playFromSearch) { controller.playEntries })
         out
     }
     var listIndex by remember(lists.size) { mutableIntStateOf(0) }
     val listNow = lists[listIndex.coerceIn(0, lists.lastIndex)]
-    var searchOpen by remember { mutableStateOf(false) }
-    var query by remember { mutableStateOf("") }
+    val searchOpen = controller.searchOpen
+    val query = controller.searchText
     // the settings file is no Compose state, so the value is held here too and saved on every change
     var everywhere by remember { mutableStateOf(state.store.config.playerSearchAll) }
     val setEverywhere: (Boolean) -> Unit = { on -> everywhere = on; state.store.update { c -> c.copy(playerSearchAll = on) } }
     val q = query.trim()
     val shown = remember(listNow, listIndex, searchOpen, q, everywhere, live, state.tick / 60) {
-        val base = if (searchOpen && q.isNotEmpty() && everywhere) live else listNow.entries()
-        if (!searchOpen || q.isEmpty()) base
+        val searching = searchOpen && q.isNotEmpty()
+        // inside the list of an earlier search the new search starts again from the list that the earlier one started from
+        val base = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin else listNow.entries()
+        if (!searching) base
         else base.filter { e ->
             e.name.contains(q, ignoreCase = true) || com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title.contains(q, ignoreCase = true) ||
                 state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true
@@ -506,7 +520,11 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                 Row(
                     Modifier.fillMaxWidth().animateItem().then(if (e.key == playingKey) Modifier.background(Palette.Wine, RoundedCornerShape(6.dp)) else Modifier)
                         .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { onHover(e) }
-                        .clickable { controller.play(shown, i) }.padding(horizontal = 12.dp, vertical = 8.dp),
+                        .clickable {
+                            val searching = searchOpen && q.isNotEmpty()
+                            val origin = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin else listNow.entries()
+                            controller.play(shown, i, fromSearch = searching, origin = origin)
+                        }.padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Logo(e.logo, Modifier.size(width = 56.dp, height = 36.dp), name = e.name)
@@ -525,9 +543,9 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                 LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
                 androidx.compose.runtime.DisposableEffect(Unit) { onDispose { state.typing = false } }
                 androidx.compose.material3.OutlinedTextField(
-                    query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged { state.typing = it.isFocused },
+                    query, { controller.searchText = it }, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged { state.typing = it.isFocused },
                     placeholder = { Text(t("live_search")) },
-                    trailingIcon = { IconButton(onClick = { query = ""; searchOpen = false }) { Icon(Icons.Filled.Close, t("action_close")) } },
+                    trailingIcon = { IconButton(onClick = { controller.searchText = ""; controller.searchOpen = false }) { Icon(Icons.Filled.Close, t("action_close")) } },
                 )
                 Row(Modifier.fillMaxWidth().clickable { setEverywhere(!everywhere) }, verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(checked = everywhere, onCheckedChange = setEverywhere)
@@ -535,7 +553,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                 }
             }
         } else {
-            IconButton(onClick = { searchOpen = true }, modifier = Modifier.align(Alignment.CenterHorizontally).semantics { contentDescription = searchText }) { Icon(Icons.Filled.Search, null) }
+            IconButton(onClick = { controller.searchOpen = true }, modifier = Modifier.align(Alignment.CenterHorizontally).semantics { contentDescription = searchText }) { Icon(Icons.Filled.Search, null) }
         }
     }
 }

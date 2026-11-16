@@ -98,6 +98,7 @@
     <string name="rec_stop">Detener grabación</string>
     <string name="rec_go_channel">Ir al canal</string>
     <string name="player_list_current">Lista actual</string>
+    <string name="player_list_search">Búsqueda actual</string>
     <string name="player_search">Buscar canales</string>
     <string name="player_search_all">Todos los canales</string>
     <string name="player_list_previous">Lista anterior</string>

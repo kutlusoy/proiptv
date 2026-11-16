@@ -98,6 +98,7 @@
     <string name="rec_stop">Aufnahme beenden</string>
     <string name="rec_go_channel">Zum Sender</string>
     <string name="player_list_current">Aktuelle Liste</string>
+    <string name="player_list_search">Aktuelle Suche</string>
     <string name="player_search">Sender suchen</string>
     <string name="player_search_all">Alle Sender</string>
     <string name="player_list_previous">Vorherige Liste</string>

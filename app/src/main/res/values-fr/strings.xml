@@ -98,6 +98,7 @@
     <string name="rec_stop">Arrêter l\'enregistrement</string>
     <string name="rec_go_channel">Aller à la chaîne</string>
     <string name="player_list_current">Liste actuelle</string>
+    <string name="player_list_search">Recherche actuelle</string>
     <string name="player_search">Rechercher des chaînes</string>
     <string name="player_search_all">Toutes les chaînes</string>
     <string name="player_list_previous">Liste précédente</string>

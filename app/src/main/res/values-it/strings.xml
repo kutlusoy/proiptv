@@ -98,6 +98,7 @@
     <string name="rec_stop">Ferma registrazione</string>
     <string name="rec_go_channel">Vai al canale</string>
     <string name="player_list_current">Elenco attuale</string>
+    <string name="player_list_search">Ricerca attuale</string>
     <string name="player_search">Cerca canali</string>
     <string name="player_search_all">Tutti i canali</string>
     <string name="player_list_previous">Elenco precedente</string>
