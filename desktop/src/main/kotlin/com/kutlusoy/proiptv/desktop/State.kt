@@ -132,9 +132,19 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     }
 
     fun deleteAccount(id: String) {
-        store.update { c -> c.copy(accounts = c.accounts.filter { it.id != id }, favorites = c.favorites.filter { it.account != id }) }
+        // everything that belongs to the account goes with it: favorites, last channels, progress, reminders and planned recordings
+        store.update { c ->
+            c.copy(
+                accounts = c.accounts.filter { it.id != id }, favorites = c.favorites.filter { it.account != id },
+                history = c.history.filterNot { it.startsWith("$id|") }, reminders = c.reminders.filter { it.account != id },
+            )
+        }
+        progress.removeAccount(id)
+        recordingStore.all().filter { it.account == id && it.status == RecStatus.SCHEDULED }.forEach { recordingStore.remove(it.id) }
         accounts = store.config.accounts
         favorites = store.config.favorites
+        history = store.config.history
+        reminders = store.config.reminders
         reload()
     }
 

@@ -132,6 +132,11 @@ class ProgressStore(private val dir: File) {
     fun all(): List<ProgressDto> = map.values.toList()
 
     @Synchronized
+    fun removeAccount(account: String) {
+        if (map.keys.removeAll { it.startsWith("$account|") }) write()
+    }
+
+    @Synchronized
     fun save(p: ProgressDto) {
         map[p.key] = p
         write()
