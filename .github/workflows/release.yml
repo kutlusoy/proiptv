@@ -113,12 +113,14 @@ jobs:
             echo "::error::The setup from SignPath is identical to the unsigned one"
             exit 1
           fi
-          cp signed/*-windows-x64-setup.exe windows/
+          rm windows/*-windows-x64-setup.exe
+          cp signed/*-windows-x64-setup.exe "windows/ProIPTV-$VERSION-cert-windows-x64-setup.exe"
+          echo "WINDOWS_SETUP=ProIPTV-$VERSION-cert-windows-x64-setup.exe" >> "$GITHUB_ENV"
 
       - name: Collect files
         run: |
           mkdir -p dist
-          cp windows/*-windows-x64-setup.exe "dist/ProIPTV-$VERSION-windows-x64-setup.exe"
+          cp windows/*-windows-x64-setup.exe "dist/${WINDOWS_SETUP:-ProIPTV-$VERSION-windows-x64-setup.exe}"
           cp app/build/outputs/apk/release/*.apk "dist/ProIPTV-$VERSION.apk"
           cp app/build/outputs/bundle/release/*.aab "dist/ProIPTV-$VERSION.aab"
           if [ -f app/build/outputs/mapping/release/mapping.txt ]; then

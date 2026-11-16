@@ -112,7 +112,7 @@ If the repository is private or the workflow permissions are read-only (Settings
 
 ## 7. The workflow steps
 
-The signing steps are already in the `release` job of `.github/workflows/release.yml`, after the Windows setup is downloaded and before the files are collected. They run only when the variable `PROIPTV_SIGNPATH_PROJECT` is set, so nothing changes until section 6 is done. `windows-build.yml` stays unchanged and still builds the unsigned setup for CI and test releases. Pin the action version when you switch signing on, the one used is the current major version. The sketch below shows the idea, the workflow file is the source of truth.
+The signing steps are already in the `release` job of `.github/workflows/release.yml`, after the Windows setup is downloaded and before the files are collected. They run only when the variable `PROIPTV_SIGNPATH_PROJECT` is set, so nothing changes until section 6 is done: until then the release publishes the unsigned `ProIPTV-<version>-windows-x64-setup.exe`. With signing on, only the signed file is published, named `ProIPTV-<version>-cert-windows-x64-setup.exe`. The in-app update of the Windows app finds both names. `windows-build.yml` stays unchanged and still builds the unsigned setup for CI and test releases. Pin the action version when you switch signing on, the one used is the current major version. The sketch below shows the idea, the workflow file is the source of truth.
 
 ```yaml
   windows:
