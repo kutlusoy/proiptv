@@ -15,6 +15,7 @@ import com.kutlusoy.proiptv.data.Download
 import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.PlayTarget
+import com.kutlusoy.proiptv.data.Recording
 import com.kutlusoy.proiptv.data.Source
 import java.io.File
 import java.util.UUID
@@ -233,6 +234,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             repo.sync.sync(it.id)
         }
     }
+
+    suspend fun channelOf(r: Recording): Item? =
+        if (r.channelRemoteId.isEmpty()) null else db.items().find(r.accountId, Kind.LIVE, r.channelRemoteId)
 
     fun playItem(item: Item) {
         run {

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.setValue
@@ -27,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.kutlusoy.proiptv.R
+import com.kutlusoy.proiptv.data.Item
 import com.kutlusoy.proiptv.data.Kind
 import com.kutlusoy.proiptv.data.PlayTarget
 import com.kutlusoy.proiptv.data.RecStatus
@@ -84,6 +90,8 @@ fun RecordingsScreen(vm: MainViewModel) {
                     note?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                     val leave = rememberLeaveFocus()
                     val deleteFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+                    val stopText = stringResource(R.string.rec_stop)
+                    val goText = stringResource(R.string.rec_go_channel)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
                         if (size > 0 && !scheduled) {
                             OutlinedButton(
@@ -96,9 +104,23 @@ fun RecordingsScreen(vm: MainViewModel) {
                             ) { Text(stringResource(R.string.rec_play)) }
                         }
                         if (running) {
-                            OutlinedButton(onClick = { runCatching { deleteFocus.requestFocus() }; vm.stopRecording(r.id) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.rec_stop)) }
+                            OutlinedButton(
+                                onClick = { runCatching { deleteFocus.requestFocus() }; vm.stopRecording(r.id) },
+                                modifier = Modifier.semantics { contentDescription = stopText }.focusHighlight(),
+                            ) { RecStopIcon() }
+                            val channel by produceState<Item?>(null, r.id) { value = vm.channelOf(r) }
+                            channel?.let { item ->
+                                OutlinedButton(
+                                    onClick = { vm.playItem(item) },
+                                    modifier = Modifier.semantics { contentDescription = goText }.focusHighlight(),
+                                ) { Logo(item.logo, Modifier.size(width = 48.dp, height = 32.dp), name = item.name) }
+                            }
                         }
-                        OutlinedButton(onClick = { if (scheduled) { leave(); vm.deleteRecording(r.id) } else deleting = r }, modifier = Modifier.focusRequester(deleteFocus).focusHighlight()) {
+                        // a running recording is stopped first, then it can be deleted
+                        OutlinedButton(
+                            onClick = { if (!running) { if (scheduled) { leave(); vm.deleteRecording(r.id) } else deleting = r } },
+                            modifier = Modifier.alpha(if (running) 0.35f else 1f).focusRequester(deleteFocus).focusHighlight(),
+                        ) {
                             Text(stringResource(if (scheduled) R.string.action_cancel else R.string.action_delete))
                         }
                     }

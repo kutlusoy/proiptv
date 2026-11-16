@@ -7,13 +7,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -224,6 +227,8 @@ fun RecordingsScreen(state: AppState) {
         return
     }
     val format = remember { SimpleDateFormat("dd.MM.yyyy HH:mm") }
+    val stopText = t("rec_stop")
+    val goText = t("rec_go_channel")
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         items(all, key = { it.id }) { r ->
             val active = r.status == RecStatus.RECORDING
@@ -244,9 +249,21 @@ fun RecordingsScreen(state: AppState) {
                         color = if (r.status == RecStatus.INTERRUPTED || r.status == RecStatus.MISSED) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.75f),
                     )
                 }
-                if (active) IconButton(onClick = { state.recordingManager.stop(r.id) }) { Icon(Icons.Filled.Stop, t("rec_stop")) }
-                else if (playable) Icon(Icons.Filled.PlayArrow, t("rec_play"))
-                IconButton(onClick = { deleting = r }) { Icon(Icons.Filled.Delete, t("action_delete")) }
+                if (active) {
+                    IconButton(onClick = { state.recordingManager.stop(r.id) }, Modifier.semantics { contentDescription = stopText }) { RecStopIcon() }
+                    val channel = state.data.entries(Kind.LIVE).firstOrNull { it.accountId == r.account && it.remoteId == r.channelRemoteId }
+                    if (channel != null) {
+                        IconButton(
+                            onClick = {
+                                val sameAccount = state.data.entries(Kind.LIVE).filter { it.accountId == r.account }
+                                state.player = PlayRequest.Live(sameAccount, sameAccount.indexOf(channel).coerceAtLeast(0))
+                            },
+                            Modifier.width(56.dp).semantics { contentDescription = goText },
+                        ) { Logo(channel.logo, Modifier.size(width = 48.dp, height = 32.dp), name = channel.name) }
+                    }
+                } else if (playable) Icon(Icons.Filled.PlayArrow, t("rec_play"))
+                // a running recording is stopped first, then it can be deleted
+                IconButton(onClick = { deleting = r }, enabled = !active) { Icon(Icons.Filled.Delete, t("action_delete")) }
             }
         }
     }

@@ -96,6 +96,7 @@
     <string name="rec_empty">Noch keine Aufnahmen. Drücke beim Fernsehen auf Aufnehmen.</string>
     <string name="rec_record">Aufnehmen</string>
     <string name="rec_stop">Aufnahme beenden</string>
+    <string name="rec_go_channel">Zum Sender</string>
     <string name="rec_until_stopped">Bis ich sie beende</string>
     <string name="rec_minutes">%1$d Minuten</string>
     <string name="rec_until_program_end">Bis die aktuelle Sendung endet</string>

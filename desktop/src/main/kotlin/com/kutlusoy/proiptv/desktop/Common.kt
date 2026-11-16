@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
@@ -92,6 +94,14 @@ private fun Initials(name: String?, modifier: Modifier) {
     Box(modifier.clip(shape).background(Color.White.copy(alpha = 0.06f)).border(1.dp, Color.White.copy(alpha = 0.08f), shape), contentAlignment = Alignment.Center) {
         val letters = initialsOf(name)
         if (letters.isNotEmpty()) Text(letters, style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.55f), maxLines = 1)
+    }
+}
+
+/** The stop symbol of a running recording: a square in a red ring. */
+@Composable
+fun RecStopIcon(size: androidx.compose.ui.unit.Dp = 32.dp) {
+    Box(Modifier.size(size).border(2.dp, Palette.WineSoft, CircleShape), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(size * 0.38f).background(Palette.WineSoft, RoundedCornerShape(2.dp)))
     }
 }
 

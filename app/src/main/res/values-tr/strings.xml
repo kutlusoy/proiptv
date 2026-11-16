@@ -92,6 +92,7 @@
     <string name="rec_empty">Henüz kayıt yok. Bir kanalı izlerken Kaydet\'e bas.</string>
     <string name="rec_record">Kaydet</string>
     <string name="rec_stop">Kaydı durdur</string>
+    <string name="rec_go_channel">Kanala git</string>
     <string name="rec_until_stopped">Ben durdurana kadar</string>
     <string name="rec_minutes">%1$d dakika</string>
     <string name="rec_until_program_end">Mevcut program bitene kadar</string>
