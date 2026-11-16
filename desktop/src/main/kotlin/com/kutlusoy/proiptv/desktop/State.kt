@@ -22,6 +22,9 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     val engine by lazy { VlcEngine() }
 
     var tab by mutableStateOf(Tab.HOME)
+
+    /** True while a text field has the focus, so the keyboard shortcuts of the player step aside. */
+    var typing by mutableStateOf(false)
     var data by mutableStateOf(LibraryData())
     var loading by mutableStateOf(false)
     var guide by mutableStateOf(Guide())

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -520,8 +521,9 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
             Column(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 8.dp, vertical = 6.dp)) {
                 val focus = remember { androidx.compose.ui.focus.FocusRequester() }
                 LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+                androidx.compose.runtime.DisposableEffect(Unit) { onDispose { state.typing = false } }
                 androidx.compose.material3.OutlinedTextField(
-                    query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                    query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged { state.typing = it.isFocused },
                     placeholder = { Text(t("live_search")) },
                     trailingIcon = { IconButton(onClick = { query = ""; searchOpen = false }) { Icon(Icons.Filled.Close, t("action_close")) } },
                 )
