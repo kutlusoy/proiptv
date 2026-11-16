@@ -1,5 +1,6 @@
 package com.kutlusoy.proiptv.desktop
 
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -23,6 +24,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -297,10 +300,28 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
         if (controller.reconnecting && controller.failed == null) Text(t("player_retrying"), Modifier.background(Color(0xAA000000)).padding(12.dp), color = Color.White)
     }
 
+    // 0 compact, 1 fullscreen, 2 window, 3 channel browser: the change between them fades instead of jumping
+    val layoutMode = when {
+        state.compact -> 0
+        controller.listOpen && controller.live -> 3
+        fullscreen -> 1
+        else -> 2
+    }
     Box(Modifier.fillMaxSize()) {
-    if (state.compact) {
+    androidx.compose.animation.AnimatedContent(
+        layoutMode, Modifier.fillMaxSize(),
+        transitionSpec = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260)) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(260)) },
+        label = "player layout",
+    ) { mode ->
+    if (mode == 3) {
+        // the channel browser: list on the left, the running channel as a small preview with its info card, the guide below
+        Column(Modifier.fillMaxSize().background(Palette.Velvet)) {
+            ChannelBrowser(state, controller, video, Modifier.weight(1f))
+            ControlBar(state, controller, Modifier, floating = false)
+        }
+    } else if (mode == 0) {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
-    } else if (fullscreen) {
+    } else if (mode == 1) {
         // the picture fills the screen, the controls float above it and fade away when the mouse rests
         Box(
             Modifier.fillMaxSize().background(Color.Black).onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Move) {
@@ -330,10 +351,68 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             ControlBar(state, controller, Modifier, floating = false)
         }
     }
-    if (controller.listOpen && controller.live) {
-        Box(Modifier.fillMaxSize().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { controller.listOpen = false })
-        ChannelPanel(state, controller, Modifier.align(Alignment.CenterStart))
     }
+    }
+}
+
+/** The browser of the player: the channel list at the left, at the right the running channel as a preview next to its info card, and its guide below. */
+@Composable
+private fun ChannelBrowser(state: AppState, controller: PlayerController, video: @Composable (Modifier) -> Unit, modifier: Modifier) {
+    val playing = controller.playEntries.getOrNull(controller.index)
+    // the guide shows the channel the mouse touched last, at the start the running one
+    var hovered by remember { mutableStateOf<Entry?>(null) }
+    val shownEntry = hovered ?: playing
+    val timeFormat = remember { java.text.SimpleDateFormat("HH:mm") }
+    val nowSecs = state.tick
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth()) {
+        val left = (maxWidth * 0.32f).coerceAtLeast(300.dp).coerceAtMost(maxWidth * 0.6f)
+        Row(Modifier.fillMaxSize()) {
+            ChannelPanel(state, controller, Modifier.width(left).fillMaxHeight(), onHover = { hovered = it })
+            Column(Modifier.weight(1f).fillMaxHeight()) {
+                Row(Modifier.weight(0.5f).fillMaxWidth()) {
+                    Box(Modifier.weight(0.62f).fillMaxHeight().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
+                    Column(Modifier.weight(0.38f).fillMaxHeight().background(Palette.Surface).padding(16.dp), verticalArrangement = Arrangement.Center) {
+                        Text(
+                            t("tv_live_badge"), Modifier.background(Palette.Wine, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
+                            color = Color.White, style = MaterialTheme.typography.labelLarge,
+                        )
+                        Text(playing?.name.orEmpty(), Modifier.padding(top = 8.dp), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 5, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        val now = playing?.let { state.guide.nowNext(it.accountId, it.epgId, nowSecs).first }
+                        if (now != null) {
+                            Text(now.title, Modifier.padding(top = 8.dp), color = Palette.WineSoft, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(timeFormat.format(java.util.Date(now.start * 1000)) + " - " + timeFormat.format(java.util.Date(now.end * 1000)), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                val programs = remember(shownEntry, state.guide, nowSecs / 60) {
+                    shownEntry?.epgId?.let { id -> state.guide.programs[Guide.key(shownEntry.accountId, id)].orEmpty().filter { it.end > nowSecs } }.orEmpty()
+                }
+                androidx.compose.animation.Crossfade(shownEntry?.key, Modifier.weight(0.5f).fillMaxWidth().background(Palette.Surface), animationSpec = androidx.compose.animation.core.tween(200), label = "guide") { _ ->
+                  Column(Modifier.fillMaxSize()) {
+                    if (shownEntry != null && shownEntry.key != playing?.key) {
+                        Text(shownEntry.name, Modifier.padding(horizontal = 16.dp, vertical = 6.dp), color = Palette.WineSoft, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
+                    if (programs.isEmpty()) {
+                        Text(t("epg_none"), Modifier.padding(16.dp), color = Color.White.copy(alpha = 0.7f))
+                    } else {
+                        androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize()) {
+                            itemsIndexed(programs, key = { _, p -> "${p.channel}|${p.start}" }) { _, p ->
+                                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                    Row {
+                                        Text(timeFormat.format(java.util.Date(p.start * 1000)) + " - " + timeFormat.format(java.util.Date(p.end * 1000)), color = Palette.WineSoft, style = MaterialTheme.typography.bodyMedium)
+                                        Text("  " + p.title, color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    }
+                                    p.description?.takeIf { it.isNotBlank() }?.let {
+                                        Text(it, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                  }
+                }
+            }
+        }
     }
 }
 
@@ -344,8 +423,9 @@ private class PanelList(val name: String, val entries: () -> List<Entry>)
  * the magnifier at the bottom opens a search field. With "All channels" the search looks through all accounts and lists.
  * The channel keeps playing while the list is open.
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-private fun ChannelPanel(state: AppState, controller: PlayerController, modifier: Modifier) {
+private fun ChannelPanel(state: AppState, controller: PlayerController, modifier: Modifier, onHover: (Entry) -> Unit) {
     val live = state.data.entries(Kind.LIVE)
     val byKey = remember(live) { live.associateBy { it.key } }
     val favLists = state.listsOf(Kind.LIVE)
@@ -393,30 +473,36 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     val list = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(listNow, searchOpen, q, everywhere) {
         val at = shown.indexOfFirst { it.key == playingKey }
-        list.scrollToItem(if (at > 3) at - 3 else 0)
+        runCatching { list.animateScrollToItem(if (at > 3) at - 3 else 0) }
     }
     val previousText = t("player_list_previous")
     val nextText = t("player_list_next")
     val searchText = t("player_search")
-    Column(modifier.fillMaxHeight().width(340.dp).background(Palette.Velvet)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier.background(Palette.Velvet)) {
+        Row(Modifier.fillMaxWidth().height(56.dp).background(Palette.WineDeep), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { listIndex = (listIndex - 1 + lists.size) % lists.size }, enabled = lists.size > 1, modifier = Modifier.semantics { contentDescription = previousText }) {
-                Icon(Icons.Filled.KeyboardArrowLeft, null)
+                Icon(Icons.Filled.KeyboardArrowLeft, null, tint = Color.White)
             }
-            Text(
-                if (searchOpen && q.isNotEmpty() && everywhere) t("player_search_all") else listNow.name,
-                Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-            )
+            androidx.compose.animation.AnimatedContent(
+                if (searchOpen && q.isNotEmpty() && everywhere) t("player_search_all") else listNow.name, Modifier.weight(1f),
+                transitionSpec = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180)) },
+                label = "list name",
+            ) { name ->
+                Text(
+                    name, Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                )
+            }
             IconButton(onClick = { listIndex = (listIndex + 1) % lists.size }, enabled = lists.size > 1, modifier = Modifier.semantics { contentDescription = nextText }) {
-                Icon(Icons.Filled.KeyboardArrowRight, null)
+                Icon(Icons.Filled.KeyboardArrowRight, null, tint = Color.White)
             }
         }
         androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list) {
             itemsIndexed(shown, key = { _, e -> e.key }) { i, e ->
                 val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
                 Row(
-                    Modifier.fillMaxWidth().background(if (e.key == playingKey) Palette.WineDeep.copy(alpha = 0.7f) else Color.Transparent)
+                    Modifier.fillMaxWidth().animateItem().then(if (e.key == playingKey) Modifier.background(Palette.Wine, RoundedCornerShape(6.dp)) else Modifier)
+                        .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { onHover(e) }
                         .clickable { controller.play(shown, i) }.padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
