@@ -122,18 +122,31 @@ fdroid scanner com.kutlusoy.proiptv
 
 | Channel | Notes |
 |---|---|
-| IzzyOnDroid | Takes the signed GitHub release APK directly, needs the same F-Droid style metadata, no recipe build. Use the store variant (`-PstoreBuild=1`) APK or accept the update permission. |
+| IzzyOnDroid | See section 8. |
 | Google Play | See [`guideline-google-play.md`](./guideline-google-play.md). Self update via installer MUST NOT be active in the Play build, use `-PstoreBuild=1` there as well. |
 | Amazon Appstore, Aptoide and others | Same store variant. |
 
-## 8. Checklist
+## 8. IzzyOnDroid
 
-- [ ] Screenshots added under `fastlane/metadata/android/en-US/phoneScreenshots/` (and `tenInchScreenshots/`, `tvScreenshots/`)
+Rules from the [inclusion policy](https://izzyondroid.org/docs/general/AppInclusionPolicy/):
+
+- The APK MUST be signed with the release key, not debuggable, and attached to a tagged GitHub release. One APK is at most 30 MB.
+- Fastlane MUST contain at least `short_description.txt` (80 characters), `full_description.txt`, an icon and screenshots (`images/phoneScreenshots/`). A `featureGraphic.png` (1024 x 500) is recommended and present. The changelog file for a version MUST exist before the tag is set.
+- A self updater is only accepted as an explicit opt-in that tells users they bypass the checks of the repository. The store build (`-PstoreBuild=1`) has no updater and avoids the question. The release APK on GitHub has the updater with the daily check switched on by default, so IzzyOnDroid SHOULD get the store build as the release APK, or the updater MUST be changed to an opt-in with that notice.
+- `android:usesCleartextTraffic` SHOULD be avoided. ProIPTV needs it because many IPTV providers and local sources (HDHomeRun, Enigma2, home network) deliver over plain HTTP, and the app says so in the request.
+- No unexpected network traffic at start: the app only talks to the provider of the user, and to TMDB when the user enters a key.
+- The policy rejects apps made with generative AI tools. The answers in the request MUST be true.
+- The request is an issue in the [IzzyOnDroid repo tracker](https://gitlab.com/IzzyOnDroid/repo/-/issues) with the project link and a short description.
+
+## 9. Checklist
+
+- [ ] Release APK for IzzyOnDroid is the store build, or the updater is an opt-in with the notice
+- [ ] Screenshots added under `fastlane/metadata/android/en-US/images/phoneScreenshots/` (PNG or JPG, ratio at most 2:1, no device frames; optional `tvScreenshots/`)
 - [ ] Release key fingerprint entered in `AllowedAPKSigningKeys`
 - [ ] Local build is reproducible
 - [ ] `fdroid lint` and `fdroid scanner` pass
 - [ ] Merge request to `fdroiddata` opened
 
-## 9. Open Questions
+## 10. Open Questions
 
 1. Should the GitHub release publish a second APK built with `-PstoreBuild=1` for IzzyOnDroid, or one APK for all?
