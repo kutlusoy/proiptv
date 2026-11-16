@@ -513,19 +513,19 @@ internal fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boo
         modifier.graphicsLayer { scaleX = scale; scaleY = scale }
             .then(if (restore) Modifier.focusRequester(requester) else Modifier)
             .onFocusChanged { focused = it.hasFocus }
-            .then(if (focused) Modifier.border(2.dp, Palette.Wine, RoundedCornerShape(10.dp)) else Modifier)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(2.dp),
+            .then(if (focused) Modifier.border(2.dp, Palette.Wine, RoundedCornerShape(8.dp)) else Modifier)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(5.dp),
     ) {
         Box {
-            Logo(item.logo, Modifier.fillMaxWidth().aspectRatio(0.68f).clip(RoundedCornerShape(8.dp)), ContentScale.Crop, item.name)
+            Logo(item.logo, Modifier.fillMaxWidth().aspectRatio(0.68f).clip(RoundedCornerShape(5.dp)), ContentScale.Crop, item.name)
             if (favorite) {
                 Icon(Icons.Filled.Star, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = StarOn)
             }
         }
         val info = remember(item.name) { TitleParser.parse(item.name) }
-        Text(info.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp))
+        Text(info.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp, start = 3.dp, end = 3.dp, bottom = 3.dp))
         val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "", LocalAccountNames.current[item.accountId] ?: "").filter { it.isNotEmpty() }.joinToString("  ")
-        if (tags.isNotEmpty()) Text(tags, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f), modifier = Modifier.padding(start = 2.dp))
+        if (tags.isNotEmpty()) Text(tags, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f), modifier = Modifier.padding(start = 3.dp, bottom = 3.dp))
     }
 }
 
