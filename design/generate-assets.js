@@ -50,7 +50,7 @@ const page = (w, h, body, background = 'transparent') =>
       `box-sizing:border-box;border:${bw}px solid ${RED};border-radius:${radius}px;` +
       `background:radial-gradient(ellipse at 50% 50%,#2a0a14 0%,#120408 60%,#000 100%);` +
       `box-shadow:0 0 ${blur}px ${blur * 0.2}px rgba(224,0,60,.85),inset 0 0 ${blur * 1.3}px rgba(224,0,60,.5);` +
-      `display:flex;align-items:center;justify-content:center">${mark(s * (circle ? 0.68 : 0.6))}</div></div>`;
+      `display:flex;align-items:center;justify-content:center">${mark(s * (circle ? 0.68 : 0.6), circle ? 'brightness(1.22) saturate(1.1)' : '')}</div></div>`;
   };
   // Adaptive launcher icon: 108dp canvas at 4x, the framed circle (phones mask it to many shapes, a circle is never cut off)
   await shot(`${res}/drawable-nodpi/ic_launcher_foreground.png`, 432, 432, iconTile(268, true));
