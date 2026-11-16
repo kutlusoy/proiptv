@@ -13,7 +13,8 @@ enum class Tab(val label: String) {
 }
 
 sealed interface PlayRequest {
-    class Live(val entries: List<Entry>, val index: Int) : PlayRequest
+    /** [query] is the search of the list the player was started from (null when the list has no search), [origin] the list without that search. */
+    class Live(val entries: List<Entry>, val index: Int, val query: String? = null, val origin: List<Entry> = emptyList()) : PlayRequest
     class Single(val item: Playable, val startMs: Long = 0) : PlayRequest
 }
 

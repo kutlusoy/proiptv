@@ -93,13 +93,24 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     /** The channels that zapping and the next and previous keys walk through. It becomes the list the user clicked a channel in. */
     var playEntries by mutableStateOf((request as? PlayRequest.Live)?.entries.orEmpty())
 
-    /** The search of the channel list lives here, so it is still there when the list is opened again. */
-    var searchOpen by mutableStateOf(false)
-    var searchText by mutableStateOf("")
+    /**
+     * The search of the channel list lives here, so it is still there when the list is opened again. When the player was started from a list with a
+     * search, that search is the one of the panel (and a change in the panel is handed back to the list).
+     */
+    private val liveRequest = request as? PlayRequest.Live
+    var searchOpen by mutableStateOf(liveRequest?.query?.isNotBlank() == true)
+    private var searchTextState by mutableStateOf(liveRequest?.query.orEmpty())
+    var searchText: String
+        get() = searchTextState
+        set(value) {
+            searchTextState = value
+            if (liveRequest?.query != null) state.browseQuery[Kind.LIVE] = value
+        }
 
     /** The playing list is the result of a search, and the list that the search started from. */
-    var playFromSearch by mutableStateOf(false)
-    var searchOrigin: List<Entry> = emptyList()
+    var playFromSearch by mutableStateOf(liveRequest?.query?.isNotBlank() == true)
+    var searchOrigin: List<Entry> = liveRequest?.origin.orEmpty()
+
     val canZap: Boolean get() = request is PlayRequest.Live && playEntries.size > 1
 
     var current: Playable? = null
@@ -479,7 +490,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     val shown = remember(listNow, listIndex, searchOpen, q, everywhere, live, state.tick / 60) {
         val searching = searchOpen && q.isNotEmpty()
         // inside the list of an earlier search the new search starts again from the list that the earlier one started from
-        val base = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin else listNow.entries()
+        val base = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin.ifEmpty { listNow.entries() } else listNow.entries()
         if (!searching) base
         else base.filter { e ->
             e.name.contains(q, ignoreCase = true) || com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title.contains(q, ignoreCase = true) ||
@@ -522,7 +533,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                         .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { onHover(e) }
                         .clickable {
                             val searching = searchOpen && q.isNotEmpty()
-                            val origin = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin else listNow.entries()
+                            val origin = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin.ifEmpty { listNow.entries() } else listNow.entries()
                             controller.play(shown, i, fromSearch = searching, origin = origin)
                         }.padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),

@@ -197,7 +197,17 @@ fun BrowseScreen(state: AppState, kind: Int) {
                         state, e,
                         onMove = if (inFavorites && q.isEmpty()) { delta -> state.moveFavorite(currentList!!.id, e, delta) } else null,
                     ) {
-                        if (kind == Kind.LIVE) state.player = PlayRequest.Live(shown, index)
+                        if (kind == Kind.LIVE) {
+                            // the search goes with the player, together with the list it started from
+                            val origin = if (q.isEmpty()) emptyList() else all.filter { e ->
+                                (!favOnly || state.isFavorite(e)) && when {
+                                    category == ALL_KEY -> true
+                                    category.startsWith(FAV_PREFIX) -> state.inList(e, category.removePrefix(FAV_PREFIX))
+                                    else -> e.categoryId == category.substringAfter('|') && e.accountId == category.substringBefore('|')
+                                }
+                            }
+                            state.player = PlayRequest.Live(shown, index, query = q, origin = origin)
+                        }
                         else if (kind == Kind.SERIES) state.series = e else state.movie = e
                     }
                 }
