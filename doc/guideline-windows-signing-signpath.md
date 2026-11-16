@@ -74,19 +74,19 @@ You get access to the SignPath portal (`app.signpath.io`). The menu names may di
 3. **Trusted build system:** Organization, "Trusted build systems", the predefined entry **GitHub.com** MUST be linked to your project (Project, "Trusted build systems", add GitHub.com).
 4. **Project:** the project (slug for example `proiptv`) is created with the acceptance or by you. Note the **project slug**.
 5. **Signing policy:** one policy for releases, normally with the slug `release-signing`, with **manual approval** switched on and you as approver. Note the **signing policy slug**.
-6. **Artifact configuration:** Project, "Artifact configurations", "New". GitHub uploads artifacts as a ZIP file, so the root is a zip. Example for one installer (**verify** the element names in the SignPath documentation "Artifact configuration"):
+6. **Artifact configuration:** Project, "Artifact configurations", "New". GitHub uploads artifacts as a ZIP file, so the root is a zip. The installer is an Inno Setup `.exe`, so the element is `pe-file` (**verify** the element names in the SignPath documentation "Artifact configuration"):
 
 ```xml
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>
-    <msi-file path="ProIPTV-*-windows-x64.msi">
+    <pe-file path="ProIPTV-*-windows-x64-setup.exe">
       <authenticode-sign/>
-    </msi-file>
+    </pe-file>
   </zip-file>
 </artifact-configuration>
 ```
 
-   Note the **artifact configuration slug**. If the executable inside the app is signed as well, add a `<pe-file>` entry for it.
+   Note the **artifact configuration slug**. The executables inside the setup are not signed by this configuration.
 7. **CI user and API token:** "Users", "New CI user" (name `github-actions`), give it the role **submitter** for the project and the signing policy `release-signing`, then create and copy its **API token**. The token is shown only once.
 
 ## 6. What you enter in GitHub
@@ -112,7 +112,7 @@ If the repository is private or the workflow permissions are read-only (Settings
 
 ## 7. The workflow steps
 
-This is the signing part of the Windows job. It is added to `.github/workflows/release.yml` when the desktop installer exists. Pin the versions at that time, the ones below are the current major versions.
+The signing steps are already in `.github/workflows/windows-build.yml`. They run only for releases and only when the variable `PROIPTV_SIGNPATH_PROJECT` is set, so nothing changes until section 6 is done. The release workflow hands the secret over with `secrets: inherit`. Pin the action versions when you switch signing on, the ones used are the current major versions. The sketch below shows the idea, the workflow file is the source of truth.
 
 ```yaml
   windows:
