@@ -151,6 +151,15 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     LaunchedEffect(accountSel, effective, category, favMode, favList) { if (enabled.isNotEmpty()) prefs.saveBrowse(kind, accountSel, effective, category, favMode, favList) }
     var series by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
     var movie by rememberSaveable(stateSaver = ItemSaver) { mutableStateOf<Item?>(null) }
+    // the list keeps its place while a detail page is open, and the opened card gets the focus back (TV)
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val rowsState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val rowStates = remember { HashMap<String, androidx.compose.foundation.lazy.LazyListState>() }
+    var restoreId by remember { mutableStateOf<Long?>(null) }
+    val open: (Item) -> Unit = { restoreId = it.id; if (it.kind == Kind.SERIES) series = it else movie = it }
+    LaunchedEffect(series == null && movie == null) {
+        if (series == null && movie == null && restoreId != null) { kotlinx.coroutines.delay(1500); restoreId = null }
+    }
     val pendingOpen by vm.pendingOpen.collectAsState()
     LaunchedEffect(pendingOpen) {
         val p = pendingOpen ?: return@LaunchedEffect
@@ -266,7 +275,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     var newListDialog by remember { mutableStateOf(false) }
     var renameListDialog by remember { mutableStateOf(false) }
     // after OK in the main menu the first entry is focused, not the search symbol
-    LaunchedEffect(tvLists) { if (tvLists) { kotlinx.coroutines.delay(450); runCatching { contentEntry.requestFocus() } } }
+    LaunchedEffect(tvLists) { if (tvLists && restoreId == null) { kotlinx.coroutines.delay(450); runCatching { contentEntry.requestFocus() } } }
     val tvCurrentList = if (showFav) favLists.firstOrNull { it.id == tvFavId } else null
     Row(Modifier.fillMaxSize()) {
     if (tvLists) {
@@ -356,16 +365,17 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
 
         val useRows = kind != Kind.LIVE && !favMode && !contMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
         Box(Modifier.fillMaxSize().focusRequester(contentEntry).focusGroup()) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalRestoreId provides restoreId) {
         if (showHist) {
             HistoryPane(vm)
         } else if (showCont) {
-            ContinuePane(vm, kind, favKeys, onToggleFavorite = toggleFavorite) { if (it.kind == Kind.SERIES) series = it else movie = it }
+            ContinuePane(vm, kind, favKeys, onToggleFavorite = toggleFavorite) { open(it) }
         } else if (showFav) {
-            FavoritesPane(vm, kind, tvFavId.takeIf { tvLists } ?: favList, manage = !tvLists, onSelect = { favList = it }, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it })
+            FavoritesPane(vm, kind, tvFavId.takeIf { tvLists } ?: favList, manage = !tvLists, onSelect = { favList = it }, onOpen = open)
         } else if (useRows) {
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            LazyColumn(Modifier.fillMaxSize(), state = rowsState, contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(categories, key = { it.id }) { c ->
-                    CategoryRow(vm, effective!!, kind, c, favKeys, onToggleFavorite = toggleFavorite, onOpen = { if (it.kind == Kind.SERIES) series = it else movie = it }, onAll = { category = c.remoteId })
+                    CategoryRow(vm, effective!!, kind, c, favKeys, rowStates.getOrPut("${c.accountId}|${c.remoteId}") { androidx.compose.foundation.lazy.LazyListState() }, onToggleFavorite = toggleFavorite, onOpen = open, onAll = { category = c.remoteId })
                 }
             }
         } else {
@@ -389,13 +399,14 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                     }
                 }
             } else {
-                LazyVerticalGrid(if (tvVod) GridCells.Fixed(4) else GridCells.Adaptive(if (LocalTv.current) 175.dp else 130.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LazyVerticalGrid(if (tvVod) GridCells.Fixed(4) else GridCells.Adaptive(if (LocalTv.current) 175.dp else 130.dp), Modifier.fillMaxSize(), state = gridState, contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(paged.itemCount, key = paged.itemKey { it.id }) { i ->
                         val item = paged[i] ?: return@items
-                        PosterCard(item, favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { toggleFavorite(item) }) { if (item.kind == Kind.SERIES) series = item else movie = item }
+                        PosterCard(item, favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { toggleFavorite(item) }) { open(item) }
                     }
                 }
             }
+        }
         }
         }
     }
@@ -495,8 +506,12 @@ private fun NowPlaying(vm: MainViewModel, accountId: Long, epgId: String?) {
 internal fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boolean = false, onLongClick: () -> Unit = {}, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "poster")
+    val restore = LocalTv.current && LocalRestoreId.current == item.id
+    val requester = remember { FocusRequester() }
+    if (restore) LaunchedEffect(Unit) { runCatching { requester.requestFocus() } }
     Column(
         modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+            .then(if (restore) Modifier.focusRequester(requester) else Modifier)
             .onFocusChanged { focused = it.hasFocus }
             .then(if (focused) Modifier.border(2.dp, Palette.Wine, RoundedCornerShape(10.dp)) else Modifier)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(2.dp),
@@ -526,7 +541,7 @@ private fun Badge(text: String) {
 @Composable
 private fun CategoryRow(
     vm: MainViewModel, accountId: Long, kind: Int, category: com.kutlusoy.proiptv.data.Category,
-    favKeys: Set<Triple<Long, Int, String>>, onToggleFavorite: (Item) -> Unit, onOpen: (Item) -> Unit, onAll: () -> Unit,
+    favKeys: Set<Triple<Long, Int, String>>, rowState: androidx.compose.foundation.lazy.LazyListState, onToggleFavorite: (Item) -> Unit, onOpen: (Item) -> Unit, onAll: () -> Unit,
 ) {
     val items by produceState<List<Item>>(emptyList(), accountId, kind, category.remoteId) {
         value = vm.repo.db.items().first(kind, accountId, category.remoteId, 20)
@@ -538,7 +553,7 @@ private fun CategoryRow(
             Text(category.name.ifBlank { stringResource(R.string.live_other) }, Modifier.weight(1f).padding(start = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(stringResource(R.string.detail_see_all), color = Palette.WineSoft, style = MaterialTheme.typography.labelLarge)
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)) {
+        LazyRow(state = rowState, horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)) {
             items(items, key = { it.id }) { item ->
                 PosterCard(item, Modifier.width(if (LocalTv.current) 156.dp else 118.dp), favorite = Triple(item.accountId, item.kind, item.remoteId) in favKeys, onLongClick = { onToggleFavorite(item) }) { onOpen(item) }
             }
