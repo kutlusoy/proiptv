@@ -523,9 +523,10 @@ internal fun PosterCard(item: Item, modifier: Modifier = Modifier, favorite: Boo
             }
         }
         val info = remember(item.name) { TitleParser.parse(item.name) }
-        Text(info.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp, start = 3.dp, end = 3.dp, bottom = 3.dp))
+        // every card reserves two lines for the title and one for the tags, so all cards are equally high and nothing jumps while moving the focus
+        Text(info.title, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp, start = 3.dp, end = 3.dp, bottom = 3.dp))
         val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "", LocalAccountNames.current[item.accountId] ?: "").filter { it.isNotEmpty() }.joinToString("  ")
-        if (tags.isNotEmpty()) Text(tags, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f), modifier = Modifier.padding(start = 3.dp, bottom = 3.dp))
+        Text(tags.ifEmpty { " " }, maxLines = 1, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f), modifier = Modifier.padding(start = 3.dp, bottom = 3.dp))
     }
 }
 
