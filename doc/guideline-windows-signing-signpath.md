@@ -112,7 +112,7 @@ If the repository is private or the workflow permissions are read-only (Settings
 
 ## 7. The workflow steps
 
-The signing steps are already in `.github/workflows/windows-build.yml`. They run only for releases and only when the variable `PROIPTV_SIGNPATH_PROJECT` is set, so nothing changes until section 6 is done. The release workflow hands the secret over with `secrets: inherit`. Pin the action versions when you switch signing on, the ones used are the current major versions. The sketch below shows the idea, the workflow file is the source of truth.
+The signing steps are already in the `release` job of `.github/workflows/release.yml`, after the Windows setup is downloaded and before the files are collected. They run only when the variable `PROIPTV_SIGNPATH_PROJECT` is set, so nothing changes until section 6 is done. `windows-build.yml` stays unchanged and still builds the unsigned setup for CI and test releases. Pin the action version when you switch signing on, the one used is the current major version. The sketch below shows the idea, the workflow file is the source of truth.
 
 ```yaml
   windows:

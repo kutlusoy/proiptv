@@ -1,7 +1,7 @@
 name: Windows build
 
 # Builds the Windows setup (not portable) of ProIPTV. Called by CI, by Test release and by Release.
-# The setup is signed with SignPath when the PROIPTV_SIGNPATH_* variables exist, otherwise Windows SmartScreen may warn. See doc/guideline-windows-version.md.
+# The setup is not signed yet, Windows SmartScreen may warn. See doc/guideline-windows-version.md.
 
 on:
   workflow_call:
@@ -59,39 +59,6 @@ jobs:
           & $iscc "/DAppVersion=$env:VERSION" "/DOutputName=$env:BASE-windows-x64-setup" "/DSourceDir=$root\desktop\build\compose\binaries\main\app\ProIPTV" "/DIconFile=$root\design\ProIPTV.ico" "/DLicenseFile=$root\LICENSE" "/O$root\dist" "desktop\installer\ProIPTV.iss"
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
           Get-ChildItem dist
-
-      # Signing runs only for releases and only after the SignPath variables exist, see doc/guideline-windows-signing-signpath.md
-      - name: Upload the unsigned setup
-        if: ${{ inputs.kind == 'release' && vars.PROIPTV_SIGNPATH_PROJECT != '' }}
-        id: upload-unsigned
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-setup-unsigned
-          path: dist/${{ env.BASE }}-windows-x64-setup.exe
-          if-no-files-found: error
-
-      - name: Sign the setup with SignPath
-        if: ${{ inputs.kind == 'release' && vars.PROIPTV_SIGNPATH_PROJECT != '' }}
-        uses: signpath/github-action-submit-signing-request@v3
-        with:
-          api-token: ${{ secrets.PROIPTV_SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.PROIPTV_SIGNPATH_ORG_ID }}
-          project-slug: ${{ vars.PROIPTV_SIGNPATH_PROJECT }}
-          signing-policy-slug: ${{ vars.PROIPTV_SIGNPATH_POLICY }}
-          artifact-configuration-slug: ${{ vars.PROIPTV_SIGNPATH_ARTIFACT_CONFIG }}
-          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
-          wait-for-completion: true
-          output-artifact-directory: signed
-
-      - name: Use the signed setup
-        if: ${{ inputs.kind == 'release' && vars.PROIPTV_SIGNPATH_PROJECT != '' }}
-        shell: pwsh
-        run: |
-          $signed = Get-ChildItem signed -Filter *-windows-x64-setup.exe
-          if ($signed.Count -ne 1) { throw "Expected one signed setup in signed, found $($signed.Count)" }
-          Copy-Item $signed.FullName "dist/$env:BASE-windows-x64-setup.exe" -Force
-          $sig = Get-AuthenticodeSignature "dist/$env:BASE-windows-x64-setup.exe"
-          if ($sig.Status -ne 'Valid') { throw "The signature is $($sig.Status)" }
 
       - name: Check the setup
         shell: bash
