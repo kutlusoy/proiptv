@@ -95,7 +95,7 @@ android {
             all { testTask ->
                 if (project.hasProperty('screenshots')) {
                     testTask.include '**/Screenshot*'
-                    testTask.systemProperty 'robolectric.pixelCopyRenderMode', 'hardware'
+                    testTask.systemProperty 'roborazzi.test.record', 'true'
                 } else {
                     testTask.exclude '**/Screenshot*'
                 }

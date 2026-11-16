@@ -200,7 +200,8 @@ fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit, onOpen: (Item
     }
 
     val saved = progress?.takeIf { it.positionMs > 5_000 }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    val page = rememberScrollState()
+    Column(Modifier.fillMaxSize().verticalScroll(page)) {
         Hero(info?.backdrop ?: info?.cover ?: item.logo, heroHeight(), onBack, trailing = { FavStar(vm, item) }) {
             Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(remember(item.name) { TitleParser.parse(item.name).title }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -231,8 +232,8 @@ fun MovieDetail(vm: MainViewModel, item: Item, onBack: () -> Unit, onOpen: (Item
                 LinearProgressIndicator(progress = { (saved.positionMs.toFloat() / saved.durationMs).coerceIn(0f, 1f) }, Modifier.fillMaxWidth(0.5f))
             }
             val plot = info?.plot ?: item.plot
-            if (plot != null) Text(plot, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyLarge)
-            Column {
+            if (plot != null) Text(plot, Modifier.tvReadable(page), color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyLarge)
+            Column(if (listOf(info?.director, info?.cast, info?.releaseDate).any { !it.isNullOrBlank() }) Modifier.tvReadable(page) else Modifier) {
                 Fact(R.string.detail_director, info?.director)
                 Fact(R.string.detail_cast, info?.cast)
                 Fact(R.string.detail_released, info?.releaseDate)
@@ -310,7 +311,8 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit, onOp
         vm.player.value = PlayRequest.Single(target)
     }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+    val page = androidx.compose.foundation.lazy.rememberLazyListState()
+    LazyColumn(Modifier.fillMaxSize(), state = page, contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
             Hero(info?.backdrop ?: info?.cover ?: series.logo, heroHeight(), onBack, trailing = { FavStar(vm, series) }) {
                 Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -329,8 +331,8 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit, onOp
                 RatingStars(info?.rating ?: series.rating)
                 TrailerButton(info?.trailer)
                 val plot = info?.plot ?: series.plot
-                if (plot != null) Text(plot, color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyLarge)
-                Column {
+                if (plot != null) Text(plot, Modifier.tvReadable(page), color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.bodyLarge)
+                Column(if (listOf(info?.cast, info?.director, info?.releaseDate).any { !it.isNullOrBlank() }) Modifier.tvReadable(page) else Modifier) {
                     Fact(R.string.detail_cast, info?.cast)
                     Fact(R.string.detail_director, info?.director)
                     Fact(R.string.detail_released, info?.releaseDate)

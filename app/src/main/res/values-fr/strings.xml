@@ -96,6 +96,13 @@
     <string name="rec_empty">Aucun enregistrement. Appuyez sur Enregistrer pendant le visionnage d\'une chaîne.</string>
     <string name="rec_record">Enregistrer</string>
     <string name="rec_stop">Arrêter l\'enregistrement</string>
+    <string name="rec_go_channel">Aller à la chaîne</string>
+    <string name="player_list_current">Liste actuelle</string>
+    <string name="player_list_search">Recherche actuelle</string>
+    <string name="player_search">Rechercher des chaînes</string>
+    <string name="player_search_all">Toutes les chaînes</string>
+    <string name="player_list_previous">Liste précédente</string>
+    <string name="player_list_next">Liste suivante</string>
     <string name="rec_until_stopped">Jusqu\'à l\'arrêt manuel</string>
     <string name="rec_minutes">%1$d minutes</string>
     <string name="rec_until_program_end">Jusqu\'à la fin de l\'émission en cours</string>

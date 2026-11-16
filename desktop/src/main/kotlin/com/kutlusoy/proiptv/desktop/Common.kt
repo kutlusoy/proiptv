@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
@@ -95,6 +97,14 @@ private fun Initials(name: String?, modifier: Modifier) {
     }
 }
 
+/** The stop symbol of a running recording: a square in a red ring. */
+@Composable
+fun RecStopIcon(size: androidx.compose.ui.unit.Dp = 32.dp) {
+    Box(Modifier.size(size).border(2.dp, Palette.WineSoft, CircleShape), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(size * 0.38f).background(Palette.WineSoft, RoundedCornerShape(2.dp)))
+    }
+}
+
 /** A logo or poster. When the address is missing or the picture cannot be loaded, the first letters of [name] take its place. */
 @Composable
 fun Logo(url: String?, modifier: Modifier, scale: ContentScale = ContentScale.Fit, name: String? = null) {
@@ -138,4 +148,31 @@ fun SkeletonRows() {
 fun clock(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
+}
+
+
+/**
+ * A text field whose cursor stands at the end of the text when it gets the focus (also when the text was filled in before, for example a search
+ * that is still there). Takes over changes of the text from outside, such as a cleared search.
+ */
+@Composable
+fun TextInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = false,
+    label: (@Composable () -> Unit)? = null,
+    placeholder: (@Composable () -> Unit)? = null,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    supportingText: (@Composable () -> Unit)? = null,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+) {
+    var field by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(value, androidx.compose.ui.text.TextRange(value.length))) }
+    if (field.text != value) field = androidx.compose.ui.text.input.TextFieldValue(value, androidx.compose.ui.text.TextRange(value.length))
+    androidx.compose.material3.OutlinedTextField(
+        field, { field = it; if (it.text != value) onValueChange(it.text) }, modifier, singleLine = singleLine,
+        label = label, placeholder = placeholder, leadingIcon = leadingIcon, trailingIcon = trailingIcon, supportingText = supportingText,
+        visualTransformation = visualTransformation,
+    )
 }

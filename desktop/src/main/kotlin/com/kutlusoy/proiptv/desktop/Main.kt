@@ -106,7 +106,8 @@ private fun runApplication() = application {
                 // any key skips the intro
                 if (e.type == KeyEventType.KeyDown) state.splash = false
                 true
-            } else if (c == null || e.type != KeyEventType.KeyDown) false
+            // while a text field has the focus the keys belong to it (P, F, M, the space bar and the arrows are shortcuts of the player)
+            } else if (c == null || e.type != KeyEventType.KeyDown || state.typing) false
             else when (e.key) {
                 Key.Escape -> { if (state.compact) { state.setCompact(false, state.windowRef?.bounds); true } else if (state.placement == WindowPlacement.Fullscreen) { state.toggleFullscreen(); true } else { c.stop(); true } }
                 Key.P -> { state.setCompact(!state.compact, state.windowRef?.bounds); true }

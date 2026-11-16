@@ -96,6 +96,13 @@
     <string name="rec_empty">Aún no hay grabaciones. Pulsa Grabar mientras ves un canal.</string>
     <string name="rec_record">Grabar</string>
     <string name="rec_stop">Detener grabación</string>
+    <string name="rec_go_channel">Ir al canal</string>
+    <string name="player_list_current">Lista actual</string>
+    <string name="player_list_search">Búsqueda actual</string>
+    <string name="player_search">Buscar canales</string>
+    <string name="player_search_all">Todos los canales</string>
+    <string name="player_list_previous">Lista anterior</string>
+    <string name="player_list_next">Lista siguiente</string>
     <string name="rec_until_stopped">Hasta que la detenga</string>
     <string name="rec_minutes">%1$d minutos</string>
     <string name="rec_until_program_end">Hasta que termine el programa actual</string>

@@ -18,6 +18,7 @@ import com.kutlusoy.proiptv.engine.HubLease
 import com.kutlusoy.proiptv.engine.Recorder
 import com.kutlusoy.proiptv.engine.RecordingEnd
 import com.kutlusoy.proiptv.net.Upstream
+import com.kutlusoy.proiptv.parse.RecordingNames
 import com.kutlusoy.proiptv.ui.MainActivity
 import java.io.File
 import java.text.SimpleDateFormat
@@ -66,9 +67,13 @@ class RecordingManager(
         val lease = engine.acquire(target.accountId, target.remoteId, target.title, maxConnections, Upstream.opener(target.url, target.userAgent))
         try {
             val now = System.currentTimeMillis()
-            val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date(now))
-            val safe = target.title.replace(Regex("[^A-Za-z0-9._-]+"), "_").take(40)
-            val file = File(dir, "$safe-$stamp.ts")
+            val channelItem = db.items().find(target.accountId, Kind.LIVE, target.remoteId)
+            val channel = channelItem?.name ?: target.title
+            var program = RecordingNames.programOf(target.title, channel)
+            if (program.isEmpty()) {
+                program = channelItem?.epgId?.takeIf { it.isNotBlank() }?.let { db.programs().now(target.accountId, it.lowercase(), now / 1000)?.title }.orEmpty()
+            }
+            val file = File(dir, RecordingNames.fileName(channel, program, now) { File(dir, it).exists() })
             val id = if (existing == null) {
                 db.recordings().insert(
                     Recording(accountId = target.accountId, title = target.title, startedAt = now, plannedEnd = stopAtMs, path = file.absolutePath, channelRemoteId = target.remoteId),

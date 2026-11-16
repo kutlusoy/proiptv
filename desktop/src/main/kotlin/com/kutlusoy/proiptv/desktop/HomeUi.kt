@@ -24,7 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,7 +58,7 @@ fun HomeScreen(state: AppState) {
         if (q.length >= 2) searchRows(state, q) else homeRows(state)
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        OutlinedTextField(
+        TextInput(
             query, { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             placeholder = { Text(t("home_search")) },
             leadingIcon = { Icon(Icons.Filled.Search, null) },

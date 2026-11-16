@@ -211,7 +211,8 @@ abstract class ScreenshotBase(private val folder: String, private val tv: Boolea
         goTo(R.string.nav_live)
         compose.onNodeWithText(str(R.string.live_all)).performClick()
         settle()
-        compose.onNodeWithText(str(R.string.fav_title)).performClick()
+        compose.onAllNodesWithText(str(R.string.fav_title)).onFirst().performClick()
+        settle()
         shot("11-favoriten")
         scenario.close()
     }

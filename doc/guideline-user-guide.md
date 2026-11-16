@@ -195,7 +195,7 @@ Double tap on the left half of the picture jumps 10 seconds back, double tap on 
 
 ## ProIPTV on Windows
 
-Download `ProIPTV-<version>-windows-x64-setup.exe` from the release page (or from a test release) and start it. It installs for your Windows user, without administrator rights, with a start menu entry and an uninstaller. As long as the installer is not signed, Windows SmartScreen shows "Windows protected your PC": click **More info** and then **Run anyway**.
+Download `ProIPTV-<version>-windows-x64-setup.exe` (signed releases: `ProIPTV-<version>-cert-windows-x64-setup.exe`) from the release page (or from a test release) and start it. It installs for your Windows user, without administrator rights, with a start menu entry and an uninstaller. As long as the installer is not signed, Windows SmartScreen shows "Windows protected your PC": click **More info** and then **Run anyway**.
 
 Add your accounts under **Accounts** (the help texts are the same as on Android), then open Live TV, Movies or Series. While watching: **Space** pause, **arrow left/right** 10 seconds (movies), **arrow up/down** previous and next channel (live), **F** or a double click full screen (without window border, the controls float over the picture and fade away when the mouse rests), **Esc** leaves full screen and then stops, mouse wheel changes the volume. Under **Settings** you find the language and the **Update** section; the app also checks once a day by itself and asks once per day when a newer version is there. The update closes the app, installs the new version and starts it again. Your accounts and favorites stay, they are in `%APPDATA%\ProIPTV`.
 

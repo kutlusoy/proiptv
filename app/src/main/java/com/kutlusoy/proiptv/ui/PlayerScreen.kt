@@ -414,7 +414,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         holder.key = key
         holder.lease = null
         hubActive = false
-        val useHub = t.live && !forceHls && catchup == null && app.prefs.timeshift && isTransportStream(t.url)
+        // plain streams and HLS playlists that the hub can follow go through the hub (pause, rewind and recording for every source)
+        val useHub = t.live && !forceHls && catchup == null && app.prefs.timeshift &&
+            (isTransportStream(t.url) || (Upstream.isHls(t.url) && Upstream.hlsUsable(t.url, t.userAgent)))
         if (useHub) {
             val lease = try {
                 val max = vm.repo.maxConnections(t.accountId)

@@ -40,7 +40,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -152,7 +151,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 )
             }
             DropdownField(options.firstOrNull { it.first == category }?.second ?: t("live_all"), options, { category = it }, Modifier.weight(0.45f).widthIn(min = 160.dp, max = 360.dp))
-            OutlinedTextField(
+            TextInput(
                 query, { query = it }, singleLine = true, modifier = Modifier.weight(0.55f),
                 placeholder = { Text(t(if (kind == Kind.LIVE) "live_search" else "live_search")) },
                 trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
@@ -197,7 +196,17 @@ fun BrowseScreen(state: AppState, kind: Int) {
                         state, e,
                         onMove = if (inFavorites && q.isEmpty()) { delta -> state.moveFavorite(currentList!!.id, e, delta) } else null,
                     ) {
-                        if (kind == Kind.LIVE) state.player = PlayRequest.Live(shown, index)
+                        if (kind == Kind.LIVE) {
+                            // the search goes with the player, together with the list it started from
+                            val origin = if (q.isEmpty()) emptyList() else all.filter { e ->
+                                (!favOnly || state.isFavorite(e)) && when {
+                                    category == ALL_KEY -> true
+                                    category.startsWith(FAV_PREFIX) -> state.inList(e, category.removePrefix(FAV_PREFIX))
+                                    else -> e.categoryId == category.substringAfter('|') && e.accountId == category.substringBefore('|')
+                                }
+                            }
+                            state.player = PlayRequest.Live(shown, index, query = q, origin = origin, allScope = category == ALL_KEY && activeAccount == null && !favOnly)
+                        }
                         else if (kind == Kind.SERIES) state.series = e else state.movie = e
                     }
                 }
@@ -215,7 +224,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { listDialog = null },
             title = { Text(t("fav_list_name")) },
-            text = { OutlinedTextField(name, { name = it }, singleLine = true) },
+            text = { TextInput(name, { name = it }, singleLine = true) },
             confirmButton = {
                 androidx.compose.material3.TextButton(enabled = name.isNotBlank(), onClick = {
                     if (mode == "rename") currentList?.let { state.renameList(it.id, name) } else category = FAV_PREFIX + state.createList(kind, name)
@@ -306,9 +315,10 @@ private fun Poster(state: AppState, e: Entry, onClick: () -> Unit) {
             Logo(e.logo, Modifier.fillMaxWidth().aspectRatio(0.68f), ContentScale.Crop, e.name)
             if (state.isFavorite(e)) Icon(Icons.Filled.Star, null, Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp), tint = Color(0xFFFFC107))
         }
-        Text(info.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+        // country and year come right below the picture, then the title; every card reserves one line for the tags and two for the title
         val tags = listOf(info.country, if (info.year > 0) info.year.toString() else "", state.accountLabel(e.accountId) ?: "").filter { it.isNotEmpty() }.joinToString("  ")
-        if (tags.isNotEmpty()) Text(tags, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f))
+        Text(tags.ifEmpty { " " }, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.65f), modifier = Modifier.padding(top = 6.dp))
+        Text(info.title, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp))
     }
 }
 

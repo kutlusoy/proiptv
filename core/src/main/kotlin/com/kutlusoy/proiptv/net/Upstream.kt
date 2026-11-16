@@ -6,7 +6,9 @@ import java.io.InputStream
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Dispatcher
@@ -26,15 +28,48 @@ object Upstream {
             .build()
     }
 
+    fun isHls(url: String): Boolean = url.substringBefore('?').substringBefore('#').endsWith(".m3u8", ignoreCase = true)
+
+    /** A plain stream, or for an HLS playlist the transport stream that follows its segments. */
     fun opener(url: String, userAgent: String?): suspend () -> InputStream = {
+        if (isHls(url)) {
+            withContext(Dispatchers.IO) {
+                HlsStream(url, HlsSource { blocking(it, userAgent) }).also { stream -> runCatching { stream.prepare() }.onFailure { stream.close(); throw it } }
+            }
+        } else {
+            val call = liveClient.newCall(Http.request(url, userAgent))
+            val response = call.await()
+            if (!response.isSuccessful) {
+                val code = response.code
+                response.close()
+                throw HttpException(code, "HTTP $code")
+            }
+            CancelOnClose(call, response.body!!.byteStream())
+        }
+    }
+
+    /** Whether the stream hub can take this HLS playlist (no encryption, no fragmented MP4). False also when the playlist cannot be read. */
+    suspend fun hlsUsable(url: String, userAgent: String?): Boolean = withContext(Dispatchers.IO) {
+        val stream = HlsStream(url, HlsSource { blocking(it, userAgent) })
+        try {
+            stream.prepare()
+            true
+        } catch (e: Exception) {
+            false
+        } finally {
+            stream.close()
+        }
+    }
+
+    private fun blocking(url: String, userAgent: String?): InputStream {
         val call = liveClient.newCall(Http.request(url, userAgent))
-        val response = call.await()
+        val response = call.execute()
         if (!response.isSuccessful) {
             val code = response.code
             response.close()
             throw HttpException(code, "HTTP $code")
         }
-        CancelOnClose(call, response.body!!.byteStream())
+        return CancelOnClose(call, response.body!!.byteStream())
     }
 
     private suspend fun Call.await(): Response = suspendCancellableCoroutine { continuation ->

@@ -7,13 +7,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,6 +74,7 @@ data class RecordingDto(
     val channelRemoteId: String = "",
     val note: String? = null,
     val plannedStart: Long? = null,
+    val program: String = "",
 )
 
 class RecordingStore(private val dir: File) {
@@ -134,15 +138,14 @@ class RecordingManager(
         store.all().firstOrNull { it.status == RecStatus.RECORDING && it.account == account && it.channelRemoteId == channelRemoteId }?.id
 
     /** Starts recording the live item. Throws BudgetExceeded when the account has no free connection and NotEnoughSpace when the disk is nearly full. */
-    fun start(item: Playable, stopAtMs: Long?): Long {
+    fun start(item: Playable, stopAtMs: Long?, program: String? = null): Long {
         dir.mkdirs()
         if (dir.usableSpace < MIN_FREE_BYTES) throw NotEnoughSpace()
         val lease = engine.acquire(item.accountNumber, item.channelId, item.title, item.maxConnections, Upstream.opener(item.url, item.userAgent))
         try {
             val now = System.currentTimeMillis()
-            val stamp = SimpleDateFormat("yyyyMMdd-HHmm").format(Date(now))
-            val safe = item.title.replace(Regex("[^A-Za-z0-9._-]+"), "_").take(40)
-            val file = File(dir, "$safe-$stamp.ts")
+            val show = program?.takeIf { it.isNotBlank() } ?: com.kutlusoy.proiptv.parse.RecordingNames.programOf(item.title, item.title)
+            val file = File(dir, com.kutlusoy.proiptv.parse.RecordingNames.fileName(item.title, show, now) { File(dir, it).exists() })
             val id = store.add(RecordingDto(0, item.account, item.title, now, null, stopAtMs, file.absolutePath, 0, RecStatus.RECORDING, item.channelId))
             val recorder = Recorder(lease.hub, file, lease.hub.buffer.end, stopAtMs)
             running[id] = Running(recorder, lease)
@@ -185,8 +188,8 @@ class RecordingManager(
     }
 
     /** Plans a recording of a later show. It starts when the program is running at that time (see startDue). */
-    fun schedule(item: Playable, startMs: Long, endMs: Long): Long =
-        store.add(RecordingDto(0, item.account, item.title, startMs, null, endMs, "", 0, RecStatus.SCHEDULED, item.channelId, plannedStart = startMs))
+    fun schedule(item: Playable, startMs: Long, endMs: Long, program: String? = null): Long =
+        store.add(RecordingDto(0, item.account, item.title, startMs, null, endMs, "", 0, RecStatus.SCHEDULED, item.channelId, plannedStart = startMs, program = program.orEmpty()))
 
     /** Starts the planned recordings whose time has come. [resolve] gives the live item of a channel. */
     fun startDue(now: Long, resolve: (RecordingDto) -> Playable?) {
@@ -199,7 +202,7 @@ class RecordingManager(
             if (item == null) { store.update(r.id) { it.copy(status = RecStatus.MISSED, note = "channel") }; continue }
             try {
                 store.remove(r.id)
-                start(item, end)
+                start(item, end, r.program)
             } catch (e: Exception) {
                 store.add(r.copy(status = RecStatus.MISSED, note = if (e is NotEnoughSpace) "space" else "budget"))
             }
@@ -224,6 +227,8 @@ fun RecordingsScreen(state: AppState) {
         return
     }
     val format = remember { SimpleDateFormat("dd.MM.yyyy HH:mm") }
+    val stopText = t("rec_stop")
+    val goText = t("rec_go_channel")
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         items(all, key = { it.id }) { r ->
             val active = r.status == RecStatus.RECORDING
@@ -244,9 +249,21 @@ fun RecordingsScreen(state: AppState) {
                         color = if (r.status == RecStatus.INTERRUPTED || r.status == RecStatus.MISSED) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.75f),
                     )
                 }
-                if (active) IconButton(onClick = { state.recordingManager.stop(r.id) }) { Icon(Icons.Filled.Stop, t("rec_stop")) }
-                else if (playable) Icon(Icons.Filled.PlayArrow, t("rec_play"))
-                IconButton(onClick = { deleting = r }) { Icon(Icons.Filled.Delete, t("action_delete")) }
+                if (active) {
+                    IconButton(onClick = { state.recordingManager.stop(r.id) }, Modifier.semantics { contentDescription = stopText }) { RecStopIcon() }
+                    val channel = state.data.entries(Kind.LIVE).firstOrNull { it.accountId == r.account && it.remoteId == r.channelRemoteId }
+                    if (channel != null) {
+                        IconButton(
+                            onClick = {
+                                val sameAccount = state.data.entries(Kind.LIVE).filter { it.accountId == r.account }
+                                state.player = PlayRequest.Live(sameAccount, sameAccount.indexOf(channel).coerceAtLeast(0))
+                            },
+                            Modifier.width(56.dp).semantics { contentDescription = goText },
+                        ) { Logo(channel.logo, Modifier.size(width = 48.dp, height = 32.dp), name = channel.name) }
+                    }
+                } else if (playable) Icon(Icons.Filled.PlayArrow, t("rec_play"))
+                // a running recording is stopped first, then it can be deleted
+                IconButton(onClick = { deleting = r }, enabled = !active) { Icon(Icons.Filled.Delete, t("action_delete")) }
             }
         }
     }

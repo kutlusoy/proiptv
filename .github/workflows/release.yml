@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: release-${{ github.ref }}-${{ inputs.version || github.ref_name }}
@@ -81,10 +82,45 @@ jobs:
           name: windows-setup
           path: windows
 
+      # Signing runs only after the SignPath variables exist, see doc/guideline-windows-signing-signpath.md
+      - name: Upload the unsigned setup
+        if: ${{ vars.PROIPTV_SIGNPATH_PROJECT != '' }}
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup-unsigned
+          path: windows/*-windows-x64-setup.exe
+          if-no-files-found: error
+
+      - name: Sign the setup with SignPath
+        if: ${{ vars.PROIPTV_SIGNPATH_PROJECT != '' }}
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.PROIPTV_SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.PROIPTV_SIGNPATH_ORG_ID }}
+          project-slug: ${{ vars.PROIPTV_SIGNPATH_PROJECT }}
+          signing-policy-slug: ${{ vars.PROIPTV_SIGNPATH_POLICY }}
+          artifact-configuration-slug: ${{ vars.PROIPTV_SIGNPATH_ARTIFACT_CONFIG }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Use the signed setup
+        if: ${{ vars.PROIPTV_SIGNPATH_PROJECT != '' }}
+        run: |
+          [[ $(ls signed/*-windows-x64-setup.exe | wc -l) -eq 1 ]] || { echo "::error::Expected one signed setup in signed"; exit 1; }
+          if cmp -s signed/*-windows-x64-setup.exe windows/*-windows-x64-setup.exe; then
+            echo "::error::The setup from SignPath is identical to the unsigned one"
+            exit 1
+          fi
+          rm windows/*-windows-x64-setup.exe
+          cp signed/*-windows-x64-setup.exe "windows/ProIPTV-$VERSION-cert-windows-x64-setup.exe"
+          echo "WINDOWS_SETUP=ProIPTV-$VERSION-cert-windows-x64-setup.exe" >> "$GITHUB_ENV"
+
       - name: Collect files
         run: |
           mkdir -p dist
-          cp windows/*-windows-x64-setup.exe "dist/ProIPTV-$VERSION-windows-x64-setup.exe"
+          cp windows/*-windows-x64-setup.exe "dist/${WINDOWS_SETUP:-ProIPTV-$VERSION-windows-x64-setup.exe}"
           cp app/build/outputs/apk/release/*.apk "dist/ProIPTV-$VERSION.apk"
           cp app/build/outputs/bundle/release/*.aab "dist/ProIPTV-$VERSION.aab"
           if [ -f app/build/outputs/mapping/release/mapping.txt ]; then

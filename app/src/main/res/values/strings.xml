@@ -97,6 +97,13 @@
     <string name="rec_empty">No recordings yet. Press Record while watching a channel.</string>
     <string name="rec_record">Record</string>
     <string name="rec_stop">Stop recording</string>
+    <string name="rec_go_channel">Go to the channel</string>
+    <string name="player_list_current">Current list</string>
+    <string name="player_list_search">Current search</string>
+    <string name="player_search">Search channels</string>
+    <string name="player_search_all">All channels</string>
+    <string name="player_list_previous">Previous list</string>
+    <string name="player_list_next">Next list</string>
     <string name="rec_until_stopped">Until I stop it</string>
     <string name="rec_minutes">%1$d minutes</string>
     <string name="rec_until_program_end">Until the current program ends</string>

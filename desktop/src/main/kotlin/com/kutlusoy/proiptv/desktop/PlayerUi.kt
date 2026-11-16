@@ -1,5 +1,6 @@
 package com.kutlusoy.proiptv.desktop
 
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -23,6 +24,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,6 +35,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.PictureInPictureAlt
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
@@ -78,7 +90,47 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var listOpen by mutableStateOf(false)
 
     val live: Boolean get() = request is PlayRequest.Live
-    val canZap: Boolean get() = request is PlayRequest.Live && request.entries.size > 1
+    /** The channels that zapping and the next and previous keys walk through. It becomes the list the user clicked a channel in. */
+    var playEntries by mutableStateOf((request as? PlayRequest.Live)?.entries.orEmpty())
+
+    /**
+     * The search of the channel list lives here, so it is still there when the list is opened again. When the player was started from a list with a
+     * search, that search is the one of the panel (and a change in the panel is handed back to the list).
+     */
+    private val liveRequest = request as? PlayRequest.Live
+    var searchOpen by mutableStateOf(liveRequest?.query?.isNotBlank() == true)
+    private var searchTextState by mutableStateOf(liveRequest?.query.orEmpty())
+    var searchText: String
+        get() = searchTextState
+        set(value) {
+            searchTextState = value
+            if (liveRequest?.query != null) state.browseQuery[Kind.LIVE] = value
+        }
+
+    /** The playing list is the result of a search, and the list that the search started from. */
+    var playFromSearch by mutableStateOf(liveRequest?.query?.isNotBlank() == true)
+    var searchOrigin: List<Entry> = liveRequest?.origin.orEmpty()
+
+    /** The search looks through all channels. A search that comes from a list starts inside that list (all channels only when that list is "All"), whatever was chosen last time. */
+    var searchAll by mutableStateOf(if (liveRequest?.query.isNullOrBlank()) state.store.config.playerSearchAll else liveRequest?.allScope == true)
+
+    /** Empties the search and closes it everywhere: the list goes back to the one that the search started from. */
+    fun clearSearch() {
+        searchText = ""
+        searchOpen = false
+        if (playFromSearch) {
+            val key = playEntries.getOrNull(index)?.key
+            val origin = searchOrigin
+            if (origin.isNotEmpty()) {
+                playEntries = origin
+                index = origin.indexOfFirst { it.key == key }.coerceAtLeast(0)
+            }
+            playFromSearch = false
+            searchOrigin = emptyList()
+        }
+    }
+
+    val canZap: Boolean get() = request is PlayRequest.Live && playEntries.size > 1
 
     var current: Playable? = null
         private set
@@ -102,7 +154,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         saveProgress()
         val item = when (request) {
             is PlayRequest.Single -> request.item
-            is PlayRequest.Live -> state.library.playable(request.entries[index])
+            is PlayRequest.Live -> playEntries.getOrNull(index)?.let { state.library.playable(it) }
         }
         if (item == null) { failed = "No address"; return }
         current = item
@@ -112,7 +164,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         // another channel: the old connection is cut at once
         releaseHub(now = true)
         if (request is PlayRequest.Live) {
-            val entry = request.entries[index]
+            val entry = playEntries[index]
             state.recordHistory(entry)
             val a = state.store.config.accounts.firstOrNull { it.id == entry.accountId }
             val live = item.copy(accountNumber = (a?.id ?: "").hashCode().toLong(), channelId = entry.remoteId, maxConnections = state.data.status[entry.accountId]?.info?.maxConnections)
@@ -151,10 +203,11 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     /** Records the current channel. stopAfterMs null means until it is stopped. Returns an error text or null. */
-    fun record(stopAfterMs: Long?): String? {
+    fun record(stopAfterMs: Long?, program: String? = null): String? {
         val item = current ?: return null
+        val show = program ?: playEntries.getOrNull(index)?.let { state.guide.nowNext(it.accountId, it.epgId, System.currentTimeMillis() / 1000).first?.title }
         return try {
-            recordingId = state.recordingManager.start(item, stopAfterMs?.let { System.currentTimeMillis() + it })
+            recordingId = state.recordingManager.start(item, stopAfterMs?.let { System.currentTimeMillis() + it }, show)
             null
         } catch (e: com.kutlusoy.proiptv.engine.BudgetExceeded) {
             Strings.get("player_no_connection", e.limit, e.openTitles.joinToString())
@@ -184,21 +237,22 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         )
     }
 
-    /** Plays the channel at this position of the list the player was started from. */
-    fun jump(i: Int) {
-        val r = request as? PlayRequest.Live ?: return
-        if (i !in r.entries.indices) return
+    /** Plays the channel at this position of [list]. From now on zapping walks through that list. */
+    fun play(list: List<Entry>, i: Int, fromSearch: Boolean = false, origin: List<Entry> = emptyList()) {
+        if (request !is PlayRequest.Live || i !in list.indices) return
+        playEntries = list
+        playFromSearch = fromSearch
+        searchOrigin = origin
         index = i
         listOpen = false
         start()
     }
 
-    val entries: List<Entry> get() = (request as? PlayRequest.Live)?.entries.orEmpty()
+    val entries: List<Entry> get() = playEntries
 
     fun zap(delta: Int) {
-        val r = request as? PlayRequest.Live ?: return
-        if (r.entries.size < 2) return
-        index = ((index + delta) % r.entries.size + r.entries.size) % r.entries.size
+        if (request !is PlayRequest.Live || playEntries.size < 2) return
+        index = ((index + delta) % playEntries.size + playEntries.size) % playEntries.size
         start()
     }
 
@@ -287,10 +341,28 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
         if (controller.reconnecting && controller.failed == null) Text(t("player_retrying"), Modifier.background(Color(0xAA000000)).padding(12.dp), color = Color.White)
     }
 
+    // 0 compact, 1 fullscreen, 2 window, 3 channel browser: the change between them fades instead of jumping
+    val layoutMode = when {
+        state.compact -> 0
+        controller.listOpen && controller.live -> 3
+        fullscreen -> 1
+        else -> 2
+    }
     Box(Modifier.fillMaxSize()) {
-    if (state.compact) {
+    androidx.compose.animation.AnimatedContent(
+        layoutMode, Modifier.fillMaxSize(),
+        transitionSpec = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260)) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(260)) },
+        label = "player layout",
+    ) { mode ->
+    if (mode == 3) {
+        // the channel browser: list on the left, the running channel as a small preview with its info card, the guide below
+        Column(Modifier.fillMaxSize().background(Palette.Velvet)) {
+            ChannelBrowser(state, controller, video, Modifier.weight(1f))
+            ControlBar(state, controller, Modifier, floating = false)
+        }
+    } else if (mode == 0) {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
-    } else if (fullscreen) {
+    } else if (mode == 1) {
         // the picture fills the screen, the controls float above it and fade away when the mouse rests
         Box(
             Modifier.fillMaxSize().background(Color.Black).onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Move) {
@@ -320,31 +392,197 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             ControlBar(state, controller, Modifier, floating = false)
         }
     }
-    if (controller.listOpen && controller.canZap) {
-        Box(Modifier.fillMaxSize().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { controller.listOpen = false })
-        ChannelPanel(state, controller, Modifier.align(Alignment.CenterStart))
     }
     }
 }
 
-/** The channels of the list the player was started from, at the left edge. The channel keeps playing while the list is open. */
+/** The browser of the player: the channel list at the left, at the right the running channel as a preview next to its info card, and its guide below. */
 @Composable
-private fun ChannelPanel(state: AppState, controller: PlayerController, modifier: Modifier) {
-    val list = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (controller.index - 3).coerceAtLeast(0))
-    androidx.compose.foundation.lazy.LazyColumn(modifier.fillMaxHeight().width(340.dp).background(Palette.Velvet), state = list) {
-        itemsIndexed(controller.entries, key = { _, e -> e.key }) { i, e ->
-            val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
-            Row(
-                Modifier.fillMaxWidth().background(if (i == controller.index) Palette.WineDeep.copy(alpha = 0.7f) else Color.Transparent)
-                    .clickable { controller.jump(i) }.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Logo(e.logo, Modifier.size(width = 56.dp, height = 36.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White)
-                    if (now != null) Text(now.title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+private fun ChannelBrowser(state: AppState, controller: PlayerController, video: @Composable (Modifier) -> Unit, modifier: Modifier) {
+    val playing = controller.playEntries.getOrNull(controller.index)
+    // the guide shows the channel the mouse touched last, at the start the running one
+    var hovered by remember { mutableStateOf<Entry?>(null) }
+    val shownEntry = hovered ?: playing
+    val timeFormat = remember { java.text.SimpleDateFormat("HH:mm") }
+    val nowSecs = state.tick
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth()) {
+        val left = (maxWidth * 0.32f).coerceAtLeast(300.dp).coerceAtMost(maxWidth * 0.6f)
+        Row(Modifier.fillMaxSize()) {
+            ChannelPanel(state, controller, Modifier.width(left).fillMaxHeight(), onHover = { hovered = it })
+            Column(Modifier.weight(1f).fillMaxHeight()) {
+                Row(Modifier.weight(0.5f).fillMaxWidth()) {
+                    Box(Modifier.weight(0.62f).fillMaxHeight().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
+                    Column(Modifier.weight(0.38f).fillMaxHeight().background(Palette.Surface).padding(16.dp), verticalArrangement = Arrangement.Center) {
+                        Text(
+                            t("tv_live_badge"), Modifier.background(Palette.Wine, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
+                            color = Color.White, style = MaterialTheme.typography.labelLarge,
+                        )
+                        Text(playing?.name.orEmpty(), Modifier.padding(top = 8.dp), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 5, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        val now = playing?.let { state.guide.nowNext(it.accountId, it.epgId, nowSecs).first }
+                        if (now != null) {
+                            Text(now.title, Modifier.padding(top = 8.dp), color = Palette.WineSoft, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(timeFormat.format(java.util.Date(now.start * 1000)) + " - " + timeFormat.format(java.util.Date(now.end * 1000)), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                val programs = remember(shownEntry, state.guide, nowSecs / 60) {
+                    shownEntry?.epgId?.let { id -> state.guide.programs[Guide.key(shownEntry.accountId, id)].orEmpty().filter { it.end > nowSecs } }.orEmpty()
+                }
+                androidx.compose.animation.Crossfade(shownEntry?.key, Modifier.weight(0.5f).fillMaxWidth().background(Palette.Surface), animationSpec = androidx.compose.animation.core.tween(200), label = "guide") { _ ->
+                  Column(Modifier.fillMaxSize()) {
+                    if (shownEntry != null && shownEntry.key != playing?.key) {
+                        Text(shownEntry.name, Modifier.padding(horizontal = 16.dp, vertical = 6.dp), color = Palette.WineSoft, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
+                    if (programs.isEmpty()) {
+                        Text(t("epg_none"), Modifier.padding(16.dp), color = Color.White.copy(alpha = 0.7f))
+                    } else {
+                        androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize()) {
+                            itemsIndexed(programs, key = { _, p -> "${p.channel}|${p.start}" }) { _, p ->
+                                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                    Row {
+                                        Text(timeFormat.format(java.util.Date(p.start * 1000)) + " - " + timeFormat.format(java.util.Date(p.end * 1000)), color = Palette.WineSoft, style = MaterialTheme.typography.bodyMedium)
+                                        Text("  " + p.title, color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    }
+                                    p.description?.takeIf { it.isNotBlank() }?.let {
+                                        Text(it, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                  }
                 }
             }
+        }
+    }
+}
+
+private class PanelList(val name: String, val isSearch: Boolean = false, val entries: () -> List<Entry>)
+
+/**
+ * The channel list at the left edge, bound to the mouse: the header shows the name of the list with arrows to switch between the lists,
+ * the magnifier at the bottom opens a search field. With "All channels" the search looks through all accounts and lists.
+ * The channel keeps playing while the list is open.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable
+private fun ChannelPanel(state: AppState, controller: PlayerController, modifier: Modifier, onHover: (Entry) -> Unit) {
+    val live = state.data.entries(Kind.LIVE)
+    val byKey = remember(live) { live.associateBy { it.key } }
+    val favLists = state.listsOf(Kind.LIVE)
+    val favName = t("fav_title")
+    val historyName = t("history_title")
+    val allName = t("live_all")
+    val currentName = t("player_list_current")
+    val searchName = t("player_list_search")
+    val otherName = t("live_other")
+    val lists = remember(controller.playEntries, controller.playFromSearch, state.favorites, state.history, favLists, live, state.data.categories(Kind.LIVE)) {
+        val out = ArrayList<PanelList>()
+        favLists.forEach { l ->
+            out += PanelList(if (favLists.size == 1) favName else "\u2605 ${l.name}") {
+                val order = state.favoriteOrder(l.id)
+                live.filter { state.inList(it, l.id) }.sortedBy { order[it.key] ?: Int.MAX_VALUE }
+            }
+        }
+        out += PanelList(historyName) { state.history.mapNotNull { byKey[it] } }
+        out += PanelList(allName) { live }
+        state.data.categories(Kind.LIVE).forEach { c ->
+            out += PanelList((state.accountLabel(c.accountId)?.let { "$it \u00B7 " } ?: "") + c.name.ifBlank { otherName }) {
+                live.filter { it.accountId == c.accountId && it.categoryId == c.id }
+            }
+        }
+        // the list the player was started from comes first, under its own name when it is one of the lists
+        val start = controller.playEntries.map { it.key }
+        val same = if (controller.playFromSearch) -1 else out.indexOfFirst { l -> l.entries().map { it.key } == start }
+        if (same > 0) out.add(0, out.removeAt(same))
+        else if (same < 0) out.add(0, PanelList(if (controller.playFromSearch) searchName else currentName, controller.playFromSearch) { controller.playEntries })
+        out
+    }
+    var listIndex by remember(lists.size) { mutableIntStateOf(0) }
+    val listNow = lists[listIndex.coerceIn(0, lists.lastIndex)]
+    val searchOpen = controller.searchOpen
+    val query = controller.searchText
+    val everywhere = controller.searchAll
+    val setEverywhere: (Boolean) -> Unit = { on -> controller.searchAll = on; state.store.update { c -> c.copy(playerSearchAll = on) } }
+    val q = query.trim()
+    val shown = remember(listNow, listIndex, searchOpen, q, everywhere, live, state.tick / 60) {
+        val searching = searchOpen && q.isNotEmpty()
+        // inside the list of an earlier search the new search starts again from the list that the earlier one started from
+        val base = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin.ifEmpty { listNow.entries() } else listNow.entries()
+        if (!searching) base
+        else base.filter { e ->
+            e.name.contains(q, ignoreCase = true) || com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title.contains(q, ignoreCase = true) ||
+                state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true
+        }
+    }
+    val playingKey = controller.playEntries.getOrNull(controller.index)?.key
+    val list = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(listNow, searchOpen, q, everywhere) {
+        val at = shown.indexOfFirst { it.key == playingKey }
+        runCatching { list.animateScrollToItem(if (at > 3) at - 3 else 0) }
+    }
+    val previousText = t("player_list_previous")
+    val nextText = t("player_list_next")
+    val searchText = t("player_search")
+    Column(modifier.background(Palette.Velvet)) {
+        Row(Modifier.fillMaxWidth().height(56.dp).background(Palette.WineDeep), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { listIndex = (listIndex - 1 + lists.size) % lists.size }, enabled = lists.size > 1, modifier = Modifier.semantics { contentDescription = previousText }) {
+                Icon(Icons.Filled.KeyboardArrowLeft, null, tint = Color.White)
+            }
+            androidx.compose.animation.AnimatedContent(
+                if (searchOpen && q.isNotEmpty() && everywhere) t("player_search_all") else listNow.name, Modifier.weight(1f),
+                transitionSpec = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180)) },
+                label = "list name",
+            ) { name ->
+                Text(
+                    name, Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                )
+            }
+            IconButton(onClick = { listIndex = (listIndex + 1) % lists.size }, enabled = lists.size > 1, modifier = Modifier.semantics { contentDescription = nextText }) {
+                Icon(Icons.Filled.KeyboardArrowRight, null, tint = Color.White)
+            }
+        }
+        androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list) {
+            itemsIndexed(shown, key = { _, e -> e.key }) { i, e ->
+                val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
+                Row(
+                    Modifier.fillMaxWidth().animateItem().then(if (e.key == playingKey) Modifier.background(Palette.Wine, RoundedCornerShape(6.dp)) else Modifier)
+                        .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { onHover(e) }
+                        .clickable {
+                            val searching = searchOpen && q.isNotEmpty()
+                            val origin = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin.ifEmpty { listNow.entries() } else listNow.entries()
+                            controller.play(shown, i, fromSearch = searching, origin = origin)
+                        }.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Logo(e.logo, Modifier.size(width = 56.dp, height = 36.dp), name = e.name)
+                    Column(Modifier.weight(1f)) {
+                        Text(com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White)
+                        val account = if (everywhere && searchOpen) state.accountLabel(e.accountId) else null
+                        val sub = listOfNotNull(account, now?.title).joinToString(" \u00B7 ")
+                        if (sub.isNotEmpty()) Text(sub, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                    }
+                }
+            }
+        }
+        if (searchOpen) {
+            Column(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 8.dp, vertical = 6.dp)) {
+                val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+                LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+                androidx.compose.runtime.DisposableEffect(Unit) { onDispose { state.typing = false } }
+                TextInput(
+                    query, { controller.searchText = it }, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged { state.typing = it.isFocused },
+                    placeholder = { Text(t("live_search")) },
+                    trailingIcon = { IconButton(onClick = { controller.clearSearch() }) { Icon(Icons.Filled.Close, t("action_close")) } },
+                )
+                Row(Modifier.fillMaxWidth().clickable { setEverywhere(!everywhere) }, verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(checked = everywhere, onCheckedChange = setEverywhere)
+                    Text(t("player_search_all"), color = Color.White)
+                }
+            }
+        } else {
+            IconButton(onClick = { controller.searchOpen = true }, modifier = Modifier.align(Alignment.CenterHorizontally).semantics { contentDescription = searchText }) { Icon(Icons.Filled.Search, null) }
         }
     }
 }
@@ -370,7 +608,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // the same round controls and symbols as in the Android player: pause, stop, record
-        if (controller.canZap) RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp)
+        if (controller.live) RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp)
         RoundControl(if (controller.paused) PlayerGlyph.PLAY else PlayerGlyph.PAUSE, t(if (controller.paused) "player_play" else "player_pause"), { controller.togglePause() }, diameter = 38.dp)
         RoundControl(PlayerGlyph.STOP, t("player_stop"), { controller.stop() }, diameter = 38.dp)
         if (controller.live) {
@@ -472,11 +710,11 @@ private fun GuideDialog(state: AppState, controller: PlayerController, onClose: 
                         Modifier.fillMaxWidth().clickable {
                             val item = entry?.let { state.livePlayable(it) } ?: return@clickable
                             message = if (running) {
-                                controller.record(p.end * 1000 + 60_000 - System.currentTimeMillis()) ?: Strings.get("rec_status_recording")
+                                controller.record(p.end * 1000 + 60_000 - System.currentTimeMillis(), p.title) ?: Strings.get("rec_status_recording")
                             } else if (!state.recordingManager.fits(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000)) {
                                 Strings.get("rec_refused", item.maxConnections ?: 1)
                             } else {
-                                state.recordingManager.schedule(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000)
+                                state.recordingManager.schedule(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000, p.title)
                                 Strings.get("rec_scheduled")
                             }
                         }.padding(vertical = 6.dp),

@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,6 +28,50 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.focusable
+
+/** The item that was opened from a list: when the list comes back, its card takes the focus again (TV). */
+val LocalRestoreId = androidx.compose.runtime.compositionLocalOf<Long?> { null }
+
+/**
+ * A block of text that a TV remote can read: it takes the focus, and Down and Up scroll the page until the end of the text is in view.
+ * Only then the focus moves on, so a long description is not jumped over.
+ */
+fun Modifier.tvReadable(canForward: () -> Boolean, canBackward: () -> Boolean, scrollBy: suspend (Float) -> Unit): Modifier = composed {
+    if (!LocalTv.current) return@composed this
+    var bounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val windowHeight = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val step = with(density) { 220.dp.toPx() }
+    val margin = with(density) { 24.dp.toPx() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    this
+        .onGloballyPositioned { bounds = it.boundsInWindow() }
+        .onPreviewKeyEvent { e ->
+            val b = bounds
+            if (b == null || e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) false
+            else when (e.key) {
+                androidx.compose.ui.input.key.Key.DirectionDown -> if (b.bottom > windowHeight - margin && canForward()) { scope.launch { scrollBy(step) }; true } else false
+                androidx.compose.ui.input.key.Key.DirectionUp -> if (b.top < margin && canBackward()) { scope.launch { scrollBy(-step) }; true } else false
+                else -> false
+            }
+        }
+        .focusHighlight()
+        .focusable()
+}
+
+fun Modifier.tvReadable(state: androidx.compose.foundation.ScrollState): Modifier =
+    tvReadable({ state.canScrollForward }, { state.canScrollBackward }, { state.animateScrollBy(it) })
+
+fun Modifier.tvReadable(state: androidx.compose.foundation.lazy.LazyListState): Modifier =
+    tvReadable({ state.canScrollForward }, { state.canScrollBackward }, { state.animateScrollBy(it) })
 
 fun Modifier.focusHighlight(): Modifier = composed {
     var focused by remember { mutableStateOf(false) }
@@ -47,6 +93,14 @@ private fun Initials(name: String?, modifier: Modifier) {
     Box(modifier.clip(shape).background(Color.White.copy(alpha = 0.06f)).border(1.dp, Color.White.copy(alpha = 0.08f), shape), contentAlignment = androidx.compose.ui.Alignment.Center) {
         val letters = initialsOf(name)
         if (letters.isNotEmpty()) androidx.compose.material3.Text(letters, style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.55f), maxLines = 1)
+    }
+}
+
+/** The stop symbol of a running recording: a square in a red ring. */
+@Composable
+fun RecStopIcon(size: androidx.compose.ui.unit.Dp = 32.dp) {
+    Box(Modifier.size(size).border(2.dp, Palette.WineSoft, CircleShape), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        Box(Modifier.size(size * 0.38f).background(Palette.WineSoft, RoundedCornerShape(2.dp)))
     }
 }
 

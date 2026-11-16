@@ -23,7 +23,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -155,18 +154,18 @@ private fun AccountDialog(state: AppState, existing: AccountDto?, onClose: () ->
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.widthIn(max = 460.dp).fillMaxWidth()) {
                 DropdownField(if (type == "xtream") "Xtream Codes" else t("account_type_m3u"), listOf("xtream" to "Xtream Codes", "m3u" to t("account_type_m3u")), { type = it })
-                OutlinedTextField(name, { name = it }, label = { Text(t("account_name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(url, { url = it }, label = { Text(t(if (type == "xtream") "account_server" else "account_playlist_url")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                TextInput(name, { name = it }, label = { Text(t("account_name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                TextInput(url, { url = it }, label = { Text(t(if (type == "xtream") "account_server" else "account_playlist_url")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 if (type == "xtream") {
-                    OutlinedTextField(user, { user = it }, label = { Text(t("account_username")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(
+                    TextInput(user, { user = it }, label = { Text(t("account_username")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    TextInput(
                         password, { password = it }, label = { Text(t("account_password")) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                         visualTransformation = PasswordVisualTransformation(),
                         supportingText = { if (existing != null) Text(t("account_password_keep")) },
                     )
                 }
-                OutlinedTextField(epg, { epg = it }, label = { Text(t("account_epg_url")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(agent, { agent = it }, label = { Text(t("account_user_agent")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                TextInput(epg, { epg = it }, label = { Text(t("account_epg_url")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                TextInput(agent, { agent = it }, label = { Text(t("account_user_agent")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },
