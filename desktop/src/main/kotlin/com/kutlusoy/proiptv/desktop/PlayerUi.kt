@@ -460,7 +460,9 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     val listNow = lists[listIndex.coerceIn(0, lists.lastIndex)]
     var searchOpen by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
-    val everywhere = state.store.config.playerSearchAll
+    // the settings file is no Compose state, so the value is held here too and saved on every change
+    var everywhere by remember { mutableStateOf(state.store.config.playerSearchAll) }
+    val setEverywhere: (Boolean) -> Unit = { on -> everywhere = on; state.store.update { c -> c.copy(playerSearchAll = on) } }
     val q = query.trim()
     val shown = remember(listNow, listIndex, searchOpen, q, everywhere, live, state.tick / 60) {
         val base = if (searchOpen && q.isNotEmpty() && everywhere) live else listNow.entries()
@@ -527,8 +529,8 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                     placeholder = { Text(t("live_search")) },
                     trailingIcon = { IconButton(onClick = { query = ""; searchOpen = false }) { Icon(Icons.Filled.Close, t("action_close")) } },
                 )
-                Row(Modifier.fillMaxWidth().clickable { state.store.update { c -> c.copy(playerSearchAll = !c.playerSearchAll) } }, verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.Checkbox(checked = everywhere, onCheckedChange = { on -> state.store.update { c -> c.copy(playerSearchAll = on) } })
+                Row(Modifier.fillMaxWidth().clickable { setEverywhere(!everywhere) }, verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(checked = everywhere, onCheckedChange = setEverywhere)
                     Text(t("player_search_all"), color = Color.White)
                 }
             }
