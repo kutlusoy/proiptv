@@ -115,6 +115,7 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     modifier = Modifier.clickable { runCatching { java.awt.Desktop.getDesktop().mail(java.net.URI("mailto:kutlusoy.dev@gmail.com")) } },
                 )
             }
+            Group(t("settings_backup")) { BackupGroup(state) }
             UpdateGroup(state, updater, update)
             Group(t("settings_tmdb")) {
                 var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
@@ -252,4 +253,93 @@ private fun errorText(e: UpdateUi.Error): String = when (e.code) {
     UpdateException.Code.TOO_LARGE -> Strings.get("update_err_too_large")
     UpdateException.Code.STORAGE -> Strings.get("update_err_storage")
     UpdateException.Code.INSTALL_FAILED -> Strings.get("update_err_install", e.detail.orEmpty())
+}
+
+private fun chooseFile(title: String, save: Boolean, name: String = ""): java.io.File? {
+    val dialog = java.awt.FileDialog(null as java.awt.Frame?, title, if (save) java.awt.FileDialog.SAVE else java.awt.FileDialog.LOAD)
+    if (save) dialog.file = name
+    dialog.isVisible = true
+    val file = dialog.file ?: return null
+    return java.io.File(dialog.directory, file)
+}
+
+/** Backup of accounts, favorites and settings, the same file format as in the Android app. */
+@Composable
+private fun BackupGroup(state: AppState) {
+    var exportDialog by remember { mutableStateOf(false) }
+    var exportPassword by remember { mutableStateOf("") }
+    var importText by remember { mutableStateOf<String?>(null) }
+    var importPassword by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf<String?>(null) }
+    val codec = com.kutlusoy.proiptv.data.BackupCodec
+
+    fun restore(text: String, password: String?) {
+        message = try {
+            val (accounts, favorites) = state.restoreBackup(text, password)
+            importText = null
+            importPassword = ""
+            Strings.get("backup_restored", accounts, favorites)
+        } catch (e: com.kutlusoy.proiptv.data.WrongPassword) {
+            Strings.get("backup_wrong_password")
+        } catch (e: com.kutlusoy.proiptv.data.InvalidBackup) {
+            importText = null
+            Strings.get("backup_invalid")
+        }
+    }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = { exportDialog = true }) { Text(t("backup_create")) }
+        OutlinedButton(onClick = {
+            val file = chooseFile(Strings.get("backup_restore"), save = false) ?: return@OutlinedButton
+            val text = runCatching { file.readText(Charsets.UTF_8) }.getOrNull()
+            if (text == null) message = Strings.get("backup_invalid")
+            else try {
+                if (codec.isEncrypted(text)) importText = text else restore(text, null)
+            } catch (e: com.kutlusoy.proiptv.data.InvalidBackup) {
+                message = Strings.get("backup_invalid")
+            }
+        }) { Text(t("backup_restore")) }
+    }
+    Hint(t("backup_hint"))
+    message?.let { Text(it, color = Palette.WineSoft) }
+
+    if (exportDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { exportDialog = false; exportPassword = "" },
+            title = { Text(t("backup_create")) },
+            text = {
+                OutlinedTextField(
+                    exportPassword, { exportPassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(t("backup_password")) }, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    exportDialog = false
+                    val name = "proiptv-backup-" + java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date()) + ".json"
+                    val file = chooseFile(Strings.get("backup_create"), save = true, name = name)
+                    if (file != null) {
+                        message = runCatching { file.writeText(state.createBackup(exportPassword.ifEmpty { null }), Charsets.UTF_8) }
+                            .fold({ Strings.get("backup_done") }, { it.message ?: "error" })
+                    }
+                    exportPassword = ""
+                }) { Text(t("action_save")) }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { exportDialog = false; exportPassword = "" }) { Text(t("action_cancel")) } },
+        )
+    }
+    importText?.let { text ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { importText = null; importPassword = "" },
+            title = { Text(t("backup_restore")) },
+            text = {
+                OutlinedTextField(
+                    importPassword, { importPassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(t("account_password")) }, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                )
+            },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { restore(text, importPassword) }) { Text(t("backup_restore")) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { importText = null; importPassword = "" }) { Text(t("action_cancel")) } },
+        )
+    }
 }

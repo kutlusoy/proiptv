@@ -71,6 +71,62 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         reload()
     }
 
+    /** Backup as a file text, in the format that the Android app writes as well. Account passwords only with a password. */
+    fun createBackup(password: String?): String {
+        val c = store.config
+        val keys = c.accounts.associate { it.id to com.kutlusoy.proiptv.data.BackupCodec.accountKey(it.type, it.url, it.username) }
+        val lists = c.favoriteLists.map { l ->
+            com.kutlusoy.proiptv.data.BackupList(
+                l.name,
+                c.favorites.filter { it.listId == l.id }.mapNotNull { f -> keys[f.account]?.let { com.kutlusoy.proiptv.data.BackupFavorite(it, f.kind, f.remoteId, f.name) } },
+            )
+        }
+        val withPasswords = !password.isNullOrEmpty()
+        val data = com.kutlusoy.proiptv.data.BackupData(
+            accounts = c.accounts.map {
+                com.kutlusoy.proiptv.data.BackupAccount(
+                    it.name, it.type, it.url, it.username, if (withPasswords) Secrets.unprotect(it.password) else null,
+                    it.epgUrl, it.userAgent, "auto", it.enabled, true, true,
+                )
+            },
+            lists = lists, timeshift = c.timeshift, bufferMb = c.bufferMb,
+        )
+        return com.kutlusoy.proiptv.data.BackupCodec.encode(data, password)
+    }
+
+    /** Adds the accounts and favorites of a backup that are not there yet. Returns the number of new accounts and favorites. */
+    fun restoreBackup(text: String, password: String?): Pair<Int, Int> {
+        val codec = com.kutlusoy.proiptv.data.BackupCodec
+        val data = codec.decode(text, password)
+        val ids = store.config.accounts.associate { codec.accountKey(it.type, it.url, it.username) to it.id }.toMutableMap()
+        var added = 0
+        for (a in data.accounts) {
+            val key = codec.accountKey(a.type, a.url, a.username)
+            if (key in ids) continue
+            val id = newAccountId()
+            val dto = AccountDto(id = id, name = a.name, type = a.type, url = a.url, username = a.username, password = Secrets.protect(a.password.orEmpty()), userAgent = a.userAgent, enabled = a.enabled, epgUrl = a.epgUrl)
+            store.update { c -> c.copy(accounts = c.accounts + dto) }
+            ids[key] = id
+            added++
+        }
+        accounts = store.config.accounts
+        var restored = 0
+        for (l in data.lists) {
+            for (e in l.entries) {
+                val accountId = ids[e.account] ?: continue
+                val area = if (e.kind in 0..2) e.kind else Kind.LIVE
+                val listId = listsOf(area).firstOrNull { it.name == l.name }?.id ?: createList(area, l.name)
+                if (favorites.any { it.listId == listId && it.account == accountId && it.kind == e.kind && it.remoteId == e.remoteId }) continue
+                store.update { c -> c.copy(favorites = c.favorites + FavoriteDto(accountId, e.kind, e.remoteId, e.name, listId)) }
+                favorites = store.config.favorites
+                restored++
+            }
+        }
+        store.update { it.copy(timeshift = data.timeshift, bufferMb = data.bufferMb) }
+        if (added > 0) reload()
+        return added to restored
+    }
+
     fun deleteAccount(id: String) {
         store.update { c -> c.copy(accounts = c.accounts.filter { it.id != id }, favorites = c.favorites.filter { it.account != id }) }
         accounts = store.config.accounts
