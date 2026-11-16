@@ -553,7 +553,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                 val focus = remember { androidx.compose.ui.focus.FocusRequester() }
                 LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
                 androidx.compose.runtime.DisposableEffect(Unit) { onDispose { state.typing = false } }
-                androidx.compose.material3.OutlinedTextField(
+                TextInput(
                     query, { controller.searchText = it }, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged { state.typing = it.isFocused },
                     placeholder = { Text(t("live_search")) },
                     trailingIcon = { IconButton(onClick = { controller.searchText = ""; controller.searchOpen = false }) { Icon(Icons.Filled.Close, t("action_close")) } },

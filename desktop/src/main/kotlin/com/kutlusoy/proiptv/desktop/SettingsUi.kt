@@ -15,7 +15,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -119,7 +118,7 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
             UpdateGroup(state, updater, update)
             Group(t("settings_tmdb")) {
                 var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
-                OutlinedTextField(
+                TextInput(
                     key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     label = { Text(t("settings_tmdb_key")) },
                 )
@@ -308,7 +307,7 @@ private fun BackupGroup(state: AppState) {
             onDismissRequest = { exportDialog = false; exportPassword = "" },
             title = { Text(t("backup_create")) },
             text = {
-                OutlinedTextField(
+                TextInput(
                     exportPassword, { exportPassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     label = { Text(t("backup_password")) }, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 )
@@ -333,7 +332,7 @@ private fun BackupGroup(state: AppState) {
             onDismissRequest = { importText = null; importPassword = "" },
             title = { Text(t("backup_restore")) },
             text = {
-                OutlinedTextField(
+                TextInput(
                     importPassword, { importPassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     label = { Text(t("account_password")) }, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 )

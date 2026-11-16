@@ -40,7 +40,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -152,7 +151,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 )
             }
             DropdownField(options.firstOrNull { it.first == category }?.second ?: t("live_all"), options, { category = it }, Modifier.weight(0.45f).widthIn(min = 160.dp, max = 360.dp))
-            OutlinedTextField(
+            TextInput(
                 query, { query = it }, singleLine = true, modifier = Modifier.weight(0.55f),
                 placeholder = { Text(t(if (kind == Kind.LIVE) "live_search" else "live_search")) },
                 trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
@@ -225,7 +224,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { listDialog = null },
             title = { Text(t("fav_list_name")) },
-            text = { OutlinedTextField(name, { name = it }, singleLine = true) },
+            text = { TextInput(name, { name = it }, singleLine = true) },
             confirmButton = {
                 androidx.compose.material3.TextButton(enabled = name.isNotBlank(), onClick = {
                     if (mode == "rename") currentList?.let { state.renameList(it.id, name) } else category = FAV_PREFIX + state.createList(kind, name)

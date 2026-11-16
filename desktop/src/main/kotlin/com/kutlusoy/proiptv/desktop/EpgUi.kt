@@ -35,7 +35,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -105,7 +104,7 @@ fun EpgScreen(state: AppState) {
                     categories.forEach { add("${it.accountId}|${it.id}" to it.name.ifBlank { t("live_other") }) }
                 }
                 DropdownField(options.firstOrNull { it.first == category }?.second ?: t("live_all"), options, { category = it }, Modifier.weight(0.4f).widthIn(min = 160.dp, max = 320.dp))
-                OutlinedTextField(
+                TextInput(
                     query, { query = it }, singleLine = true, modifier = Modifier.weight(0.6f),
                     placeholder = { Text(t("epg_search")) },
                     trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
