@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** File names of recordings: language, channel, show and date, for example `DE-ORF 1-Tatort-2026.12.23.mpg`. */
+/** File names of recordings: language, channel, show and date, for example `DE-ORF 1-Tatort-2026.12.23.ts`. */
 object RecordingNames {
     private val FORBIDDEN = Regex("[\\\\/:*?\"<>|\\u0000-\\u001f]")
     private const val PART_MAX = 60
@@ -27,12 +27,12 @@ object RecordingNames {
         val date = SimpleDateFormat("yyyy.MM.dd", Locale.US).format(Date(atMs))
         val time = SimpleDateFormat("HHmm", Locale.US).format(Date(atMs))
         val head = listOf(language, channel, show).filter { it.isNotEmpty() }.joinToString("-").ifEmpty { "Recording" }
-        val first = "$head-$date.mpg"
+        val first = "$head-$date.ts"
         if (!taken(first)) return first
-        val timed = "$head-$date-$time.mpg"
+        val timed = "$head-$date-$time.ts"
         if (!taken(timed)) return timed
         var n = 2
-        while (taken("$head-$date-$time-$n.mpg")) n++
-        return "$head-$date-$time-$n.mpg"
+        while (taken("$head-$date-$time-$n.ts")) n++
+        return "$head-$date-$time-$n.ts"
     }
 }

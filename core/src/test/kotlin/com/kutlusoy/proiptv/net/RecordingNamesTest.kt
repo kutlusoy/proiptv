@@ -10,22 +10,22 @@ class RecordingNamesTest {
 
     @Test
     fun languageChannelShowAndDate() {
-        assertEquals("DE-ORF 1-Tatort-2026.12.23.mpg", RecordingNames.fileName("DE | ORF 1", "Tatort", at) { false })
+        assertEquals("DE-ORF 1-Tatort-2026.12.23.ts", RecordingNames.fileName("DE | ORF 1", "Tatort", at) { false })
     }
 
     @Test
     fun leavesOutWhatIsMissingAndForbiddenCharacters() {
-        assertEquals("kabel eins-2026.12.23.mpg", RecordingNames.fileName("kabel eins", null, at) { false })
-        assertEquals("Das Beste Aus-Heute Show-2026.12.23.mpg", RecordingNames.fileName("Das Beste Aus", "Heute: Show?", at) { false })
+        assertEquals("kabel eins-2026.12.23.ts", RecordingNames.fileName("kabel eins", null, at) { false })
+        assertEquals("Das Beste Aus-Heute Show-2026.12.23.ts", RecordingNames.fileName("Das Beste Aus", "Heute: Show?", at) { false })
     }
 
     @Test
     fun makesNamesUnique() {
-        val used = mutableSetOf("DE-ORF 1-Tatort-2026.12.23.mpg")
+        val used = mutableSetOf("DE-ORF 1-Tatort-2026.12.23.ts")
         val second = RecordingNames.fileName("DE | ORF 1", "Tatort", at) { it in used }
-        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015.mpg", second)
+        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015.ts", second)
         used += second
-        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015-2.mpg", RecordingNames.fileName("DE | ORF 1", "Tatort", at) { it in used })
+        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015-2.ts", RecordingNames.fileName("DE | ORF 1", "Tatort", at) { it in used })
     }
 
     @Test
