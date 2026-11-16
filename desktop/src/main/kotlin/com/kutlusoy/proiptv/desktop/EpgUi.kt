@@ -239,7 +239,7 @@ private fun DetailPanel(state: AppState, sel: Selected, channels: List<Entry>, o
                     item == null -> Strings.get("epg_empty")
                     running -> recordNow(state, item, p)
                     !state.recordingManager.fits(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000) -> Strings.get("rec_refused", item.maxConnections ?: 1)
-                    else -> { state.recordingManager.schedule(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000); Strings.get("rec_scheduled") }
+                    else -> { state.recordingManager.schedule(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000, p.title); Strings.get("rec_scheduled") }
                 }
             }, Modifier.fillMaxWidth()) {
                 Icon(Icons.Filled.FiberManualRecord, null, tint = Color(0xFFE53935))
@@ -258,7 +258,7 @@ private fun DetailPanel(state: AppState, sel: Selected, channels: List<Entry>, o
 
 private fun recordNow(state: AppState, item: Playable, p: XmltvProgram): String =
     try {
-        state.recordingManager.start(item, p.end * 1000 + 60_000)
+        state.recordingManager.start(item, p.end * 1000 + 60_000, p.title)
         Strings.get("rec_status_recording")
     } catch (e: com.kutlusoy.proiptv.engine.BudgetExceeded) {
         Strings.get("player_no_connection", e.limit, e.openTitles.joinToString())

@@ -161,10 +161,11 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     /** Records the current channel. stopAfterMs null means until it is stopped. Returns an error text or null. */
-    fun record(stopAfterMs: Long?): String? {
+    fun record(stopAfterMs: Long?, program: String? = null): String? {
         val item = current ?: return null
+        val show = program ?: playEntries.getOrNull(index)?.let { state.guide.nowNext(it.accountId, it.epgId, System.currentTimeMillis() / 1000).first?.title }
         return try {
-            recordingId = state.recordingManager.start(item, stopAfterMs?.let { System.currentTimeMillis() + it })
+            recordingId = state.recordingManager.start(item, stopAfterMs?.let { System.currentTimeMillis() + it }, show)
             null
         } catch (e: com.kutlusoy.proiptv.engine.BudgetExceeded) {
             Strings.get("player_no_connection", e.limit, e.openTitles.joinToString())
@@ -572,11 +573,11 @@ private fun GuideDialog(state: AppState, controller: PlayerController, onClose: 
                         Modifier.fillMaxWidth().clickable {
                             val item = entry?.let { state.livePlayable(it) } ?: return@clickable
                             message = if (running) {
-                                controller.record(p.end * 1000 + 60_000 - System.currentTimeMillis()) ?: Strings.get("rec_status_recording")
+                                controller.record(p.end * 1000 + 60_000 - System.currentTimeMillis(), p.title) ?: Strings.get("rec_status_recording")
                             } else if (!state.recordingManager.fits(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000)) {
                                 Strings.get("rec_refused", item.maxConnections ?: 1)
                             } else {
-                                state.recordingManager.schedule(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000)
+                                state.recordingManager.schedule(item, p.start * 1000 - 30_000, p.end * 1000 + 60_000, p.title)
                                 Strings.get("rec_scheduled")
                             }
                         }.padding(vertical = 6.dp),

@@ -74,6 +74,7 @@ data class RecordingDto(
     val channelRemoteId: String = "",
     val note: String? = null,
     val plannedStart: Long? = null,
+    val program: String = "",
 )
 
 class RecordingStore(private val dir: File) {
@@ -137,15 +138,14 @@ class RecordingManager(
         store.all().firstOrNull { it.status == RecStatus.RECORDING && it.account == account && it.channelRemoteId == channelRemoteId }?.id
 
     /** Starts recording the live item. Throws BudgetExceeded when the account has no free connection and NotEnoughSpace when the disk is nearly full. */
-    fun start(item: Playable, stopAtMs: Long?): Long {
+    fun start(item: Playable, stopAtMs: Long?, program: String? = null): Long {
         dir.mkdirs()
         if (dir.usableSpace < MIN_FREE_BYTES) throw NotEnoughSpace()
         val lease = engine.acquire(item.accountNumber, item.channelId, item.title, item.maxConnections, Upstream.opener(item.url, item.userAgent))
         try {
             val now = System.currentTimeMillis()
-            val stamp = SimpleDateFormat("yyyyMMdd-HHmm").format(Date(now))
-            val safe = item.title.replace(Regex("[^A-Za-z0-9._-]+"), "_").take(40)
-            val file = File(dir, "$safe-$stamp.ts")
+            val show = program?.takeIf { it.isNotBlank() } ?: com.kutlusoy.proiptv.parse.RecordingNames.programOf(item.title, item.title)
+            val file = File(dir, com.kutlusoy.proiptv.parse.RecordingNames.fileName(item.title, show, now) { File(dir, it).exists() })
             val id = store.add(RecordingDto(0, item.account, item.title, now, null, stopAtMs, file.absolutePath, 0, RecStatus.RECORDING, item.channelId))
             val recorder = Recorder(lease.hub, file, lease.hub.buffer.end, stopAtMs)
             running[id] = Running(recorder, lease)
@@ -188,8 +188,8 @@ class RecordingManager(
     }
 
     /** Plans a recording of a later show. It starts when the program is running at that time (see startDue). */
-    fun schedule(item: Playable, startMs: Long, endMs: Long): Long =
-        store.add(RecordingDto(0, item.account, item.title, startMs, null, endMs, "", 0, RecStatus.SCHEDULED, item.channelId, plannedStart = startMs))
+    fun schedule(item: Playable, startMs: Long, endMs: Long, program: String? = null): Long =
+        store.add(RecordingDto(0, item.account, item.title, startMs, null, endMs, "", 0, RecStatus.SCHEDULED, item.channelId, plannedStart = startMs, program = program.orEmpty()))
 
     /** Starts the planned recordings whose time has come. [resolve] gives the live item of a channel. */
     fun startDue(now: Long, resolve: (RecordingDto) -> Playable?) {
@@ -202,7 +202,7 @@ class RecordingManager(
             if (item == null) { store.update(r.id) { it.copy(status = RecStatus.MISSED, note = "channel") }; continue }
             try {
                 store.remove(r.id)
-                start(item, end)
+                start(item, end, r.program)
             } catch (e: Exception) {
                 store.add(r.copy(status = RecStatus.MISSED, note = if (e is NotEnoughSpace) "space" else "budget"))
             }
