@@ -199,6 +199,7 @@ class VlcEngine {
         l.libvlc_media_player_set_media(p, media)
         l.libvlc_media_release(media)
         l.libvlc_audio_set_volume(p, volume)
+        soundOn(p, item.url.substringBefore('?').takeLast(40))
         val result = l.libvlc_media_player_play(p)
         Log.write("play ${item.url.substringBefore('?').takeLast(60)} result=$result")
         if (result != 0) Log.write("play failed: ${l.libvlc_errmsg()}")
@@ -218,6 +219,7 @@ class VlcEngine {
         l.libvlc_media_player_set_media(p, media)
         l.libvlc_media_release(media)
         l.libvlc_audio_set_volume(p, volume)
+        soundOn(p, "stream $title")
         val result = l.libvlc_media_player_play(p)
         Log.write("play stream $title result=$result")
         if (result != 0) Log.write("play failed: ${l.libvlc_errmsg()}")
@@ -236,7 +238,31 @@ class VlcEngine {
     fun length(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_length(it) } ?: 0 }
     fun seek(ms: Long) { val l = lib ?: return; player?.let { l.libvlc_media_player_set_time(it, ms.coerceAtLeast(0)) } }
     fun setVolume(percent: Int) { val l = lib ?: return; player?.let { l.libvlc_audio_set_volume(it, percent.coerceIn(0, 200)) } }
-    fun setMute(mute: Boolean) { val l = lib ?: return; player?.let { l.libvlc_audio_set_mute(it, if (mute) 1 else 0) } }
+    @Volatile
+    var muted = false
+        private set
+
+    fun setMute(mute: Boolean) {
+        val l = lib ?: return
+        player?.let { l.libvlc_audio_set_mute(it, if (mute) 1 else 0) }
+        muted = mute
+    }
+
+    fun toggleMute() = setMute(!muted)
+
+    /** Every new picture starts with sound on, a mute from before does not stay for the next title. After a few seconds the audio tracks go into the log, so a missing sound can be traced. */
+    private fun soundOn(p: Pointer, what: String) {
+        val l = lib ?: return
+        l.libvlc_audio_set_mute(p, 0)
+        muted = false
+        Thread {
+            runCatching {
+                Thread.sleep(4000)
+                val t = tracks()
+                Log.write("audio of $what: ${t?.audio?.size ?: 0} tracks (${t?.audio?.joinToString { it.name }}), selected ${t?.audioSelected}, muted=$muted")
+            }
+        }.apply { isDaemon = true }.start()
+    }
 
     /** An audio or subtitle track: its id for libVLC and its name. */
     class Track(val id: Int, val name: String)

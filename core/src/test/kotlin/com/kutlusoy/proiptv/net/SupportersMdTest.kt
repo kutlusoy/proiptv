@@ -19,7 +19,7 @@ class SupportersMdTest {
             Somebody
         """.trimIndent()
         assertEquals(
-            listOf(SupporterSection("Tester", listOf("Cengiz, Coşkun", "Mahmut")), SupporterSection("Developers", listOf("Somebody"))),
+            listOf(SupporterSection("Tester", listOf("Cengiz, Coşkun", "Mahmut"), 2), SupporterSection("Developers", listOf("Somebody"), 2)),
             SupportersMd.parse(text),
         )
     }
@@ -27,5 +27,11 @@ class SupportersMdTest {
     @Test
     fun anEmptyFileHasNoSections() {
         assertEquals(emptyList<SupporterSection>(), SupportersMd.parse("<!-- x -->\n\n## Empty\n"))
+    }
+
+    @Test
+    fun theNumberOfHashesIsTheLevel() {
+        assertEquals(1, SupportersMd.parse("# Big\nx").first().level)
+        assertEquals(3, SupportersMd.parse("### Small\nx").first().level)
     }
 }
