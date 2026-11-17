@@ -104,6 +104,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun retryDownload(id: Long) = downloadManager.retry(id)
 
+    /** Entries of downloads and recordings whose file was deleted outside of the app go away. */
+    fun removeMissingFiles() {
+        viewModelScope.launch {
+            (getApplication<Application>() as ProIptvApp).recordings.removeMissing()
+            downloadManager.removeMissing()
+        }
+    }
+
     fun pauseDownload(id: Long) = downloadManager.pause(id)
 
     fun deleteDownload(id: Long) = downloadManager.delete(id)

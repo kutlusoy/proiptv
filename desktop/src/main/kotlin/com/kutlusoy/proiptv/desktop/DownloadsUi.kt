@@ -46,6 +46,8 @@ fun sizeText(bytes: Long): String = when {
 
 @Composable
 fun DownloadsScreen(state: AppState) {
+    // a file that was deleted in the Explorer disappears from the list
+    androidx.compose.runtime.LaunchedEffect(Unit) { state.downloadManager.removeMissing() }
     state.downloads.version
     val all = state.downloads.all()
     var deleting by remember { mutableStateOf<DownloadDto?>(null) }

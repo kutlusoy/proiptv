@@ -134,6 +134,14 @@ class DownloadManager(
         return if (!named.exists() && legacy.exists()) legacy else named
     }
 
+    /** Removes the finished downloads whose file was deleted outside of the app (only while the folder of the downloads is there). */
+    fun removeMissing() {
+        if (!dir.isDirectory) return
+        for (d in store.all().filter { it.status == DlStatus.DONE && !fileOf(it).exists() }) {
+            store.remove(d.id)
+        }
+    }
+
     private fun removeEmptyFolders(file: File) {
         var folder = file.parentFile
         while (folder != null && folder != dir && folder.isDirectory && folder.list().isNullOrEmpty()) {

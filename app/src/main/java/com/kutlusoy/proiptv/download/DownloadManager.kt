@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
@@ -56,6 +57,14 @@ class DownloadManager(
         val legacy = File(dir, "${d.id}.$ext")
         // downloads of older versions were stored under their number
         return if (!named.exists() && legacy.exists()) legacy else named
+    }
+
+    /** Removes the finished downloads whose file was deleted outside of the app (only while the folder of the downloads is there). */
+    suspend fun removeMissing() = withContext(Dispatchers.IO) {
+        if (!dir.isDirectory) return@withContext
+        for (d in dao.all().first()) {
+            if (d.status == DlStatus.DONE && !fileOf(d).exists()) dao.delete(d.id)
+        }
     }
 
     private fun removeEmptyFolders(file: File) {

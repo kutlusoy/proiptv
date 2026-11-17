@@ -95,6 +95,19 @@ class RecordingStore(private val dir: File) {
 
     @Synchronized fun get(id: Long) = list.firstOrNull { it.id == id }
 
+    /** Removes the entries whose file was deleted outside of the app. Only while the folder is there, so a drive that is not connected does not empty the list. */
+    @Synchronized
+    fun removeMissing() {
+        val gone = list.filter {
+            (it.status == RecStatus.DONE || it.status == RecStatus.INTERRUPTED) && it.path.isNotEmpty() &&
+                !File(it.path).exists() && File(it.path).parentFile?.isDirectory == true
+        }
+        if (gone.isNotEmpty()) {
+            list = list - gone.toSet()
+            write()
+        }
+    }
+
     @Synchronized
     fun add(r: RecordingDto): Long {
         val id = (list.maxOfOrNull { it.id } ?: 0) + 1
@@ -230,6 +243,8 @@ class RecordingManager(
 
 @Composable
 fun RecordingsScreen(state: AppState) {
+    // a file that was deleted in the Explorer disappears from the list
+    androidx.compose.runtime.LaunchedEffect(Unit) { state.recordingStore.removeMissing() }
     state.recordingStore.version
     val all = state.recordingStore.all().sortedByDescending { it.startedAt }
     var deleting by remember { mutableStateOf<RecordingDto?>(null) }

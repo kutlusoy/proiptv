@@ -46,6 +46,7 @@ import com.kutlusoy.proiptv.download.DownloadManager
 
 @Composable
 fun DownloadsScreen(vm: MainViewModel) {
+    androidx.compose.runtime.LaunchedEffect(Unit) { vm.removeMissingFiles() }
     val all by vm.downloads.collectAsState()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var deleting by remember { mutableStateOf<List<Download>?>(null) }

@@ -30,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 class NotEnoughSpace : Exception("not enough free storage")
@@ -124,6 +125,16 @@ class RecordingManager(
     }
 
     suspend fun recoverInterrupted() = db.recordings().markInterrupted()
+
+    /** Removes the entries whose file was deleted outside of the app. Only while the folder is there, so a card that is not connected does not empty the list. */
+    suspend fun removeMissing() = withContext(Dispatchers.IO) {
+        for (r in db.recordings().all().first()) {
+            if ((r.status == RecStatus.DONE || r.status == RecStatus.INTERRUPTED) && r.path.isNotEmpty()) {
+                val file = File(r.path)
+                if (!file.exists() && file.parentFile?.isDirectory == true) db.recordings().delete(r.id)
+            }
+        }
+    }
 
     suspend fun schedule(item: Item, title: String, startMs: Long, endMs: Long): Long {
         val id = db.recordings().insert(
