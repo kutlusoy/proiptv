@@ -66,23 +66,27 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         val ok = store.config.accounts.filter { it.enabled && it.id !in d.errors }.map { it.id }.toSet()
         fun loaded(account: String, kind: Int) = account in ok && d.entries(kind).any { it.accountId == account }
         val byKey = HashMap<String, Entry>()
-        val byName = HashMap<String, Entry>()
-        for (kind in 0..2) for (e in d.entries(kind)) {
-            byKey[e.key] = e
-            byName.putIfAbsent("${e.accountId}|${e.kind}|${com.kutlusoy.proiptv.parse.StableId.normalize(e.name)}", e)
+        val matchers = HashMap<String, com.kutlusoy.proiptv.parse.FavoriteMatch>()
+        val entriesOf = HashMap<String, Entry>()
+        for (kind in 0..2) {
+            for (e in d.entries(kind)) byKey[e.key] = e
+            for ((account, list) in d.entries(kind).groupBy { it.accountId }) {
+                matchers["$account|$kind"] = com.kutlusoy.proiptv.parse.FavoriteMatch(list.map { com.kutlusoy.proiptv.parse.MatchCandidate(it.remoteId, it.name, it.epgId) })
+                list.forEach { entriesOf["${it.accountId}|${it.kind}|${it.remoteId}"] = it }
+            }
         }
         val same = com.kutlusoy.proiptv.parse.StableId::sameName
         val kept = ArrayList<FavoriteDto>()
         var favoritesChanged = false
         for (f in store.config.favorites) {
             if (!loaded(f.account, f.kind)) { kept += f; continue }
-            val current = byKey["${f.account}|${f.kind}|${f.remoteId}"]
-            if (current != null && same(current.name, f.name)) { kept += f; continue }
-            favoritesChanged = true
-            val other = byName["${f.account}|${f.kind}|${com.kutlusoy.proiptv.parse.StableId.normalize(f.name)}"]
-            if (other != null && kept.none { it.listId == f.listId && it.account == f.account && it.kind == f.kind && it.remoteId == other.remoteId }) {
-                kept += f.copy(remoteId = other.remoteId, name = other.name)
-            }
+            // only the channels of the same account are considered, a favorite never moves to another account
+            val found = matchers["${f.account}|${f.kind}"]?.resolve(f.remoteId, f.name, f.epgId)
+            val entry = found?.let { entriesOf["${f.account}|${f.kind}|${it.remoteId}"] }
+            if (entry == null) { favoritesChanged = true; continue }
+            val updated = f.copy(remoteId = entry.remoteId, name = entry.name, epgId = entry.epgId ?: f.epgId)
+            if (updated != f) favoritesChanged = true
+            if (kept.none { it.listId == updated.listId && it.account == updated.account && it.kind == updated.kind && it.remoteId == updated.remoteId }) kept += updated
         }
         val history = store.config.history.filter { key ->
             val account = key.substringBefore('|')
@@ -91,8 +95,9 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         val reminders = store.config.reminders.mapNotNull { r ->
             if (!loaded(r.account, Kind.LIVE)) return@mapNotNull r
             val current = byKey["${r.account}|${Kind.LIVE}|${r.channelId}"]
-            if (current != null && same(current.name, r.channelName)) r
-            else byName["${r.account}|${Kind.LIVE}|${com.kutlusoy.proiptv.parse.StableId.normalize(r.channelName)}"]?.let { r.copy(channelId = it.remoteId, channelName = it.name) }
+            if (current != null && same(current.name, r.channelName)) return@mapNotNull r
+            val found = matchers["${r.account}|${Kind.LIVE}"]?.resolve(r.channelId, r.channelName, null) ?: return@mapNotNull null
+            r.copy(channelId = found.remoteId, channelName = found.name)
         }
         if (favoritesChanged || history.size != store.config.history.size || reminders != store.config.reminders) {
             store.update { c -> c.copy(favorites = kept, history = history, reminders = reminders) }
@@ -241,7 +246,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     fun setInList(e: Entry, listId: String, on: Boolean) {
         store.update { c ->
             val rest = c.favorites.filterNot { it.listId == listId && it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
-            c.copy(favorites = if (on) rest + FavoriteDto(e.accountId, e.kind, e.remoteId, e.name, listId) else rest)
+            c.copy(favorites = if (on) rest + FavoriteDto(e.accountId, e.kind, e.remoteId, e.name, listId, e.epgId) else rest)
         }
         favorites = store.config.favorites
     }

@@ -27,7 +27,7 @@ data class AccountDto(
 data class ReminderDto(val account: String, val channelId: String, val channelName: String, val title: String, val startMs: Long)
 
 @Serializable
-data class FavoriteDto(val account: String, val kind: Int, val remoteId: String, val name: String, val listId: String = "")
+data class FavoriteDto(val account: String, val kind: Int, val remoteId: String, val name: String, val listId: String = "", val epgId: String? = null)
 
 /** A favorites list. Live TV, movies and series each have their own lists. */
 @Serializable

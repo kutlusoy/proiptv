@@ -129,6 +129,8 @@ class SyncManager(
     private suspend fun run(id: Long) {
         val account = db.accounts().get(id) ?: return
         var error: String? = null
+        val reconciler = com.kutlusoy.proiptv.data.FavoriteReconciler(db)
+        val before = runCatching { reconciler.snapshot(id) }.getOrDefault(emptyMap())
         try {
             set(id, Phase.CONNECTING)
             when (account.type) {
@@ -143,7 +145,7 @@ class SyncManager(
         }
         if (error == null) {
             try {
-                com.kutlusoy.proiptv.data.FavoriteReconciler(db).run(id)
+                reconciler.run(id, before)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

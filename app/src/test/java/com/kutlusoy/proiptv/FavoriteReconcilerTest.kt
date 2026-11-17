@@ -30,7 +30,7 @@ class FavoriteReconcilerTest {
     private var account = 0L
     private var list = 0L
 
-    private fun channel(id: String, name: String) = Item(accountId = account, kind = Kind.LIVE, remoteId = id, name = name)
+    private fun channel(id: String, name: String, epg: String? = null) = Item(accountId = account, kind = Kind.LIVE, remoteId = id, name = name, epgId = epg)
 
     @Before
     fun setUp() = runBlocking {
@@ -79,5 +79,36 @@ class FavoriteReconcilerTest {
         favorite("1", "ORF 1", 1.0)
         FavoriteReconciler(db).run(account)
         assertEquals(listOf("1"), db.history().items().map { it.remoteId })
+    }
+
+    @Test
+    fun theTvgIdFindsTheChannelWhenTheNameChanged() = runBlocking {
+        db.items().upsert(listOf(channel("5", "TRT 2", "trt2.tr"), channel("6", "ATV", "atv.tr")))
+        favorite("5", "TRT 2", 1.0)
+        val before = FavoriteReconciler(db).snapshot(account)
+        // after the update the id 5 is ATV, TRT 2 has got a new id and a new name
+        db.items().upsert(listOf(channel("5", "ATV", "atv.tr"), channel("8", "TRT 2 HD", "trt2.tr")))
+        db.items().deleteStale(account, Kind.LIVE, 0)
+        FavoriteReconciler(db).run(account, before)
+        assertEquals(listOf("8" to "TRT 2 HD"), ids())
+    }
+
+    @Test
+    fun aRenamedChannelWithTheSameTvgIdKeepsItsFavorite() = runBlocking {
+        db.items().upsert(listOf(channel("5", "STAR TV HD", "startv.tr")))
+        favorite("5", "STAR TV HD", 1.0)
+        val before = FavoriteReconciler(db).snapshot(account)
+        db.items().upsert(listOf(channel("5", "STAR TV FHD", "startv.tr")))
+        FavoriteReconciler(db).run(account, before)
+        assertEquals(listOf("5" to "STAR TV FHD"), ids())
+    }
+
+    @Test
+    fun aFavoriteOfAnotherAccountIsNeverMoved() = runBlocking {
+        val other = db.accounts().insert(Account(name = "B", type = AccountType.M3U, url = "http://b"))
+        db.items().upsert(listOf(channel("1", "ORF 1"), Item(accountId = other, kind = Kind.LIVE, remoteId = "7", name = "RTL")))
+        db.favorites().add(Favorite(list, account, Kind.LIVE, "9", "RTL", 1.0))
+        FavoriteReconciler(db).run(account)
+        assertEquals(emptyList<Pair<String, String>>(), ids())
     }
 }
