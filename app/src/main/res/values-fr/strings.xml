@@ -99,6 +99,9 @@
     <string name="rec_go_channel">Aller à la chaîne</string>
     <string name="player_list_current">Liste actuelle</string>
     <string name="player_list_search">Recherche actuelle</string>
+    <string name="player_columns">Catégories et chaînes côte à côte</string>
+    <string name="player_filter_categories">Chercher dans %1$d catégories</string>
+    <string name="player_filter_channels">Chercher dans %1$d chaînes</string>
     <string name="player_search">Rechercher des chaînes</string>
     <string name="player_search_all">Toutes les chaînes</string>
     <string name="player_list_previous">Liste précédente</string>

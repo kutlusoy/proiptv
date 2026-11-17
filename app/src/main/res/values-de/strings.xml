@@ -99,6 +99,9 @@
     <string name="rec_go_channel">Zum Sender</string>
     <string name="player_list_current">Aktuelle Liste</string>
     <string name="player_list_search">Aktuelle Suche</string>
+    <string name="player_columns">Kategorien und Sender nebeneinander</string>
+    <string name="player_filter_categories">In %1$d Kategorien suchen</string>
+    <string name="player_filter_channels">In %1$d Sendern suchen</string>
     <string name="player_search">Sender suchen</string>
     <string name="player_search_all">Alle Sender</string>
     <string name="player_list_previous">Vorherige Liste</string>
