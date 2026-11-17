@@ -407,7 +407,7 @@ private fun RelatedRow(state: AppState, e: Entry, titleKey: String) {
     }
     if (related.isEmpty()) return
     Text(t(titleKey), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    ScrollRow {
         items(related, key = { it.key }) { r ->
             Box(Modifier.width(120.dp)) {
                 Poster(state, r) { if (r.kind == Kind.SERIES) { state.series = r; state.movie = null } else { state.movie = r; state.series = null } }

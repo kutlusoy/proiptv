@@ -18,6 +18,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -175,4 +179,33 @@ fun TextInput(
         label = label, placeholder = placeholder, leadingIcon = leadingIcon, trailingIcon = trailingIcon, supportingText = supportingText,
         visualTransformation = visualTransformation,
     )
+}
+
+
+/**
+ * A row of cards that can be moved sideways with the mouse: an arrow at each side appears while there is more to see in that direction, and a
+ * click on it moves the row by most of its width.
+ */
+@Composable
+fun ScrollRow(modifier: Modifier = Modifier, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
+    val state = androidx.compose.foundation.lazy.rememberLazyListState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val previous = t("player_list_previous")
+    val next = t("player_list_next")
+    fun move(direction: Int) {
+        scope.launch { state.animateScrollBy(direction * state.layoutInfo.viewportSize.width * 0.8f) }
+    }
+    Box(modifier) {
+        androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxWidth(), state = state, horizontalArrangement = Arrangement.spacedBy(10.dp), content = content)
+        if (state.canScrollBackward) RowArrow(Alignment.CenterStart, previous, Icons.Filled.KeyboardArrowLeft) { move(-1) }
+        if (state.canScrollForward) RowArrow(Alignment.CenterEnd, next, Icons.Filled.KeyboardArrowRight) { move(1) }
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.RowArrow(align: Alignment, description: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    androidx.compose.material3.IconButton(
+        onClick = onClick,
+        modifier = Modifier.align(align).padding(horizontal = 4.dp).size(40.dp).background(Color(0xCC000000), androidx.compose.foundation.shape.CircleShape),
+    ) { Icon(icon, description, tint = Color.White) }
 }

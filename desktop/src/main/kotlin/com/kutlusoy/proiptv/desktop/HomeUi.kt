@@ -71,7 +71,7 @@ fun HomeScreen(state: AppState) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
             items(rows) { row ->
                 Text(row.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ScrollRow(Modifier.padding(top = 6.dp)) {
                     items(row.entries, key = { it.key }) { e ->
                         PosterCard(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
                     }
