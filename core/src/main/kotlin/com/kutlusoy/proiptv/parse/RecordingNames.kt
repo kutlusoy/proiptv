@@ -9,7 +9,8 @@ object RecordingNames {
     private val FORBIDDEN = Regex("[\\\\/:*?\"<>|\\u0000-\\u001f]")
     private const val PART_MAX = 60
 
-    private fun clean(text: String): String =
+    /** A part of a file name: no characters that Windows does not allow, no double spaces, not too long. */
+    fun clean(text: String): String =
         text.decodeEntities().replace(FORBIDDEN, " ").replace(Regex("\\s{2,}"), " ").trim().trim('.', ' ', '-').take(PART_MAX).trim().trim('.', ' ', '-')
 
     /** The show of a title that was built as "Channel: Show", or the title itself when it is no channel name. Empty when it is only the channel. */

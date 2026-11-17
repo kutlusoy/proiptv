@@ -115,7 +115,32 @@ class DownloadManager(
     @Volatile
     private var currentCall: okhttp3.Call? = null
 
-    fun fileOf(d: DownloadDto): File = File(dir, "${d.id}.${d.ext.ifBlank { "mp4" }}")
+    private fun seasonLabel(n: Int): String {
+        // two digits, so the season folders are in the right order
+        return Strings.get("series_season", n).replace(n.toString(), "%02d".format(n))
+    }
+
+    /** A movie is a file in the folder of the downloads, an episode goes into the folder of its series and of its season. */
+    fun fileOf(d: DownloadDto): File {
+        val ext = d.ext.ifBlank { "mp4" }
+        val relative = if (d.kind == Kind.EPISODE) {
+            com.kutlusoy.proiptv.parse.DownloadNames.episode(d.seriesName, d.season, d.episode, d.title, ext, ::seasonLabel)
+        } else {
+            com.kutlusoy.proiptv.parse.DownloadNames.movie(d.title, ext)
+        }
+        val named = File(dir, relative)
+        val legacy = File(dir, "${d.id}.$ext")
+        // downloads of older versions were stored under their number
+        return if (!named.exists() && legacy.exists()) legacy else named
+    }
+
+    private fun removeEmptyFolders(file: File) {
+        var folder = file.parentFile
+        while (folder != null && folder != dir && folder.isDirectory && folder.list().isNullOrEmpty()) {
+            folder.delete()
+            folder = folder.parentFile
+        }
+    }
 
     fun enqueue(list: List<DownloadDto>) {
         list.forEach { store.add(it) }
@@ -144,7 +169,7 @@ class DownloadManager(
     fun delete(id: Long) {
         scope.launch(Dispatchers.IO) {
             if (currentId == id) { currentCall?.cancel(); running?.cancel(); running?.join() }
-            store.get(id)?.let { fileOf(it).delete() }
+            store.get(id)?.let { val file = fileOf(it); file.delete(); removeEmptyFolders(file) }
             store.remove(id)
         }
     }
@@ -195,6 +220,7 @@ class DownloadManager(
     private fun transfer(d: DownloadDto, url: String, userAgent: String?) {
         dir.mkdirs()
         val file = fileOf(d)
+        file.parentFile?.mkdirs()
         val offset = if (file.exists()) file.length() else 0L
         val request = Request.Builder().url(url)
             .header("User-Agent", userAgent?.takeIf { it.isNotBlank() } ?: "ProIPTV")
