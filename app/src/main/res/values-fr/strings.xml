@@ -100,6 +100,7 @@
     <string name="rec_show_file">Afficher le fichier dans le dossier</string>
     <string name="player_list_current">Liste actuelle</string>
     <string name="player_list_search">Recherche actuelle</string>
+    <string name="player_mute">Couper le son</string>
     <string name="player_columns">Catégories et chaînes côte à côte</string>
     <string name="player_filter_categories">Chercher dans %1$d catégories</string>
     <string name="player_filter_channels">Chercher dans %1$d chaînes</string>

@@ -100,6 +100,7 @@
     <string name="rec_show_file">Datei im Ordner anzeigen</string>
     <string name="player_list_current">Aktuelle Liste</string>
     <string name="player_list_search">Aktuelle Suche</string>
+    <string name="player_mute">Ton aus</string>
     <string name="player_columns">Kategorien und Sender nebeneinander</string>
     <string name="player_filter_categories">In %1$d Kategorien suchen</string>
     <string name="player_filter_channels">In %1$d Sendern suchen</string>

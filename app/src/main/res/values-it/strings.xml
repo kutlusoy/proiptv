@@ -100,6 +100,7 @@
     <string name="rec_show_file">Mostra il file nella cartella</string>
     <string name="player_list_current">Elenco attuale</string>
     <string name="player_list_search">Ricerca attuale</string>
+    <string name="player_mute">Disattiva audio</string>
     <string name="player_columns">Categorie e canali affiancati</string>
     <string name="player_filter_categories">Cerca in %1$d categorie</string>
     <string name="player_filter_channels">Cerca in %1$d canali</string>

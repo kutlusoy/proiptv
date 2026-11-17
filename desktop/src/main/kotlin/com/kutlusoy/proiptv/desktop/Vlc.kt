@@ -1,5 +1,7 @@
 package com.kutlusoy.proiptv.desktop
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.kutlusoy.proiptv.engine.HubReader
 import com.sun.jna.Callback
 import com.sun.jna.Library
@@ -238,8 +240,8 @@ class VlcEngine {
     fun length(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_length(it) } ?: 0 }
     fun seek(ms: Long) { val l = lib ?: return; player?.let { l.libvlc_media_player_set_time(it, ms.coerceAtLeast(0)) } }
     fun setVolume(percent: Int) { val l = lib ?: return; player?.let { l.libvlc_audio_set_volume(it, percent.coerceIn(0, 200)) } }
-    @Volatile
-    var muted = false
+    /** Compose state, so the volume symbol in the player follows the mute. */
+    var muted by androidx.compose.runtime.mutableStateOf(false)
         private set
 
     fun setMute(mute: Boolean) {

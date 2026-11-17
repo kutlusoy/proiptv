@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.PictureInPictureAlt
@@ -66,6 +67,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -732,8 +734,12 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         } else {
             Box(Modifier.weight(1f))
         }
-        Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp))
-        Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp))
+        // the symbol shows and switches the mute (the key M does the same)
+        val muteText = t("player_mute")
+        IconButton(onClick = { state.engine.toggleMute() }, Modifier.size(32.dp).semantics { contentDescription = muteText }) {
+            Icon(if (state.engine.muted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, muteText, Modifier.size(20.dp), tint = if (state.engine.muted) Palette.WineSoft else LocalContentColor.current)
+        }
+        Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp).alpha(if (state.engine.muted) 0.4f else 1f))
         if (controller.live) RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp)
         RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp)
         IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) }
