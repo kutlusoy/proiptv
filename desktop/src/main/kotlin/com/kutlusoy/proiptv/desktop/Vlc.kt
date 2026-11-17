@@ -242,6 +242,9 @@ class VlcEngine {
     fun length(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_length(it) } ?: 0 }
     fun seek(ms: Long) { val l = lib ?: return; player?.let { l.libvlc_media_player_set_time(it, ms.coerceAtLeast(0)) } }
     @Volatile
+    private var soundHealed = false
+
+    @Volatile
     private var volumePercent = 100
 
     /** Changing the volume ends a mute. */
@@ -275,7 +278,18 @@ class VlcEngine {
         l.libvlc_audio_set_mute(p, 0)
         Thread {
             runCatching {
-                Thread.sleep(4000)
+                if (!soundHealed) {
+                    // Windows keeps a mute of the program in its mixer, also after a restart (an older version could leave it behind): once per start the mute is
+                    // switched on and off through libVLC, which sets the mute of the mixer to a known state
+                    soundHealed = true
+                    Thread.sleep(1200)
+                    l.libvlc_audio_set_mute(p, 1)
+                    Thread.sleep(120)
+                    l.libvlc_audio_set_mute(p, 0)
+                    Thread.sleep(2680)
+                } else {
+                    Thread.sleep(4000)
+                }
                 val t = tracks()
                 Log.write("audio of $what: ${t?.audio?.size ?: 0} tracks (${t?.audio?.joinToString { it.name }}), selected ${t?.audioSelected}, muted=$muted")
             }
