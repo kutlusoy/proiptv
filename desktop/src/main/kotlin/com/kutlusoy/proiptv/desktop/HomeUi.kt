@@ -71,7 +71,7 @@ fun HomeScreen(state: AppState) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
             items(rows) { row ->
                 Text(row.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ScrollRow(Modifier.padding(top = 6.dp)) {
                     items(row.entries, key = { it.key }) { e ->
                         PosterCard(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
                     }
@@ -155,8 +155,7 @@ private fun searchRows(state: AppState, q: String): List<HomeRow> {
     val data = state.data
     return listOf(Kind.LIVE to "nav_live", Kind.MOVIE to "nav_movies", Kind.SERIES to "nav_series").mapNotNull { (kind, label) ->
         val found = data.entries(kind).filter { e ->
-            e.name.contains(q, ignoreCase = true) ||
-                (kind == Kind.LIVE && state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true)
+            com.kutlusoy.proiptv.parse.SearchMatch.matches(e.name + " " + (if (kind == Kind.LIVE) state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title.orEmpty() else ""), q)
         }.take(60)
         if (found.isEmpty()) null else HomeRow(Strings.get(label), kind, found)
     }

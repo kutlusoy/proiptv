@@ -152,7 +152,8 @@ fun HomeScreen(vm: MainViewModel) {
         if (q.length < 2) { value = emptyList(); return@produceState }
         kotlinx.coroutines.delay(250)
         value = listOf(Kind.LIVE, Kind.MOVIE, Kind.SERIES).mapNotNull { kind ->
-            val hits = db.items().search(kind, ids, q, 40)
+            val (w1, w2, w3, w4) = com.kutlusoy.proiptv.parse.SearchMatch.four(q)
+            val hits = db.items().search(kind, ids, w1, w2, w3, w4, 40)
             if (hits.isEmpty()) null else Row(area.getValue(kind), hits.map { item ->
                 if (kind == Kind.LIVE) Card("${item.accountId}|0|${item.remoteId}", item.name, item.logo, true, null, item.accountId) {
                     vm.player.value = PlayRequest.Zap(Source.Browse(Kind.LIVE, ids, null, q), hits.indexOf(item).coerceAtLeast(0))

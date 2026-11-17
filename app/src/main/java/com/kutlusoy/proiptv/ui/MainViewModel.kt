@@ -104,6 +104,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun retryDownload(id: Long) = downloadManager.retry(id)
 
+    /** Entries of downloads and recordings whose file was deleted outside of the app go away. */
+    fun removeMissingFiles() {
+        viewModelScope.launch {
+            (getApplication<Application>() as ProIptvApp).recordings.removeMissing()
+            downloadManager.removeMissing()
+        }
+    }
+
     fun pauseDownload(id: Long) = downloadManager.pause(id)
 
     fun deleteDownload(id: Long) = downloadManager.delete(id)
@@ -185,9 +193,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun favoriteChannels(listId: Long) = db.favorites().channelItems(listId)
 
-    fun guideChannels(ids: List<Long>, category: String?, query: String, from: Long) = db.programs().guideChannels(ids, category, query, from)
+    fun guideChannels(ids: List<Long>, category: String?, query: String, from: Long) = com.kutlusoy.proiptv.parse.SearchMatch.four(query).let { (w1, w2, w3, w4) -> db.programs().guideChannels(ids, category, w1, w2, w3, w4, from) }
 
-    fun guide(ids: List<Long>, category: String?, from: Long, to: Long, query: String) = db.programs().guide(ids, category, from, to, query)
+    fun guide(ids: List<Long>, category: String?, from: Long, to: Long, query: String) = com.kutlusoy.proiptv.parse.SearchMatch.four(query).let { (w1, w2, w3, w4) -> db.programs().guide(ids, category, from, to, w1, w2, w3, w4) }
 
     fun counts(accountId: Long) = combine(
         db.items().countFlow(accountId, Kind.LIVE),
@@ -202,7 +210,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val key = listOf(kind, ids, category, query, flags)
         pagers[kind]?.takeIf { it.first == key }?.let { return it.second }
         val flow = Pager(PagingConfig(pageSize = 60, enablePlaceholders = false)) {
-            db.items().paging(kind, ids, category, query, null, null, flags)
+            val (w1, w2, w3, w4) = com.kutlusoy.proiptv.parse.SearchMatch.four(query)
+            db.items().paging(kind, ids, category, w1, w2, w3, w4, null, null, flags)
         }.flow.cachedIn(viewModelScope)
         pagers[kind] = key to flow
         return flow

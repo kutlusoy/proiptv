@@ -117,7 +117,7 @@ private fun runApplication() = application {
                 Key.DirectionDown -> { c.zap(1); true }
                 Key.DirectionLeft -> { c.seekBy(-10_000); true }
                 Key.DirectionRight -> { c.seekBy(10_000); true }
-                Key.M -> { state.engine.setMute(true); true }
+                Key.M -> { state.engine.toggleMute(); true }
                 else -> false
             }
         },

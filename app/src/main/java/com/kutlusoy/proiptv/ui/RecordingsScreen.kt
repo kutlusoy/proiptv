@@ -44,6 +44,7 @@ import java.util.Date
 
 @Composable
 fun RecordingsScreen(vm: MainViewModel) {
+    androidx.compose.runtime.LaunchedEffect(Unit) { vm.removeMissingFiles() }
     val list by vm.recordings.collectAsState()
     val active by vm.activeRecordings.collectAsState()
     var deleting by remember { mutableStateOf<Recording?>(null) }

@@ -80,7 +80,7 @@ fun EpgScreen(state: AppState) {
             .filter { category == null || "${it.accountId}|${it.categoryId}" == category }
             .filter { e ->
                 val programs = state.guide.programs[Guide.key(e.accountId, e.epgId ?: return@filter false)] ?: return@filter false
-                q.isEmpty() || e.name.contains(q, ignoreCase = true) || programs.any { it.title.contains(q, ignoreCase = true) }
+                q.isEmpty() || com.kutlusoy.proiptv.parse.SearchMatch.matches(e.name, q) || programs.any { com.kutlusoy.proiptv.parse.SearchMatch.matches(e.name + " " + it.title, q) }
             }
             .toList()
     }

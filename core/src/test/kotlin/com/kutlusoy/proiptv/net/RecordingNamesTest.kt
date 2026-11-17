@@ -6,26 +6,33 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class RecordingNamesTest {
-    private val at = Calendar.getInstance().apply { clear(); set(2026, Calendar.DECEMBER, 23, 20, 15) }.timeInMillis
+    private fun at(h: Int, m: Int) = Calendar.getInstance().apply { clear(); set(2026, Calendar.DECEMBER, 23, h, m) }.timeInMillis
+    private val start = at(20, 15)
 
     @Test
-    fun languageChannelShowAndDate() {
-        assertEquals("DE-ORF 1-Tatort-2026.12.23.ts", RecordingNames.fileName("DE | ORF 1", "Tatort", at) { false })
+    fun languageChannelShowDateAndStartTime() {
+        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015.ts", RecordingNames.fileName("DE | ORF 1", "Tatort", start) { false })
     }
 
     @Test
     fun leavesOutWhatIsMissingAndForbiddenCharacters() {
-        assertEquals("kabel eins-2026.12.23.ts", RecordingNames.fileName("kabel eins", null, at) { false })
-        assertEquals("Das Beste Aus-Heute Show-2026.12.23.ts", RecordingNames.fileName("Das Beste Aus", "Heute: Show?", at) { false })
+        assertEquals("kabel eins-2026.12.23-2015.ts", RecordingNames.fileName("kabel eins", null, start) { false })
+        assertEquals("Das Beste Aus-Heute Show-2026.12.23-2015.ts", RecordingNames.fileName("Das Beste Aus", "Heute: Show?", start) { false })
+    }
+
+    @Test
+    fun theStopTimeIsAddedWhenTheRecordingIsFinished() {
+        val running = RecordingNames.fileName("DE | ORF 1", "Tatort", start) { false }
+        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015-2145.ts", RecordingNames.withStop(running, at(21, 45)) { false })
     }
 
     @Test
     fun makesNamesUnique() {
-        val used = mutableSetOf("DE-ORF 1-Tatort-2026.12.23.ts")
-        val second = RecordingNames.fileName("DE | ORF 1", "Tatort", at) { it in used }
-        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015.ts", second)
+        val used = mutableSetOf("DE-ORF 1-Tatort-2026.12.23-2015.ts")
+        val second = RecordingNames.fileName("DE | ORF 1", "Tatort", start) { it in used }
+        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015-2.ts", second)
         used += second
-        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015-2.ts", RecordingNames.fileName("DE | ORF 1", "Tatort", at) { it in used })
+        assertEquals("DE-ORF 1-Tatort-2026.12.23-2015-3.ts", RecordingNames.fileName("DE | ORF 1", "Tatort", start) { it in used })
     }
 
     @Test

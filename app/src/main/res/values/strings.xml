@@ -98,8 +98,10 @@
     <string name="rec_record">Record</string>
     <string name="rec_stop">Stop recording</string>
     <string name="rec_go_channel">Go to the channel</string>
+    <string name="rec_show_file">Show file in folder</string>
     <string name="player_list_current">Current list</string>
     <string name="player_list_search">Current search</string>
+    <string name="player_mute">Mute</string>
     <string name="player_columns">Categories and channels side by side</string>
     <string name="player_filter_categories">Search %1$d categories</string>
     <string name="player_filter_channels">Search %1$d channels</string>
@@ -253,6 +255,7 @@
     <string name="detail_runtime">Duration</string>
     <string name="settings_tmdb">Movie information (TMDB)</string>
     <string name="settings_tmdb_hint">Optional. With your own free API key from themoviedb.org the app loads plot, cast and trailer for titles that have none (for example from M3U lists). Only the title and the year of the opened title are sent.</string>
+    <string name="settings_thanks">Special thanks</string>
     <string name="settings_tmdb_key">API key</string>
     <string name="onboarding_add_account">Add account</string>
     <string name="player_err_auth">The provider refused the login. Check user name, password and the expiry date of the account.</string>

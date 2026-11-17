@@ -114,8 +114,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 }
             }
             .filter { e ->
-                q.isEmpty() || e.name.contains(q, ignoreCase = true) ||
-                    (kind == Kind.LIVE && state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true)
+                q.isEmpty() || com.kutlusoy.proiptv.parse.SearchMatch.matches(e.name + " " + (if (kind == Kind.LIVE) state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title.orEmpty() else ""), q)
             }
             .toList()
             .let { list ->
@@ -408,7 +407,7 @@ private fun RelatedRow(state: AppState, e: Entry, titleKey: String) {
     }
     if (related.isEmpty()) return
     Text(t(titleKey), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    ScrollRow {
         items(related, key = { it.key }) { r ->
             Box(Modifier.width(120.dp)) {
                 Poster(state, r) { if (r.kind == Kind.SERIES) { state.series = r; state.movie = null } else { state.movie = r; state.series = null } }

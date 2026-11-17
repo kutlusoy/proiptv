@@ -97,8 +97,10 @@
     <string name="rec_record">Aufnehmen</string>
     <string name="rec_stop">Aufnahme beenden</string>
     <string name="rec_go_channel">Zum Sender</string>
+    <string name="rec_show_file">Datei im Ordner anzeigen</string>
     <string name="player_list_current">Aktuelle Liste</string>
     <string name="player_list_search">Aktuelle Suche</string>
+    <string name="player_mute">Ton aus</string>
     <string name="player_columns">Kategorien und Sender nebeneinander</string>
     <string name="player_filter_categories">In %1$d Kategorien suchen</string>
     <string name="player_filter_channels">In %1$d Sendern suchen</string>
@@ -252,6 +254,7 @@
     <string name="detail_runtime">Dauer</string>
     <string name="settings_tmdb">Filminformationen (TMDB)</string>
     <string name="settings_tmdb_hint">Optional. Mit deinem eigenen kostenlosen API-Schlüssel von themoviedb.org lädt die App Handlung, Besetzung und Trailer für Titel ohne Informationen (zum Beispiel aus M3U-Listen). Gesendet werden nur der Titel und das Jahr des geöffneten Titels.</string>
+    <string name="settings_thanks">Besonderer Dank</string>
     <string name="settings_tmdb_key">API-Schlüssel</string>
     <string name="onboarding_add_account">Konto hinzufügen</string>
     <string name="player_err_auth">Der Anbieter hat die Anmeldung abgelehnt. Prüfe Benutzername, Passwort und Ablaufdatum des Kontos.</string>

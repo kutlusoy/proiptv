@@ -79,8 +79,11 @@ class Updater(private val downloader: UpdateDownloader = UpdateDownloader(Http.c
                 "echo setup ended with code %errorlevel% > \"${result.absolutePath}\"",
             ).joinToString("\r\n") + "\r\n",
         )
+        // the script runs in a hidden window: the restarted app keeps the console of the script alive, a visible one would stay open after the update
+        val launcher = File(file.parentFile, "apply-update.vbs")
+        launcher.writeText("CreateObject(\"WScript.Shell\").Run \"\"\"\" & \"${script.absolutePath}\" & \"\"\"\", 0, False\r\n")
         try {
-            ProcessBuilder("cmd.exe", "/c", "start", "ProIPTV update", "/min", script.absolutePath).start()
+            ProcessBuilder("wscript.exe", "//B", "//NoLogo", launcher.absolutePath).start()
         } catch (e: java.io.IOException) {
             Log.write("Update: the update script did not start: ${e.message}")
             throw UpdateException(UpdateException.Code.INSTALL_FAILED, "${e.message} (${file.absolutePath})")

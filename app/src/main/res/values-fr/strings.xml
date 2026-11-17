@@ -97,8 +97,10 @@
     <string name="rec_record">Enregistrer</string>
     <string name="rec_stop">Arrêter l\'enregistrement</string>
     <string name="rec_go_channel">Aller à la chaîne</string>
+    <string name="rec_show_file">Afficher le fichier dans le dossier</string>
     <string name="player_list_current">Liste actuelle</string>
     <string name="player_list_search">Recherche actuelle</string>
+    <string name="player_mute">Couper le son</string>
     <string name="player_columns">Catégories et chaînes côte à côte</string>
     <string name="player_filter_categories">Chercher dans %1$d catégories</string>
     <string name="player_filter_channels">Chercher dans %1$d chaînes</string>
@@ -252,6 +254,7 @@
     <string name="detail_runtime">Durée</string>
     <string name="settings_tmdb">Informations sur les films (TMDB)</string>
     <string name="settings_tmdb_hint">Facultatif. Avec votre propre clé API gratuite de themoviedb.org, l\'app charge résumé, distribution et bande-annonce pour les titres sans informations (par exemple des listes M3U). Seuls le titre et l\'année sont envoyés.</string>
+    <string name="settings_thanks">Remerciements spéciaux</string>
     <string name="settings_tmdb_key">Clé API</string>
     <string name="onboarding_add_account">Ajouter un compte</string>
     <string name="player_err_auth">Le fournisseur a refusé la connexion. Vérifiez l\'identifiant, le mot de passe et la date d\'expiration du compte.</string>

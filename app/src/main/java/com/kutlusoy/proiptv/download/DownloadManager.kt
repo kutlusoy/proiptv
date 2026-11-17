@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
@@ -38,7 +39,41 @@ class DownloadManager(
     private val _current = MutableStateFlow<Download?>(null)
     val current: StateFlow<Download?> = _current
 
-    fun fileOf(d: Download): File = File(dir, "${d.id}.${d.ext.ifBlank { "mp4" }}")
+    private fun seasonLabel(n: Int): String {
+        val text = context?.getString(com.kutlusoy.proiptv.R.string.series_season, n) ?: "Season $n"
+        // two digits, so the season folders are in the right order
+        return text.replace(n.toString(), "%02d".format(n))
+    }
+
+    /** A movie is a file in the folder of the downloads, an episode goes into the folder of its series and of its season. */
+    fun fileOf(d: Download): File {
+        val ext = d.ext.ifBlank { "mp4" }
+        val relative = if (d.kind == com.kutlusoy.proiptv.data.Kind.EPISODE) {
+            com.kutlusoy.proiptv.parse.DownloadNames.episode(d.seriesName, d.season, d.episode, d.title, ext, ::seasonLabel)
+        } else {
+            com.kutlusoy.proiptv.parse.DownloadNames.movie(d.title, ext)
+        }
+        val named = File(dir, relative)
+        val legacy = File(dir, "${d.id}.$ext")
+        // downloads of older versions were stored under their number
+        return if (!named.exists() && legacy.exists()) legacy else named
+    }
+
+    /** Removes the finished downloads whose file was deleted outside of the app (only while the folder of the downloads is there). */
+    suspend fun removeMissing() = withContext(Dispatchers.IO) {
+        if (!dir.isDirectory) return@withContext
+        for (d in dao.all().first()) {
+            if (d.status == DlStatus.DONE && !fileOf(d).exists()) dao.delete(d.id)
+        }
+    }
+
+    private fun removeEmptyFolders(file: File) {
+        var folder = file.parentFile
+        while (folder != null && folder != dir && folder.isDirectory && folder.list().isNullOrEmpty()) {
+            folder.delete()
+            folder = folder.parentFile
+        }
+    }
 
     fun enqueue(list: List<Download>) {
         scope.launch {
@@ -67,7 +102,7 @@ class DownloadManager(
     fun delete(id: Long) {
         scope.launch {
             if (currentId == id) running?.cancelAndJoin()
-            dao.get(id)?.let { fileOf(it).delete() }
+            dao.get(id)?.let { val file = fileOf(it); file.delete(); removeEmptyFolders(file) }
             dao.delete(id)
         }
     }
@@ -120,6 +155,7 @@ class DownloadManager(
     private suspend fun transfer(d: Download, url: String, userAgent: String?) {
         dir.mkdirs()
         val file = fileOf(d)
+        file.parentFile?.mkdirs()
         val offset = if (file.exists()) file.length() else 0L
         val request = Request.Builder().url(url)
             .header("User-Agent", userAgent?.takeIf { it.isNotBlank() } ?: "ProIPTV")

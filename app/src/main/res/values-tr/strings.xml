@@ -93,8 +93,10 @@
     <string name="rec_record">Kaydet</string>
     <string name="rec_stop">Kaydı durdur</string>
     <string name="rec_go_channel">Kanala git</string>
+    <string name="rec_show_file">Dosyayı klasörde göster</string>
     <string name="player_list_current">Geçerli liste</string>
     <string name="player_list_search">Geçerli arama</string>
+    <string name="player_mute">Sesi kapat</string>
     <string name="player_columns">Kategoriler ve kanallar yan yana</string>
     <string name="player_filter_categories">%1$d kategoride ara</string>
     <string name="player_filter_channels">%1$d kanalda ara</string>
@@ -252,6 +254,7 @@
     <string name="detail_runtime">Süre</string>
     <string name="settings_tmdb">Film bilgileri (TMDB)</string>
     <string name="settings_tmdb_hint">İsteğe bağlı. themoviedb.org\'dan aldığınız ücretsiz API anahtarıyla uygulama, bilgisi olmayan başlıklar (örneğin M3U listeleri) için konu, oyuncular ve fragmanı yükler. Yalnızca başlık ve yıl gönderilir.</string>
+    <string name="settings_thanks">Özel teşekkürler</string>
     <string name="settings_tmdb_key">API anahtarı</string>
     <string name="onboarding_add_account">Hesap ekle</string>
     <string name="player_err_auth">Sağlayıcı girişi reddetti. Kullanıcı adını, şifreyi ve hesabın bitiş tarihini kontrol edin.</string>
