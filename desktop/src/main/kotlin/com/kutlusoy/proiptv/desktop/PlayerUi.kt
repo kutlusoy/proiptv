@@ -734,12 +734,16 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         } else {
             Box(Modifier.weight(1f))
         }
-        // the symbol shows and switches the mute (the key M does the same)
+        // the symbol shows and switches the mute (the key M does the same); a volume of zero shows the crossed symbol too
         val muteText = t("player_mute")
-        IconButton(onClick = { state.engine.toggleMute() }, Modifier.size(32.dp).semantics { contentDescription = muteText }) {
-            Icon(if (state.engine.muted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, muteText, Modifier.size(20.dp), tint = if (state.engine.muted) Palette.WineSoft else LocalContentColor.current)
+        val silent = state.engine.muted || controller.volume == 0
+        IconButton(
+            onClick = { if (controller.volume == 0 && !state.engine.muted) controller.changeVolume(50) else state.engine.toggleMute() },
+            modifier = Modifier.size(32.dp).semantics { contentDescription = muteText },
+        ) {
+            Icon(if (silent) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, muteText, Modifier.size(20.dp), tint = if (silent) Palette.WineSoft else LocalContentColor.current)
         }
-        Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp).alpha(if (state.engine.muted) 0.4f else 1f))
+        Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp).alpha(if (silent) 0.4f else 1f))
         if (controller.live) RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp)
         RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp)
         IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) }
