@@ -476,7 +476,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     val currentName = t("player_list_current")
     val searchName = t("player_list_search")
     val otherName = t("live_other")
-    val lists = remember(controller.playEntries, controller.playFromSearch, state.favorites, state.history, favLists, live, state.data.categories(Kind.LIVE)) {
+    val listsAndStart = remember(controller.playEntries, controller.playFromSearch, state.favorites, state.history, favLists, live, state.data.categories(Kind.LIVE)) {
         val out = ArrayList<PanelList>()
         favLists.forEach { l ->
             out += PanelList(if (favLists.size == 1) favName else "\u2605 ${l.name}") {
@@ -491,14 +491,20 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                 live.filter { it.accountId == c.accountId && it.categoryId == c.id }
             }
         }
-        // the list the player was started from comes first, under its own name when it is one of the lists
+        // the list the player was started from stays at its own place, so the arrows lead to the next list of the start screen; a list that is not
+        // one of them (a search, a zapping list from elsewhere) is put in front
         val start = controller.playEntries.map { it.key }
-        val same = if (controller.playFromSearch) -1 else out.indexOfFirst { l -> l.entries().map { it.key } == start }
-        if (same > 0) out.add(0, out.removeAt(same))
-        else if (same < 0) out.add(0, PanelList(if (controller.playFromSearch) searchName else currentName, controller.playFromSearch) { controller.playEntries })
-        out
+        val same = if (controller.playFromSearch) -1 else {
+            val exact = out.indexOfFirst { l -> l.entries().map { it.key } == start }
+            // the start screen shows only the first 40 channels of a category: such a row belongs to the category that begins with them
+            if (exact >= 0 || start.size < 20) exact
+            else out.indexOfFirst { l -> l.name != allName && l.name != historyName && l.entries().map { it.key }.take(start.size) == start }
+        }
+        if (same < 0) out.add(0, PanelList(if (controller.playFromSearch) searchName else currentName, controller.playFromSearch) { controller.playEntries })
+        out to (if (same < 0) 0 else same)
     }
-    var listIndex by remember(lists.size) { mutableIntStateOf(0) }
+    val lists = listsAndStart.first
+    var listIndex by remember(lists.size) { mutableIntStateOf(listsAndStart.second) }
     val listNow = lists[listIndex.coerceIn(0, lists.lastIndex)]
     val searchOpen = controller.searchOpen
     val query = controller.searchText
