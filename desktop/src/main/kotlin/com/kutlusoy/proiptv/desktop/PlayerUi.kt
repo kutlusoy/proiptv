@@ -111,6 +111,13 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var playFromSearch by mutableStateOf(liveRequest?.query?.isNotBlank() == true)
     var searchOrigin: List<Entry> = liveRequest?.origin.orEmpty()
 
+    /** The channel list shows the categories and the channels side by side. */
+    var columnMode by mutableStateOf(state.store.config.playerColumns)
+    fun setColumns(on: Boolean) {
+        columnMode = on
+        state.store.update { c -> c.copy(playerColumns = on) }
+    }
+
     /** The search looks through all channels. A search that comes from a list starts inside that list (all channels only when that list is "All"), whatever was chosen last time. */
     var searchAll by mutableStateOf(if (liveRequest?.query.isNullOrBlank()) state.store.config.playerSearchAll else liveRequest?.allScope == true)
 
@@ -406,7 +413,10 @@ private fun ChannelBrowser(state: AppState, controller: PlayerController, video:
     val timeFormat = remember { java.text.SimpleDateFormat("HH:mm") }
     val nowSecs = state.tick
     androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth()) {
-        val left = (maxWidth * 0.32f).coerceAtLeast(300.dp).coerceAtMost(maxWidth * 0.6f)
+        val narrow = (maxWidth * 0.32f).coerceAtLeast(300.dp).coerceAtMost(maxWidth * 0.6f)
+        val wide = (maxWidth * 0.6f).coerceAtLeast(520.dp).coerceAtMost(maxWidth * 0.78f)
+        // the list grows to make room for the categories next to the channels
+        val left by androidx.compose.animation.core.animateDpAsState(if (controller.columnMode) wide else narrow, androidx.compose.animation.core.tween(220), label = "list width")
         Row(Modifier.fillMaxSize()) {
             ChannelPanel(state, controller, Modifier.width(left).fillMaxHeight(), onHover = { hovered = it })
             Column(Modifier.weight(1f).fillMaxHeight()) {
@@ -426,7 +436,7 @@ private fun ChannelBrowser(state: AppState, controller: PlayerController, video:
                     }
                 }
                 val programs = remember(shownEntry, state.guide, nowSecs / 60) {
-                    shownEntry?.epgId?.let { id -> state.guide.programs[Guide.key(shownEntry.accountId, id)].orEmpty().filter { it.end > nowSecs } }.orEmpty()
+                    shownEntry?.epgId?.let { id -> state.guide.programs[Guide.key(shownEntry.accountId, id)].orEmpty().filter { it.end > nowSecs }.distinctBy { it.start } }.orEmpty()
                 }
                 androidx.compose.animation.Crossfade(shownEntry?.key, Modifier.weight(0.5f).fillMaxWidth().background(Palette.Surface), animationSpec = androidx.compose.animation.core.tween(200), label = "guide") { _ ->
                   Column(Modifier.fillMaxSize()) {
@@ -437,7 +447,7 @@ private fun ChannelBrowser(state: AppState, controller: PlayerController, video:
                         Text(t("epg_none"), Modifier.padding(16.dp), color = Color.White.copy(alpha = 0.7f))
                     } else {
                         androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize()) {
-                            itemsIndexed(programs, key = { _, p -> "${p.channel}|${p.start}" }) { _, p ->
+                            itemsIndexed(programs, key = { _, p -> "${shownEntry?.accountId}|${p.channel}|${p.start}" }) { _, p ->
                                 Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
                                     Row {
                                         Text(timeFormat.format(java.util.Date(p.start * 1000)) + " - " + timeFormat.format(java.util.Date(p.end * 1000)), color = Palette.WineSoft, style = MaterialTheme.typography.bodyMedium)
@@ -476,7 +486,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     val currentName = t("player_list_current")
     val searchName = t("player_list_search")
     val otherName = t("live_other")
-    val lists = remember(controller.playEntries, controller.playFromSearch, state.favorites, state.history, favLists, live, state.data.categories(Kind.LIVE)) {
+    val listsAndStart = remember(controller.playEntries, controller.playFromSearch, state.favorites, state.history, favLists, live, state.data.categories(Kind.LIVE)) {
         val out = ArrayList<PanelList>()
         favLists.forEach { l ->
             out += PanelList(if (favLists.size == 1) favName else "\u2605 ${l.name}") {
@@ -491,40 +501,62 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                 live.filter { it.accountId == c.accountId && it.categoryId == c.id }
             }
         }
-        // the list the player was started from comes first, under its own name when it is one of the lists
+        // the list the player was started from stays at its own place, so the arrows lead to the next list of the start screen; a list that is not
+        // one of them (a search, a zapping list from elsewhere) is put in front
         val start = controller.playEntries.map { it.key }
-        val same = if (controller.playFromSearch) -1 else out.indexOfFirst { l -> l.entries().map { it.key } == start }
-        if (same > 0) out.add(0, out.removeAt(same))
-        else if (same < 0) out.add(0, PanelList(if (controller.playFromSearch) searchName else currentName, controller.playFromSearch) { controller.playEntries })
-        out
+        val same = if (controller.playFromSearch) -1 else {
+            val exact = out.indexOfFirst { l -> l.entries().map { it.key } == start }
+            // the start screen shows only the first 40 channels of a category: such a row belongs to the category that begins with them
+            if (exact >= 0 || start.size < 20) exact
+            else out.indexOfFirst { l -> l.name != allName && l.name != historyName && l.entries().map { it.key }.take(start.size) == start }
+        }
+        if (same < 0) out.add(0, PanelList(if (controller.playFromSearch) searchName else currentName, controller.playFromSearch) { controller.playEntries })
+        out to (if (same < 0) 0 else same)
     }
-    var listIndex by remember(lists.size) { mutableIntStateOf(0) }
+    val lists = listsAndStart.first
+    var listIndex by remember(lists.size) { mutableIntStateOf(listsAndStart.second) }
     val listNow = lists[listIndex.coerceIn(0, lists.lastIndex)]
     val searchOpen = controller.searchOpen
     val query = controller.searchText
     val everywhere = controller.searchAll
     val setEverywhere: (Boolean) -> Unit = { on -> controller.searchAll = on; state.store.update { c -> c.copy(playerSearchAll = on) } }
     val q = query.trim()
-    val shown = remember(listNow, listIndex, searchOpen, q, everywhere, live, state.tick / 60) {
+    val shownAll = remember(listNow, listIndex, searchOpen, q, everywhere, live, state.tick / 60) {
         val searching = searchOpen && q.isNotEmpty()
         // inside the list of an earlier search the new search starts again from the list that the earlier one started from
         val base = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin.ifEmpty { listNow.entries() } else listNow.entries()
-        if (!searching) base
+        // every channel once: the list is keyed by the channel
+        (if (!searching) base
         else base.filter { e ->
             e.name.contains(q, ignoreCase = true) || com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title.contains(q, ignoreCase = true) ||
                 state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true
-        }
+        }).distinctBy { it.key }
+    }
+    // in the side by side view the fields at the top of the columns filter the categories and the channels of the chosen category
+    var categoryFilter by remember { mutableStateOf("") }
+    var channelFilter by remember { mutableStateOf("") }
+    LaunchedEffect(listIndex) { channelFilter = "" }
+    val shown = remember(shownAll, controller.columnMode, channelFilter) {
+        val f = channelFilter.trim()
+        if (!controller.columnMode || f.isEmpty()) shownAll else shownAll.filter { it.name.contains(f, ignoreCase = true) }
     }
     val playingKey = controller.playEntries.getOrNull(controller.index)?.key
     val list = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(listNow, searchOpen, q, everywhere) {
-        val at = shown.indexOfFirst { it.key == playingKey }
+        val at = shownAll.indexOfFirst { it.key == playingKey }
         runCatching { list.animateScrollToItem(if (at > 3) at - 3 else 0) }
     }
     val previousText = t("player_list_previous")
     val nextText = t("player_list_next")
     val searchText = t("player_search")
-    Column(modifier.background(Palette.Velvet)) {
+    val columnsText = t("player_columns")
+    val typingFocus = Modifier.onFocusChanged { state.typing = it.isFocused }
+    androidx.compose.runtime.DisposableEffect(controller.columnMode) { onDispose { if (!controller.searchOpen) state.typing = false } }
+    val columnsButton: @Composable () -> Unit = {
+        IconButton(onClick = { controller.setColumns(!controller.columnMode) }, modifier = Modifier.semantics { contentDescription = columnsText }) { ColumnsIcon(controller.columnMode) }
+    }
+    val pane: @Composable (Modifier) -> Unit = { paneModifier ->
+    Column(paneModifier.background(Palette.Velvet)) {
         Row(Modifier.fillMaxWidth().height(56.dp).background(Palette.WineDeep), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { listIndex = (listIndex - 1 + lists.size) % lists.size }, enabled = lists.size > 1, modifier = Modifier.semantics { contentDescription = previousText }) {
                 Icon(Icons.Filled.KeyboardArrowLeft, null, tint = Color.White)
@@ -542,6 +574,13 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
             IconButton(onClick = { listIndex = (listIndex + 1) % lists.size }, enabled = lists.size > 1, modifier = Modifier.semantics { contentDescription = nextText }) {
                 Icon(Icons.Filled.KeyboardArrowRight, null, tint = Color.White)
             }
+        }
+        if (controller.columnMode) {
+            TextInput(
+                channelFilter, { channelFilter = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp).then(typingFocus),
+                placeholder = { Text(t("player_filter_channels", shownAll.size)) },
+                trailingIcon = { if (channelFilter.isNotEmpty()) IconButton(onClick = { channelFilter = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
+            )
         }
         androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list) {
             itemsIndexed(shown, key = { _, e -> e.key }) { i, e ->
@@ -576,14 +615,61 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                     placeholder = { Text(t("live_search")) },
                     trailingIcon = { IconButton(onClick = { controller.clearSearch() }) { Icon(Icons.Filled.Close, t("action_close")) } },
                 )
-                Row(Modifier.fillMaxWidth().clickable { setEverywhere(!everywhere) }, verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.Checkbox(checked = everywhere, onCheckedChange = setEverywhere)
-                    Text(t("player_search_all"), color = Color.White)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).clickable { setEverywhere(!everywhere) }, verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Checkbox(checked = everywhere, onCheckedChange = setEverywhere)
+                        Text(t("player_search_all"), color = Color.White)
+                    }
+                    columnsButton()
                 }
             }
         } else {
-            IconButton(onClick = { controller.searchOpen = true }, modifier = Modifier.align(Alignment.CenterHorizontally).semantics { contentDescription = searchText }) { Icon(Icons.Filled.Search, null) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                columnsButton()
+                IconButton(onClick = { controller.searchOpen = true }, modifier = Modifier.semantics { contentDescription = searchText }) { Icon(Icons.Filled.Search, null) }
+            }
         }
+    }
+    }
+    if (controller.columnMode) {
+        // categories and channels side by side, like in a classic channel browser
+        val counts = remember(lists) { lists.map { it.entries().size } }
+        Row(modifier) {
+            val categories = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (listIndex - 3).coerceAtLeast(0))
+            val cf = categoryFilter.trim()
+            val visible = remember(lists, cf) { lists.withIndex().filter { cf.isEmpty() || it.value.name.contains(cf, ignoreCase = true) } }
+            Column(Modifier.weight(0.4f).fillMaxHeight().background(Palette.Surface)) {
+                TextInput(
+                    categoryFilter, { categoryFilter = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp).then(typingFocus),
+                    placeholder = { Text(t("player_filter_categories", lists.size)) },
+                    trailingIcon = { if (categoryFilter.isNotEmpty()) IconButton(onClick = { categoryFilter = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
+                )
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = categories) {
+                    itemsIndexed(visible, key = { _, v -> "${v.index}|${v.value.name}" }) { _, v ->
+                        val i = v.index
+                        Row(
+                            Modifier.fillMaxWidth().then(if (i == listIndex) Modifier.background(Palette.WineDeep) else Modifier).clickable { listIndex = i }.padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(v.value.name, Modifier.weight(1f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                            Text(counts.getOrNull(i)?.toString().orEmpty(), color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+            pane(Modifier.weight(0.6f).fillMaxHeight())
+        }
+    } else {
+        pane(modifier)
+    }
+}
+
+/** Three upright bars: the switch for the view with categories and channels side by side. */
+@Composable
+private fun ColumnsIcon(active: Boolean) {
+    val color = if (active) Palette.WineSoft else LocalContentColor.current
+    Row(Modifier.size(24.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+        repeat(3) { Box(Modifier.width(3.dp).height(18.dp).background(color, RoundedCornerShape(2.dp))) }
     }
 }
 

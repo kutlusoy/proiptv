@@ -27,7 +27,7 @@ data class AccountDto(
 data class ReminderDto(val account: String, val channelId: String, val channelName: String, val title: String, val startMs: Long)
 
 @Serializable
-data class FavoriteDto(val account: String, val kind: Int, val remoteId: String, val name: String, val listId: String = "")
+data class FavoriteDto(val account: String, val kind: Int, val remoteId: String, val name: String, val listId: String = "", val epgId: String? = null)
 
 /** A favorites list. Live TV, movies and series each have their own lists. */
 @Serializable
@@ -67,6 +67,7 @@ data class ConfigDto(
     val hideAdult: Boolean = true,
     val reminders: List<ReminderDto> = emptyList(),
     val playerSearchAll: Boolean = false,
+    val playerColumns: Boolean = false,
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */
@@ -130,6 +131,11 @@ class ProgressStore(private val dir: File) {
 
     @Synchronized
     fun all(): List<ProgressDto> = map.values.toList()
+
+    @Synchronized
+    fun removeAccount(account: String) {
+        if (map.keys.removeAll { it.startsWith("$account|") }) write()
+    }
 
     @Synchronized
     fun save(p: ProgressDto) {

@@ -52,7 +52,58 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         scope.launch {
             data = library.load()
             loading = false
+            reconcileFavorites(data)
             refreshGuide()
+        }
+    }
+
+    /**
+     * After the lists were loaded: a favorite has to point to the channel it was made for. When the provider has removed it, or has given its id
+     * to another channel (the name is not the same any more), it follows the channel of the same name or is removed. The same for the last channels
+     * and the reminders. Accounts that did not load, and kinds that came back empty, are not touched.
+     */
+    private fun reconcileFavorites(d: LibraryData) {
+        val ok = store.config.accounts.filter { it.enabled && it.id !in d.errors }.map { it.id }.toSet()
+        fun loaded(account: String, kind: Int) = account in ok && d.entries(kind).any { it.accountId == account }
+        val byKey = HashMap<String, Entry>()
+        val matchers = HashMap<String, com.kutlusoy.proiptv.parse.FavoriteMatch>()
+        val entriesOf = HashMap<String, Entry>()
+        for (kind in 0..2) {
+            for (e in d.entries(kind)) byKey[e.key] = e
+            for ((account, list) in d.entries(kind).groupBy { it.accountId }) {
+                matchers["$account|$kind"] = com.kutlusoy.proiptv.parse.FavoriteMatch(list.map { com.kutlusoy.proiptv.parse.MatchCandidate(it.remoteId, it.name, it.epgId) })
+                list.forEach { entriesOf["${it.accountId}|${it.kind}|${it.remoteId}"] = it }
+            }
+        }
+        val same = com.kutlusoy.proiptv.parse.StableId::sameName
+        val kept = ArrayList<FavoriteDto>()
+        var favoritesChanged = false
+        for (f in store.config.favorites) {
+            if (!loaded(f.account, f.kind)) { kept += f; continue }
+            // only the channels of the same account are considered, a favorite never moves to another account
+            val found = matchers["${f.account}|${f.kind}"]?.resolve(f.remoteId, f.name, f.epgId)
+            val entry = found?.let { entriesOf["${f.account}|${f.kind}|${it.remoteId}"] }
+            if (entry == null) { favoritesChanged = true; continue }
+            val updated = f.copy(remoteId = entry.remoteId, name = entry.name, epgId = entry.epgId ?: f.epgId)
+            if (updated != f) favoritesChanged = true
+            if (kept.none { it.listId == updated.listId && it.account == updated.account && it.kind == updated.kind && it.remoteId == updated.remoteId }) kept += updated
+        }
+        val history = store.config.history.filter { key ->
+            val account = key.substringBefore('|')
+            !loaded(account, Kind.LIVE) || byKey.containsKey(key)
+        }
+        val reminders = store.config.reminders.mapNotNull { r ->
+            if (!loaded(r.account, Kind.LIVE)) return@mapNotNull r
+            val current = byKey["${r.account}|${Kind.LIVE}|${r.channelId}"]
+            if (current != null && same(current.name, r.channelName)) return@mapNotNull r
+            val found = matchers["${r.account}|${Kind.LIVE}"]?.resolve(r.channelId, r.channelName, null) ?: return@mapNotNull null
+            r.copy(channelId = found.remoteId, channelName = found.name)
+        }
+        if (favoritesChanged || history.size != store.config.history.size || reminders != store.config.reminders) {
+            store.update { c -> c.copy(favorites = kept, history = history, reminders = reminders) }
+            favorites = store.config.favorites
+            this.history = store.config.history
+            this.reminders = store.config.reminders
         }
     }
 
@@ -132,9 +183,19 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     }
 
     fun deleteAccount(id: String) {
-        store.update { c -> c.copy(accounts = c.accounts.filter { it.id != id }, favorites = c.favorites.filter { it.account != id }) }
+        // everything that belongs to the account goes with it: favorites, last channels, progress, reminders and planned recordings
+        store.update { c ->
+            c.copy(
+                accounts = c.accounts.filter { it.id != id }, favorites = c.favorites.filter { it.account != id },
+                history = c.history.filterNot { it.startsWith("$id|") }, reminders = c.reminders.filter { it.account != id },
+            )
+        }
+        progress.removeAccount(id)
+        recordingStore.all().filter { it.account == id && it.status == RecStatus.SCHEDULED }.forEach { recordingStore.remove(it.id) }
         accounts = store.config.accounts
         favorites = store.config.favorites
+        history = store.config.history
+        reminders = store.config.reminders
         reload()
     }
 
@@ -185,7 +246,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     fun setInList(e: Entry, listId: String, on: Boolean) {
         store.update { c ->
             val rest = c.favorites.filterNot { it.listId == listId && it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
-            c.copy(favorites = if (on) rest + FavoriteDto(e.accountId, e.kind, e.remoteId, e.name, listId) else rest)
+            c.copy(favorites = if (on) rest + FavoriteDto(e.accountId, e.kind, e.remoteId, e.name, listId, e.epgId) else rest)
         }
         favorites = store.config.favorites
     }

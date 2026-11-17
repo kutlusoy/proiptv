@@ -129,6 +129,8 @@ class SyncManager(
     private suspend fun run(id: Long) {
         val account = db.accounts().get(id) ?: return
         var error: String? = null
+        val reconciler = com.kutlusoy.proiptv.data.FavoriteReconciler(db)
+        val before = runCatching { reconciler.snapshot(id) }.getOrDefault(emptyMap())
         try {
             set(id, Phase.CONNECTING)
             when (account.type) {
@@ -140,6 +142,15 @@ class SyncManager(
         } catch (e: Exception) {
             error = describe(e)
             com.kutlusoy.proiptv.DebugLog.write("sync failed: $error")
+        }
+        if (error == null) {
+            try {
+                reconciler.run(id, before)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                com.kutlusoy.proiptv.DebugLog.write("favorites check failed: ${e.message}")
+            }
         }
         val fresh = db.accounts().get(id) ?: return
         db.accounts().update(
@@ -362,8 +373,7 @@ class SyncManager(
         }
     }
 
-    private fun hash(s: String): String =
-        MessageDigest.getInstance("SHA-1").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
+    private fun hash(s: String): String = com.kutlusoy.proiptv.parse.StableId.of(s)
 
     private companion object {
         const val BATCH = 1000

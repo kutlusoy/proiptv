@@ -95,6 +95,9 @@
     <string name="rec_go_channel">Kanala git</string>
     <string name="player_list_current">Geçerli liste</string>
     <string name="player_list_search">Geçerli arama</string>
+    <string name="player_columns">Kategoriler ve kanallar yan yana</string>
+    <string name="player_filter_categories">%1$d kategoride ara</string>
+    <string name="player_filter_channels">%1$d kanalda ara</string>
     <string name="player_search">Kanal ara</string>
     <string name="player_search_all">Tüm kanallar</string>
     <string name="player_list_previous">Önceki liste</string>

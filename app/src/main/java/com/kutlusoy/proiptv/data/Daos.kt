@@ -116,6 +116,12 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE accountId = :accountId AND kind = :kind AND remoteId = :remoteId")
     suspend fun find(accountId: Long, kind: Int, remoteId: String): Item?
 
+    @Query("SELECT * FROM items WHERE accountId = :accountId AND kind = :kind")
+    suspend fun ofKind(accountId: Long, kind: Int): List<Item>
+
+    @Query("SELECT COUNT(*) FROM items WHERE accountId = :accountId AND kind = :kind")
+    suspend fun countOf(accountId: Long, kind: Int): Int
+
     @Query("SELECT COUNT(*) FROM items WHERE accountId = :accountId AND kind = :kind")
     fun countFlow(accountId: Long, kind: Int): Flow<Int>
 
@@ -225,25 +231,25 @@ interface FavoriteDao {
         "SELECT f.listId AS listId, f.accountId AS accountId, f.kind AS kind, f.remoteId AS remoteId, f.name AS name, " +
             "f.sortKey AS sortKey, i.logo AS logo, i.epgId AS epgId, i.id AS itemId FROM favorites f " +
             "LEFT JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
-            "WHERE f.listId = :listId AND f.kind = :kind ORDER BY f.sortKey",
+            "WHERE f.listId = :listId AND f.kind = :kind AND f.accountId IN (SELECT id FROM accounts WHERE enabled = 1) ORDER BY f.sortKey",
     )
     fun rows(listId: Long, kind: Int): Flow<List<FavoriteRow>>
 
     @Query(
         "SELECT i.* FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
-            "WHERE f.listId = :listId AND i.kind = 0 ORDER BY f.sortKey LIMIT 1 OFFSET :offset",
+            "WHERE f.listId = :listId AND i.kind = 0 AND i.accountId IN (SELECT id FROM accounts WHERE enabled = 1) ORDER BY f.sortKey LIMIT 1 OFFSET :offset",
     )
     suspend fun itemAt(listId: Long, offset: Int): Item?
 
     @Query(
         "SELECT COUNT(*) FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
-            "WHERE f.listId = :listId AND i.kind = 0",
+            "WHERE f.listId = :listId AND i.kind = 0 AND i.accountId IN (SELECT id FROM accounts WHERE enabled = 1)",
     )
     suspend fun presentCount(listId: Long): Int
 
     @Query(
         "SELECT i.* FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
-            "WHERE f.listId = :listId AND i.kind = 0 ORDER BY f.sortKey",
+            "WHERE f.listId = :listId AND i.kind = 0 AND i.accountId IN (SELECT id FROM accounts WHERE enabled = 1) ORDER BY f.sortKey",
     )
     fun channelItems(listId: Long): Flow<List<Item>>
 
@@ -273,6 +279,9 @@ interface FavoriteDao {
 
     @Query("SELECT * FROM favorites WHERE listId = :listId ORDER BY sortKey")
     suspend fun entries(listId: Long): List<Favorite>
+
+    @Query("SELECT * FROM favorites WHERE accountId = :accountId")
+    suspend fun ofAccount(accountId: Long): List<Favorite>
 }
 
 @Dao
@@ -287,7 +296,7 @@ interface ProgressDao {
     suspend fun forIds(accountId: Long, kind: Int, ids: List<String>): List<Progress>
 
     @Query(
-        "SELECT * FROM progress WHERE dismissed = 0 AND ((kind = 1 AND watched = 0 AND positionMs > 5000) " +
+        "SELECT * FROM progress WHERE dismissed = 0 AND accountId IN (SELECT id FROM accounts WHERE enabled = 1) AND ((kind = 1 AND watched = 0 AND positionMs > 5000) " +
             "OR (kind = 3 AND seriesRemoteId <> '' AND (positionMs > 5000 OR watched = 1))) ORDER BY updated DESC LIMIT 300",
     )
     fun continueWatching(): Flow<List<Progress>>
@@ -393,12 +402,14 @@ interface ReminderDao {
 interface HistoryDao {
     @Query(
         "SELECT i.*, c.name AS listName FROM history h JOIN items i ON i.accountId = h.accountId AND i.kind = 0 AND i.remoteId = h.remoteId " +
-            "LEFT JOIN categories c ON c.accountId = i.accountId AND c.kind = 0 AND c.remoteId = i.categoryRemoteId ORDER BY h.watched DESC LIMIT 24",
+            "LEFT JOIN categories c ON c.accountId = i.accountId AND c.kind = 0 AND c.remoteId = i.categoryRemoteId " +
+            "WHERE h.accountId IN (SELECT id FROM accounts WHERE enabled = 1) ORDER BY h.watched DESC LIMIT 24",
     )
     fun rows(): kotlinx.coroutines.flow.Flow<List<HistoryRow>>
 
     @Query(
-        "SELECT i.* FROM history h JOIN items i ON i.accountId = h.accountId AND i.kind = 0 AND i.remoteId = h.remoteId ORDER BY h.watched DESC LIMIT 24",
+        "SELECT i.* FROM history h JOIN items i ON i.accountId = h.accountId AND i.kind = 0 AND i.remoteId = h.remoteId " +
+            "WHERE h.accountId IN (SELECT id FROM accounts WHERE enabled = 1) ORDER BY h.watched DESC LIMIT 24",
     )
     suspend fun items(): List<Item>
 
@@ -410,6 +421,9 @@ interface HistoryDao {
 
     @Query("DELETE FROM history WHERE accountId = :accountId")
     suspend fun deleteAccount(accountId: Long)
+
+    @Query("DELETE FROM history WHERE accountId = :accountId AND remoteId NOT IN (SELECT remoteId FROM items WHERE accountId = :accountId AND kind = 0)")
+    suspend fun pruneMissing(accountId: Long)
 
     @Query("DELETE FROM history")
     suspend fun clear()
