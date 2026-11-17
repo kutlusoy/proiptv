@@ -200,6 +200,7 @@ class VlcEngine {
         if (startMs > 0) l.libvlc_media_add_option(media, ":start-time=${startMs / 1000.0}")
         l.libvlc_media_player_set_media(p, media)
         l.libvlc_media_release(media)
+        volumePercent = volume
         l.libvlc_audio_set_volume(p, volume)
         soundOn(p, item.url.substringBefore('?').takeLast(40))
         val result = l.libvlc_media_player_play(p)
@@ -220,6 +221,7 @@ class VlcEngine {
         val media = l.libvlc_media_new_callbacks(i, mediaOpenCb, mediaReadCb, mediaSeekCb, mediaCloseCb, null) ?: run { error = l.libvlc_errmsg(); return }
         l.libvlc_media_player_set_media(p, media)
         l.libvlc_media_release(media)
+        volumePercent = volume
         l.libvlc_audio_set_volume(p, volume)
         soundOn(p, "stream $title")
         val result = l.libvlc_media_player_play(p)
@@ -239,14 +241,28 @@ class VlcEngine {
     fun time(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_time(it) } ?: 0 }
     fun length(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_length(it) } ?: 0 }
     fun seek(ms: Long) { val l = lib ?: return; player?.let { l.libvlc_media_player_set_time(it, ms.coerceAtLeast(0)) } }
-    fun setVolume(percent: Int) { val l = lib ?: return; player?.let { l.libvlc_audio_set_volume(it, percent.coerceIn(0, 200)) } }
+    @Volatile
+    private var volumePercent = 100
+
+    /** Changing the volume ends a mute. */
+    fun setVolume(percent: Int) {
+        val l = lib ?: return
+        volumePercent = percent.coerceIn(0, 200)
+        muted = false
+        player?.let { l.libvlc_audio_set_mute(it, 0); l.libvlc_audio_set_volume(it, volumePercent) }
+    }
+
     /** Compose state, so the volume symbol in the player follows the mute. */
     var muted by androidx.compose.runtime.mutableStateOf(false)
         private set
 
+    /** The mute sets the volume of libVLC to zero and back to what it was: the mute of libVLC itself did not always come back on Windows. */
     fun setMute(mute: Boolean) {
         val l = lib ?: return
-        player?.let { l.libvlc_audio_set_mute(it, if (mute) 1 else 0) }
+        player?.let {
+            l.libvlc_audio_set_mute(it, 0)
+            l.libvlc_audio_set_volume(it, if (mute) 0 else volumePercent)
+        }
         muted = mute
     }
 
@@ -255,8 +271,8 @@ class VlcEngine {
     /** Every new picture starts with sound on, a mute from before does not stay for the next title. After a few seconds the audio tracks go into the log, so a missing sound can be traced. */
     private fun soundOn(p: Pointer, what: String) {
         val l = lib ?: return
-        l.libvlc_audio_set_mute(p, 0)
         muted = false
+        l.libvlc_audio_set_mute(p, 0)
         Thread {
             runCatching {
                 Thread.sleep(4000)
