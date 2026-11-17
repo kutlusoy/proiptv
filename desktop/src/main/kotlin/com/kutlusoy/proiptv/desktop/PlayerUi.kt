@@ -275,6 +275,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     fun stop() {
+        state.typing = false
         saveProgress()
         engine.stop()
         // leaving the player: the provider connection is closed at once
@@ -552,7 +553,8 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     val searchText = t("player_search")
     val columnsText = t("player_columns")
     val typingFocus = Modifier.onFocusChanged { state.typing = it.isFocused }
-    androidx.compose.runtime.DisposableEffect(controller.columnMode) { onDispose { if (!controller.searchOpen) state.typing = false } }
+    // when the panel goes away no field has the focus any more, so the shortcuts of the player work again
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { state.typing = false } }
     val columnsButton: @Composable () -> Unit = {
         IconButton(onClick = { controller.setColumns(!controller.columnMode) }, modifier = Modifier.semantics { contentDescription = columnsText }) { ColumnsIcon(controller.columnMode) }
     }
