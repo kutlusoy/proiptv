@@ -71,8 +71,17 @@ fun EpgScreen(state: AppState) {
     var query by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<Selected?>(null) }
     var timersOpen by remember { mutableStateOf(false) }
-    val live = state.data.entries(Kind.LIVE)
-    val categories = state.data.categories(Kind.LIVE)
+    // with several accounts the guide can be limited to one of them, the choice is kept like in the channel list
+    val enabled = state.accounts.filter { it.enabled }
+    var accountFilter by remember { mutableStateOf<String?>(state.store.config.lastAccount["epg"]) }
+    androidx.compose.runtime.LaunchedEffect(accountFilter) {
+        if (state.store.config.lastAccount["epg"] != accountFilter) {
+            state.store.update { c -> c.copy(lastAccount = if (accountFilter == null) c.lastAccount - "epg" else c.lastAccount + ("epg" to accountFilter!!)) }
+        }
+    }
+    val activeAccount = accountFilter?.takeIf { id -> enabled.any { it.id == id } }
+    val live = state.data.entries(Kind.LIVE).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
+    val categories = state.data.categories(Kind.LIVE).filter { activeAccount == null || it.accountId == activeAccount }
     val q = query.trim()
     val now = state.tick
     val channels = remember(live, state.guide, category, q) {
@@ -101,7 +110,15 @@ fun EpgScreen(state: AppState) {
             Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 val options = buildList<Pair<String?, String>> {
                     add(null to t("live_all"))
-                    categories.forEach { add("${it.accountId}|${it.id}" to it.name.ifBlank { t("live_other") }) }
+                    categories.forEach { add("${it.accountId}|${it.id}" to ((state.accountLabel(it.accountId)?.let { n -> "$n \u00B7 " } ?: "") + it.name.ifBlank { t("live_other") })) }
+                }
+                if (enabled.size > 1) {
+                    DropdownField(
+                        enabled.firstOrNull { it.id == activeAccount }?.name ?: t("live_all_accounts"),
+                        listOf<Pair<String?, String>>(null to t("live_all_accounts")) + enabled.map { it.id to it.name },
+                        { accountFilter = it; category = null },
+                        Modifier.weight(0.3f).widthIn(min = 140.dp, max = 260.dp),
+                    )
                 }
                 DropdownField(options.firstOrNull { it.first == category }?.second ?: t("live_all"), options, { category = it }, Modifier.weight(0.4f).widthIn(min = 160.dp, max = 320.dp))
                 TextInput(
