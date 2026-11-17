@@ -184,7 +184,19 @@ fun SettingsScreen(vm: MainViewModel) {
                 )
                 Hint(stringResource(R.string.settings_tmdb_hint))
             }
-
+            // the people who helped, from supporters.md in the root folder of the project
+            val assets = androidx.compose.ui.platform.LocalContext.current.assets
+            val supporters = remember {
+                runCatching { assets.open("supporters.md").use { com.kutlusoy.proiptv.parse.SupportersMd.parse(String(it.readBytes(), Charsets.UTF_8)) } }.getOrDefault(emptyList())
+            }
+            if (supporters.isNotEmpty()) {
+                Group(stringResource(R.string.settings_thanks)) {
+                    supporters.forEach { section ->
+                        if (section.title.isNotEmpty()) Text(section.title, style = MaterialTheme.typography.labelLarge)
+                        section.lines.forEach { Text(it) }
+                    }
+                }
+            }
         }
     }
 }

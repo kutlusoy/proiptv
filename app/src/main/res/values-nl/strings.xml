@@ -20,6 +20,7 @@
     <string name="detail_runtime">Duur</string>
     <string name="settings_tmdb">Filminformatie (TMDB)</string>
     <string name="settings_tmdb_hint">Optioneel. Met je eigen gratis API-sleutel van themoviedb.org laadt de app plot, cast en trailer voor titels zonder informatie (bijvoorbeeld uit M3U-lijsten). Alleen de titel en het jaar worden verstuurd.</string>
+    <string name="settings_thanks">Speciale dank</string>
     <string name="settings_tmdb_key">API-sleutel</string>
     <string name="onboarding_add_account">Account toevoegen</string>
     <string name="player_err_auth">De aanbieder heeft de aanmelding geweigerd. Controleer gebruikersnaam, wachtwoord en vervaldatum van het account.</string>

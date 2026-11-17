@@ -253,6 +253,7 @@
     <string name="detail_runtime">Durata</string>
     <string name="settings_tmdb">Informazioni sui film (TMDB)</string>
     <string name="settings_tmdb_hint">Facoltativo. Con la tua chiave API gratuita di themoviedb.org l\'app carica trama, cast e trailer per i titoli senza informazioni (ad esempio da liste M3U). Vengono inviati solo titolo e anno.</string>
+    <string name="settings_thanks">Ringraziamenti speciali</string>
     <string name="settings_tmdb_key">Chiave API</string>
     <string name="onboarding_add_account">Aggiungi account</string>
     <string name="player_err_auth">Il fornitore ha rifiutato l\'accesso. Controlla utente, password e data di scadenza dell\'account.</string>

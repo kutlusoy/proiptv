@@ -19,9 +19,19 @@ ksp {
     arg('room.schemaLocation', "$projectDir/schemas")
 }
 
+// the people who helped (Special thanks): supporters.md in the root folder becomes an asset of the app
+def supportersAssets = layout.buildDirectory.dir('generated/supporters')
+tasks.register('syncSupporters', Copy) {
+    from(rootProject.file('supporters.md'))
+    into supportersAssets
+}
+tasks.named('preBuild') { dependsOn 'syncSupporters' }
+
 android {
     namespace = 'com.kutlusoy.proiptv'
     compileSdk rootProject.ext.compileSdkVersion
+
+    sourceSets.main.assets.srcDir(supportersAssets)
 
     lint {
         disable 'UnsafeOptInUsageError', 'MissingTranslation'

@@ -254,6 +254,7 @@
     <string name="detail_runtime">Duration</string>
     <string name="settings_tmdb">Movie information (TMDB)</string>
     <string name="settings_tmdb_hint">Optional. With your own free API key from themoviedb.org the app loads plot, cast and trailer for titles that have none (for example from M3U lists). Only the title and the year of the opened title are sent.</string>
+    <string name="settings_thanks">Special thanks</string>
     <string name="settings_tmdb_key">API key</string>
     <string name="onboarding_add_account">Add account</string>
     <string name="player_err_auth">The provider refused the login. Check user name, password and the expiry date of the account.</string>

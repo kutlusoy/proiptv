@@ -124,6 +124,16 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                 )
                 Hint(t("settings_tmdb_hint"))
             }
+            // the people who helped, from supporters.md in the root folder of the project
+            val supporters = remember { loadSupporters() }
+            if (supporters.isNotEmpty()) {
+                Group(t("settings_thanks")) {
+                    supporters.forEach { section ->
+                        if (section.title.isNotEmpty()) Text(section.title, style = MaterialTheme.typography.labelLarge)
+                        section.lines.forEach { Text(it) }
+                    }
+                }
+            }
 
         }
     }
@@ -342,3 +352,10 @@ private fun BackupGroup(state: AppState) {
         )
     }
 }
+
+private fun loadSupporters(): List<com.kutlusoy.proiptv.parse.SupporterSection> =
+    runCatching {
+        SettingsUi::class.java.getResourceAsStream("/supporters.md")?.use { com.kutlusoy.proiptv.parse.SupportersMd.parse(String(it.readBytes(), Charsets.UTF_8)) }
+    }.getOrNull().orEmpty()
+
+private object SettingsUi
