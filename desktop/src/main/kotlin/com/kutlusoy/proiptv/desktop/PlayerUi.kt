@@ -557,7 +557,8 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     }
     val pane: @Composable (Modifier) -> Unit = { paneModifier ->
     Column(paneModifier.background(Palette.Velvet)) {
-        Row(Modifier.fillMaxWidth().height(56.dp).background(Palette.WineDeep), verticalAlignment = Alignment.CenterVertically) {
+        // in the side by side view the categories at the left are the choice of the list, so the header with the arrows is not needed
+        if (!controller.columnMode) Row(Modifier.fillMaxWidth().height(56.dp).background(Palette.WineDeep), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { listIndex = (listIndex - 1 + lists.size) % lists.size }, enabled = lists.size > 1, modifier = Modifier.semantics { contentDescription = previousText }) {
                 Icon(Icons.Filled.KeyboardArrowLeft, null, tint = Color.White)
             }
@@ -626,7 +627,8 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
         } else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 columnsButton()
-                IconButton(onClick = { controller.searchOpen = true }, modifier = Modifier.semantics { contentDescription = searchText }) { Icon(Icons.Filled.Search, null) }
+                // the filter fields at the top take the place of the magnifier in the side by side view
+                if (!controller.columnMode) IconButton(onClick = { controller.searchOpen = true }, modifier = Modifier.semantics { contentDescription = searchText }) { Icon(Icons.Filled.Search, null) }
             }
         }
     }
