@@ -165,7 +165,7 @@ class SyncIntegrationTest {
         val id = repo.saveAccount(Account(name = "Test", type = AccountType.XTREAM, url = base(), username = "bob"), "secret")
         waitForSync(id)
         val list = repo.createList("L")
-        for (remote in listOf("10", "11", "12")) repo.setFavorite(list, id, Kind.LIVE, remote, "n$remote", true)
+        for ((remote, name) in listOf("10" to "One", "11" to "Two", "12" to "Three")) repo.setFavorite(list, id, Kind.LIVE, remote, name, true)
         repo.moveFavorite(list, Kind.LIVE, 2, 0)
         assertEquals(listOf("12", "10", "11"), db.favorites().entries(list).map { it.remoteId })
         repo.moveFavorite(list, Kind.LIVE, 0, 1)
@@ -184,10 +184,11 @@ class SyncIntegrationTest {
         repo.sync.sync(id)
         waitForSync(id)
         assertEquals(2, db.items().count(Kind.LIVE, listOf(id), null, "", null, null, 0))
+        // the favorite of the channel that is gone is removed, the others stay in their order
         val rows = db.favorites().rows(list, Kind.LIVE).first()
-        assertEquals(listOf("10", "12", "11"), rows.map { it.remoteId })
+        assertEquals(listOf("10", "12"), rows.map { it.remoteId })
         assertNotNull(rows[0].itemId)
-        assertNull(rows[2].itemId)
+        assertNotNull(rows[1].itemId)
         assertEquals(2, db.favorites().presentCount(list))
         assertEquals("12", repo.at(Source.Favs(list), 1)!!.remoteId)
     }
