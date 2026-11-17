@@ -253,7 +253,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         playFromSearch = fromSearch
         searchOrigin = origin
         index = i
-        listOpen = false
+        // the channel browser stays open: the channel plays in the small window, the menu button leads to the big picture
         start()
     }
 
@@ -412,6 +412,8 @@ private fun ChannelBrowser(state: AppState, controller: PlayerController, video:
     val playing = controller.playEntries.getOrNull(controller.index)
     // the guide shows the channel the mouse touched last, at the start the running one
     var hovered by remember { mutableStateOf<Entry?>(null) }
+    // a new channel shows its own guide and info card
+    androidx.compose.runtime.LaunchedEffect(playing?.key) { hovered = null }
     val shownEntry = hovered ?: playing
     val timeFormat = remember { java.text.SimpleDateFormat("HH:mm") }
     val nowSecs = state.tick
