@@ -97,6 +97,7 @@
     <string name="rec_record">Aufnehmen</string>
     <string name="rec_stop">Aufnahme beenden</string>
     <string name="rec_go_channel">Zum Sender</string>
+    <string name="rec_show_file">Datei im Ordner anzeigen</string>
     <string name="player_list_current">Aktuelle Liste</string>
     <string name="player_list_search">Aktuelle Suche</string>
     <string name="player_columns">Kategorien und Sender nebeneinander</string>

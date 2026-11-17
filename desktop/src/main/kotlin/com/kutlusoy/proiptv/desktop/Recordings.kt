@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -130,6 +131,8 @@ class RecordingManager(
     private val scope: CoroutineScope,
     private val dir: File,
 ) {
+    val directory: File get() = dir
+
     private class Running(val recorder: Recorder, val lease: HubLease)
 
     private val running = ConcurrentHashMap<Long, Running>()
@@ -162,6 +165,14 @@ class RecordingManager(
         r?.lease?.close()
         val status = if (reason == RecordingEnd.STOPPED || reason == RecordingEnd.TIME_REACHED) RecStatus.DONE else RecStatus.INTERRUPTED
         store.update(id) { it.copy(endedAt = System.currentTimeMillis(), bytes = r?.recorder?.bytes ?: File(it.path).length(), status = status) }
+        // the stop time goes into the name, so several recordings of the same channel on one day keep different files
+        store.get(id)?.let { rec ->
+            val old = File(rec.path)
+            if (rec.path.isNotEmpty() && old.exists()) {
+                val target = File(old.parentFile, com.kutlusoy.proiptv.parse.RecordingNames.withStop(old.name, rec.endedAt ?: System.currentTimeMillis()) { File(old.parentFile, it).exists() })
+                if (old.renameTo(target)) store.update(id) { it.copy(path = target.absolutePath) }
+            }
+        }
     }
 
     fun stop(id: Long) {
@@ -222,35 +233,47 @@ fun RecordingsScreen(state: AppState) {
     state.recordingStore.version
     val all = state.recordingStore.all().sortedByDescending { it.startedAt }
     var deleting by remember { mutableStateOf<RecordingDto?>(null) }
-    if (all.isEmpty()) {
-        Text(t("rec_empty"), Modifier.padding(16.dp), color = Color.White.copy(alpha = 0.75f))
-        return
-    }
+    val dir = state.recordingManager.directory
     val format = remember { SimpleDateFormat("dd.MM.yyyy HH:mm") }
     val stopText = t("rec_stop")
     val goText = t("rec_go_channel")
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        items(all, key = { it.id }) { r ->
-            val active = r.status == RecStatus.RECORDING
-            val playable = r.status == RecStatus.DONE || r.status == RecStatus.INTERRUPTED
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(enabled = playable) {
-                    state.player = PlayRequest.Single(Playable(r.title, File(r.path).toURI().toString().replaceFirst("file:/", "file:///"), null, false))
-                }.padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(r.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val bytes = if (active) state.recordingManager.liveBytes(r.id) else r.bytes
-                    Text(
-                        "${format.format(Date(r.startedAt))} · " + t(when (r.status) { RecStatus.RECORDING -> "rec_status_recording"; RecStatus.DONE -> "rec_status_done"; RecStatus.SCHEDULED -> "rec_status_scheduled"; RecStatus.MISSED -> "rec_status_missed"; else -> "rec_status_interrupted" }) +
-                            " · ${sizeText(bytes)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (r.status == RecStatus.INTERRUPTED || r.status == RecStatus.MISSED) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.75f),
-                    )
-                }
-                if (active) {
-                    IconButton(onClick = { state.recordingManager.stop(r.id) }, Modifier.semantics { contentDescription = stopText }) { RecStopIcon() }
+    val showText = t("rec_show_file")
+    Column(Modifier.fillMaxSize()) {
+        // the folder of the recordings, as in the downloads
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(dir.absolutePath, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            androidx.compose.material3.OutlinedButton(onClick = {
+                dir.mkdirs()
+                runCatching { java.awt.Desktop.getDesktop().open(dir) }
+            }) {
+                Icon(Icons.Filled.FolderOpen, null)
+                Text(t("dl_open_folder"), Modifier.padding(start = 6.dp))
+            }
+        }
+        if (all.isEmpty()) {
+            Text(t("rec_empty"), Modifier.padding(16.dp), color = Color.White.copy(alpha = 0.75f))
+        }
+        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            items(all, key = { it.id }) { r ->
+                val active = r.status == RecStatus.RECORDING
+                val playable = r.status == RecStatus.DONE || r.status == RecStatus.INTERRUPTED
+                val file = File(r.path)
+                val play = { state.player = PlayRequest.Single(Playable(r.title, file.toURI().toString().replaceFirst("file:/", "file:///"), null, false)) }
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(enabled = playable) { play() }.padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(r.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val bytes = if (active) state.recordingManager.liveBytes(r.id) else r.bytes
+                        Text(
+                            "${format.format(Date(r.startedAt))} · " + t(when (r.status) { RecStatus.RECORDING -> "rec_status_recording"; RecStatus.DONE -> "rec_status_done"; RecStatus.SCHEDULED -> "rec_status_scheduled"; RecStatus.MISSED -> "rec_status_missed"; else -> "rec_status_interrupted" }) +
+                                " · ${sizeText(bytes)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (r.status == RecStatus.INTERRUPTED || r.status == RecStatus.MISSED) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.75f),
+                        )
+                    }
+                    // the channel logo opens the channel again, for running and finished recordings
                     val channel = state.data.entries(Kind.LIVE).firstOrNull { it.accountId == r.account && it.remoteId == r.channelRemoteId }
                     if (channel != null) {
                         IconButton(
@@ -261,9 +284,14 @@ fun RecordingsScreen(state: AppState) {
                             Modifier.width(56.dp).semantics { contentDescription = goText },
                         ) { Logo(channel.logo, Modifier.size(width = 48.dp, height = 32.dp), name = channel.name) }
                     }
-                } else if (playable) Icon(Icons.Filled.PlayArrow, t("rec_play"))
-                // a running recording is stopped first, then it can be deleted
-                IconButton(onClick = { deleting = r }, enabled = !active) { Icon(Icons.Filled.Delete, t("action_delete")) }
+                    if (active) IconButton(onClick = { state.recordingManager.stop(r.id) }, Modifier.semantics { contentDescription = stopText }) { RecStopIcon() }
+                    if (playable) IconButton(onClick = { play() }) { Icon(Icons.Filled.PlayArrow, t("rec_play")) }
+                    if (r.path.isNotEmpty() && file.exists()) {
+                        IconButton(onClick = { showInFolder(file) }, Modifier.semantics { contentDescription = showText }) { Icon(Icons.Filled.FolderOpen, showText) }
+                    }
+                    // a running recording is stopped first, then it can be deleted
+                    IconButton(onClick = { deleting = r }, enabled = !active) { Icon(Icons.Filled.Delete, t("action_delete")) }
+                }
             }
         }
     }
@@ -274,5 +302,13 @@ fun RecordingsScreen(state: AppState) {
             confirmButton = { TextButton(onClick = { state.recordingManager.delete(r.id); deleting = null }) { Text(t("action_delete")) } },
             dismissButton = { TextButton(onClick = { deleting = null }) { Text(t("action_cancel")) } },
         )
+    }
+}
+
+/** Opens the folder of the file with the file marked (Windows Explorer), elsewhere just the folder. */
+private fun showInFolder(file: File) {
+    runCatching {
+        if (System.getProperty("os.name").lowercase().contains("win")) ProcessBuilder("explorer.exe", "/select,", file.absolutePath).start()
+        else java.awt.Desktop.getDesktop().open(file.parentFile)
     }
 }

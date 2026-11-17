@@ -93,6 +93,7 @@
     <string name="rec_record">Kaydet</string>
     <string name="rec_stop">Kaydı durdur</string>
     <string name="rec_go_channel">Kanala git</string>
+    <string name="rec_show_file">Dosyayı klasörde göster</string>
     <string name="player_list_current">Geçerli liste</string>
     <string name="player_list_search">Geçerli arama</string>
     <string name="player_columns">Kategoriler ve kanallar yan yana</string>

@@ -99,7 +99,15 @@ class RecordingManager(
         r?.lease?.close()
         db.recordings().get(id)?.let {
             val status = if (reason == RecordingEnd.STOPPED || reason == RecordingEnd.TIME_REACHED) RecStatus.DONE else RecStatus.INTERRUPTED
-            db.recordings().update(it.copy(endedAt = System.currentTimeMillis(), bytes = r?.recorder?.bytes ?: File(it.path).length(), status = status))
+            val ended = System.currentTimeMillis()
+            // the stop time goes into the name, so several recordings of the same channel on one day keep different files
+            var path = it.path
+            val old = File(path)
+            if (path.isNotEmpty() && old.exists()) {
+                val target = File(old.parentFile, com.kutlusoy.proiptv.parse.RecordingNames.withStop(old.name, ended) { name -> File(old.parentFile, name).exists() })
+                if (old.renameTo(target)) path = target.absolutePath
+            }
+            db.recordings().update(it.copy(endedAt = ended, path = path, bytes = r?.recorder?.bytes ?: File(path).length(), status = status))
         }
         publish()
     }

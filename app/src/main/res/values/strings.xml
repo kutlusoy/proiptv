@@ -98,6 +98,7 @@
     <string name="rec_record">Record</string>
     <string name="rec_stop">Stop recording</string>
     <string name="rec_go_channel">Go to the channel</string>
+    <string name="rec_show_file">Show file in folder</string>
     <string name="player_list_current">Current list</string>
     <string name="player_list_search">Current search</string>
     <string name="player_columns">Categories and channels side by side</string>

@@ -97,6 +97,7 @@
     <string name="rec_record">Grabar</string>
     <string name="rec_stop">Detener grabación</string>
     <string name="rec_go_channel">Ir al canal</string>
+    <string name="rec_show_file">Mostrar el archivo en la carpeta</string>
     <string name="player_list_current">Lista actual</string>
     <string name="player_list_search">Búsqueda actual</string>
     <string name="player_columns">Categorías y canales en columnas</string>
