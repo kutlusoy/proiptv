@@ -164,15 +164,15 @@ class RecordingManager(
         val r = running.remove(id)
         r?.lease?.close()
         val status = if (reason == RecordingEnd.STOPPED || reason == RecordingEnd.TIME_REACHED) RecStatus.DONE else RecStatus.INTERRUPTED
-        store.update(id) { it.copy(endedAt = System.currentTimeMillis(), bytes = r?.recorder?.bytes ?: File(it.path).length(), status = status) }
-        // the stop time goes into the name, so several recordings of the same channel on one day keep different files
-        store.get(id)?.let { rec ->
-            val old = File(rec.path)
-            if (rec.path.isNotEmpty() && old.exists()) {
-                val target = File(old.parentFile, com.kutlusoy.proiptv.parse.RecordingNames.withStop(old.name, rec.endedAt ?: System.currentTimeMillis()) { File(old.parentFile, it).exists() })
-                if (old.renameTo(target)) store.update(id) { it.copy(path = target.absolutePath) }
-            }
+        val ended = System.currentTimeMillis()
+        // the stop time goes into the name, so several recordings of the same channel on one day keep different files; the path is final before the state changes
+        var path = store.get(id)?.path.orEmpty()
+        val old = File(path)
+        if (path.isNotEmpty() && old.exists()) {
+            val target = File(old.parentFile, com.kutlusoy.proiptv.parse.RecordingNames.withStop(old.name, ended) { File(old.parentFile, it).exists() })
+            if (old.renameTo(target)) path = target.absolutePath
         }
+        store.update(id) { it.copy(endedAt = ended, path = path, bytes = r?.recorder?.bytes ?: File(path).length(), status = status) }
     }
 
     fun stop(id: Long) {
