@@ -528,8 +528,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
         // every channel once: the list is keyed by the channel
         (if (!searching) base
         else base.filter { e ->
-            e.name.contains(q, ignoreCase = true) || com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title.contains(q, ignoreCase = true) ||
-                state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true
+            com.kutlusoy.proiptv.parse.SearchMatch.matches(e.name + " " + state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title.orEmpty(), q)
         }).distinctBy { it.key }
     }
     // in the side by side view the fields at the top of the columns filter the categories and the channels of the chosen category
@@ -538,7 +537,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     LaunchedEffect(listIndex) { channelFilter = "" }
     val shown = remember(shownAll, controller.columnMode, channelFilter) {
         val f = channelFilter.trim()
-        if (!controller.columnMode || f.isEmpty()) shownAll else shownAll.filter { it.name.contains(f, ignoreCase = true) }
+        if (!controller.columnMode || f.isEmpty()) shownAll else shownAll.filter { com.kutlusoy.proiptv.parse.SearchMatch.matches(it.name, f) }
     }
     val playingKey = controller.playEntries.getOrNull(controller.index)?.key
     val list = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -639,7 +638,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
         Row(modifier) {
             val categories = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (listIndex - 3).coerceAtLeast(0))
             val cf = categoryFilter.trim()
-            val visible = remember(lists, cf) { lists.withIndex().filter { cf.isEmpty() || it.value.name.contains(cf, ignoreCase = true) } }
+            val visible = remember(lists, cf) { lists.withIndex().filter { cf.isEmpty() || com.kutlusoy.proiptv.parse.SearchMatch.matches(it.value.name, cf) } }
             Column(Modifier.weight(0.4f).fillMaxHeight().background(Palette.Surface)) {
                 TextInput(
                     categoryFilter, { categoryFilter = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp).then(typingFocus),

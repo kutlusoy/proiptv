@@ -114,8 +114,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 }
             }
             .filter { e ->
-                q.isEmpty() || e.name.contains(q, ignoreCase = true) ||
-                    (kind == Kind.LIVE && state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true)
+                q.isEmpty() || com.kutlusoy.proiptv.parse.SearchMatch.matches(e.name + " " + (if (kind == Kind.LIVE) state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title.orEmpty() else ""), q)
             }
             .toList()
             .let { list ->
