@@ -34,10 +34,36 @@ interface AccountDao {
 }
 
 private const val NOW_SECS = "CAST(strftime('%s','now') AS INTEGER)"
-private const val NAME_OR_NOW_PLAYING =
-    "(name LIKE '%' || :q || '%' OR (:q <> '' AND epgId IS NOT NULL AND EXISTS (SELECT 1 FROM programs p " +
+/**
+ * The search of channels, movies and series: every one of up to four words (:w1 to :w4, empty ones match everything) has to occur in the name or
+ * in the title of the program that runs now. The order of the words does not matter.
+ */
+private const val WORD_1 =
+    "(:w1 = '' OR name LIKE '%' || :w1 || '%' OR (epgId IS NOT NULL AND EXISTS (SELECT 1 FROM programs p " +
         "WHERE p.accountId = items.accountId AND p.epgId = items.epgId AND p.start <= " + NOW_SECS + " AND p.`end` > " + NOW_SECS +
-        " AND p.title LIKE '%' || :q || '%')))"
+        " AND p.title LIKE '%' || :w1 || '%')))"
+
+private const val WORD_2 =
+    "(:w2 = '' OR name LIKE '%' || :w2 || '%' OR (epgId IS NOT NULL AND EXISTS (SELECT 1 FROM programs p " +
+        "WHERE p.accountId = items.accountId AND p.epgId = items.epgId AND p.start <= " + NOW_SECS + " AND p.`end` > " + NOW_SECS +
+        " AND p.title LIKE '%' || :w2 || '%')))"
+
+private const val WORD_3 =
+    "(:w3 = '' OR name LIKE '%' || :w3 || '%' OR (epgId IS NOT NULL AND EXISTS (SELECT 1 FROM programs p " +
+        "WHERE p.accountId = items.accountId AND p.epgId = items.epgId AND p.start <= " + NOW_SECS + " AND p.`end` > " + NOW_SECS +
+        " AND p.title LIKE '%' || :w3 || '%')))"
+
+private const val WORD_4 =
+    "(:w4 = '' OR name LIKE '%' || :w4 || '%' OR (epgId IS NOT NULL AND EXISTS (SELECT 1 FROM programs p " +
+        "WHERE p.accountId = items.accountId AND p.epgId = items.epgId AND p.start <= " + NOW_SECS + " AND p.`end` > " + NOW_SECS +
+        " AND p.title LIKE '%' || :w4 || '%')))"
+
+private const val NAME_OR_NOW_PLAYING = "(" + WORD_1 + " AND " + WORD_2 + " AND " + WORD_3 + " AND " + WORD_4 + ")"
+
+/** The same for the guide: every word in the title of the program or the name of the channel. */
+private const val GUIDE_WORDS =
+    "(:w1 = '' OR p.title LIKE '%' || :w1 || '%' OR i.name LIKE '%' || :w1 || '%') AND (:w2 = '' OR p.title LIKE '%' || :w2 || '%' OR i.name LIKE '%' || :w2 || '%') AND " +
+        "(:w3 = '' OR p.title LIKE '%' || :w3 || '%' OR i.name LIKE '%' || :w3 || '%') AND (:w4 = '' OR p.title LIKE '%' || :w4 || '%' OR i.name LIKE '%' || :w4 || '%')"
 
 /** How many titles a category has, for the list column of the TV layout. */
 data class CategoryCount(val accountId: Long, val categoryRemoteId: String, val n: Int)
@@ -66,21 +92,21 @@ interface ItemDao {
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
             "AND " + NAME_OR_NOW_PLAYING + QUICK_FILTERS + " ORDER BY CASE WHEN :flags & 8 <> 0 THEN name END COLLATE NOCASE ASC, CASE WHEN :flags & 16 <> 0 THEN name END COLLATE NOCASE DESC, accountId, ord",
     )
-    fun paging(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, flags: Int): PagingSource<Int, Item>
+    fun paging(kind: Int, ids: List<Long>, cat: String?, w1: String, w2: String, w3: String, w4: String, country: String?, year: Int?, flags: Int): PagingSource<Int, Item>
 
     @Query(
         "SELECT COUNT(*) FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
             "AND " + NAME_OR_NOW_PLAYING + QUICK_FILTERS,
     )
-    suspend fun count(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, flags: Int): Int
+    suspend fun count(kind: Int, ids: List<Long>, cat: String?, w1: String, w2: String, w3: String, w4: String, country: String?, year: Int?, flags: Int): Int
 
     @Query(
         "SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
             "AND " + NAME_OR_NOW_PLAYING + QUICK_FILTERS + " ORDER BY accountId, ord LIMIT 1 OFFSET :offset",
     )
-    suspend fun at(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, flags: Int, offset: Int): Item?
+    suspend fun at(kind: Int, ids: List<Long>, cat: String?, w1: String, w2: String, w3: String, w4: String, country: String?, year: Int?, flags: Int, offset: Int): Item?
 
     @Query(
         "SELECT COUNT(*) FROM items WHERE kind = 0 AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
@@ -94,8 +120,8 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) ORDER BY accountId, ord LIMIT :limit")
     suspend fun top(kind: Int, ids: List<Long>, limit: Int): List<Item>
 
-    @Query("SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND name LIKE '%' || :q || '%' ORDER BY accountId, ord LIMIT :limit")
-    suspend fun search(kind: Int, ids: List<Long>, q: String, limit: Int): List<Item>
+    @Query("SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:w1 = '' OR name LIKE '%' || :w1 || '%') AND (:w2 = '' OR name LIKE '%' || :w2 || '%') AND (:w3 = '' OR name LIKE '%' || :w3 || '%') AND (:w4 = '' OR name LIKE '%' || :w4 || '%') ORDER BY accountId, ord LIMIT :limit")
+    suspend fun search(kind: Int, ids: List<Long>, w1: String, w2: String, w3: String, w4: String, limit: Int): List<Item>
 
     @Query("SELECT accountId, categoryRemoteId, COUNT(*) AS n FROM items WHERE kind = :kind AND accountId IN (:ids) GROUP BY accountId, categoryRemoteId")
     fun categoryCounts(ids: List<Long>, kind: Int): Flow<List<CategoryCount>>
@@ -187,18 +213,18 @@ interface ProgramDao {
             "i.accountId AS accountId, i.ord AS ord, i.categoryRemoteId AS category FROM programs p " +
             "JOIN items i ON i.accountId = p.accountId AND i.epgId = p.epgId AND i.kind = 0 " +
             "WHERE i.accountId IN (:ids) AND (:cat IS NULL OR i.categoryRemoteId = :cat) AND p.`end` > :from AND p.start < :to " +
-            "AND (:q = '' OR p.title LIKE '%' || :q || '%' OR i.name LIKE '%' || :q || '%') " +
+            "AND " + GUIDE_WORDS + " " +
             "ORDER BY p.start, i.accountId, i.ord LIMIT 400",
     )
-    fun guide(ids: List<Long>, cat: String?, from: Long, to: Long, q: String): Flow<List<GuideRow>>
+    fun guide(ids: List<Long>, cat: String?, from: Long, to: Long, w1: String, w2: String, w3: String, w4: String): Flow<List<GuideRow>>
 
     @Query(
         "SELECT i.* FROM items i WHERE i.kind = 0 AND i.accountId IN (:ids) AND (:cat IS NULL OR i.categoryRemoteId = :cat) " +
             "AND i.epgId IS NOT NULL AND i.epgId <> '' AND EXISTS (SELECT 1 FROM programs p WHERE p.accountId = i.accountId AND p.epgId = i.epgId " +
-            "AND p.`end` > :from AND (:q = '' OR i.name LIKE '%' || :q || '%' OR p.title LIKE '%' || :q || '%')) " +
+            "AND p.`end` > :from AND " + GUIDE_WORDS + ") " +
             "ORDER BY i.accountId, i.ord LIMIT 300",
     )
-    fun guideChannels(ids: List<Long>, cat: String?, q: String, from: Long): Flow<List<Item>>
+    fun guideChannels(ids: List<Long>, cat: String?, w1: String, w2: String, w3: String, w4: String, from: Long): Flow<List<Item>>
 }
 
 @Dao

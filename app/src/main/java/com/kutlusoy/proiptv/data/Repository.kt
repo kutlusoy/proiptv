@@ -84,13 +84,13 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
     suspend fun enabledIds(): List<Long> = db.accounts().enabledIds()
 
     suspend fun count(src: Source): Int = when (src) {
-        is Source.Browse -> db.items().count(src.kind, src.accountIds, src.category, src.query, src.country, src.year, src.flags)
+        is Source.Browse -> { val (w1, w2, w3, w4) = com.kutlusoy.proiptv.parse.SearchMatch.four(src.query); db.items().count(src.kind, src.accountIds, src.category, w1, w2, w3, w4, src.country, src.year, src.flags) }
         is Source.Favs -> db.favorites().presentCount(src.listId)
         is Source.History -> db.history().items().size
     }
 
     suspend fun at(src: Source, index: Int): Item? = when (src) {
-        is Source.Browse -> db.items().at(src.kind, src.accountIds, src.category, src.query, src.country, src.year, src.flags, index)
+        is Source.Browse -> { val (w1, w2, w3, w4) = com.kutlusoy.proiptv.parse.SearchMatch.four(src.query); db.items().at(src.kind, src.accountIds, src.category, w1, w2, w3, w4, src.country, src.year, src.flags, index) }
         is Source.Favs -> db.favorites().itemAt(src.listId, index)
         is Source.History -> db.history().items().getOrNull(index)
     }
