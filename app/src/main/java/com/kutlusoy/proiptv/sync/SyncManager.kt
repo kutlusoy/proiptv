@@ -141,6 +141,15 @@ class SyncManager(
             error = describe(e)
             com.kutlusoy.proiptv.DebugLog.write("sync failed: $error")
         }
+        if (error == null) {
+            try {
+                com.kutlusoy.proiptv.data.FavoriteReconciler(db).run(id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                com.kutlusoy.proiptv.DebugLog.write("favorites check failed: ${e.message}")
+            }
+        }
         val fresh = db.accounts().get(id) ?: return
         db.accounts().update(
             fresh.copy(
@@ -362,8 +371,7 @@ class SyncManager(
         }
     }
 
-    private fun hash(s: String): String =
-        MessageDigest.getInstance("SHA-1").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
+    private fun hash(s: String): String = com.kutlusoy.proiptv.parse.StableId.of(s)
 
     private companion object {
         const val BATCH = 1000

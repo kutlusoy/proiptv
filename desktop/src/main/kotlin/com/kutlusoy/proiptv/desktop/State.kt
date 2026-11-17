@@ -52,7 +52,53 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         scope.launch {
             data = library.load()
             loading = false
+            reconcileFavorites(data)
             refreshGuide()
+        }
+    }
+
+    /**
+     * After the lists were loaded: a favorite has to point to the channel it was made for. When the provider has removed it, or has given its id
+     * to another channel (the name is not the same any more), it follows the channel of the same name or is removed. The same for the last channels
+     * and the reminders. Accounts that did not load, and kinds that came back empty, are not touched.
+     */
+    private fun reconcileFavorites(d: LibraryData) {
+        val ok = store.config.accounts.filter { it.enabled && it.id !in d.errors }.map { it.id }.toSet()
+        fun loaded(account: String, kind: Int) = account in ok && d.entries(kind).any { it.accountId == account }
+        val byKey = HashMap<String, Entry>()
+        val byName = HashMap<String, Entry>()
+        for (kind in 0..2) for (e in d.entries(kind)) {
+            byKey[e.key] = e
+            byName.putIfAbsent("${e.accountId}|${e.kind}|${com.kutlusoy.proiptv.parse.StableId.normalize(e.name)}", e)
+        }
+        val same = com.kutlusoy.proiptv.parse.StableId::sameName
+        val kept = ArrayList<FavoriteDto>()
+        var favoritesChanged = false
+        for (f in store.config.favorites) {
+            if (!loaded(f.account, f.kind)) { kept += f; continue }
+            val current = byKey["${f.account}|${f.kind}|${f.remoteId}"]
+            if (current != null && same(current.name, f.name)) { kept += f; continue }
+            favoritesChanged = true
+            val other = byName["${f.account}|${f.kind}|${com.kutlusoy.proiptv.parse.StableId.normalize(f.name)}"]
+            if (other != null && kept.none { it.listId == f.listId && it.account == f.account && it.kind == f.kind && it.remoteId == other.remoteId }) {
+                kept += f.copy(remoteId = other.remoteId, name = other.name)
+            }
+        }
+        val history = store.config.history.filter { key ->
+            val account = key.substringBefore('|')
+            !loaded(account, Kind.LIVE) || byKey.containsKey(key)
+        }
+        val reminders = store.config.reminders.mapNotNull { r ->
+            if (!loaded(r.account, Kind.LIVE)) return@mapNotNull r
+            val current = byKey["${r.account}|${Kind.LIVE}|${r.channelId}"]
+            if (current != null && same(current.name, r.channelName)) r
+            else byName["${r.account}|${Kind.LIVE}|${com.kutlusoy.proiptv.parse.StableId.normalize(r.channelName)}"]?.let { r.copy(channelId = it.remoteId, channelName = it.name) }
+        }
+        if (favoritesChanged || history.size != store.config.history.size || reminders != store.config.reminders) {
+            store.update { c -> c.copy(favorites = kept, history = history, reminders = reminders) }
+            favorites = store.config.favorites
+            this.history = store.config.history
+            this.reminders = store.config.reminders
         }
     }
 

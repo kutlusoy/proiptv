@@ -426,7 +426,7 @@ private fun ChannelBrowser(state: AppState, controller: PlayerController, video:
                     }
                 }
                 val programs = remember(shownEntry, state.guide, nowSecs / 60) {
-                    shownEntry?.epgId?.let { id -> state.guide.programs[Guide.key(shownEntry.accountId, id)].orEmpty().filter { it.end > nowSecs } }.orEmpty()
+                    shownEntry?.epgId?.let { id -> state.guide.programs[Guide.key(shownEntry.accountId, id)].orEmpty().filter { it.end > nowSecs }.distinctBy { it.start } }.orEmpty()
                 }
                 androidx.compose.animation.Crossfade(shownEntry?.key, Modifier.weight(0.5f).fillMaxWidth().background(Palette.Surface), animationSpec = androidx.compose.animation.core.tween(200), label = "guide") { _ ->
                   Column(Modifier.fillMaxSize()) {
@@ -437,7 +437,7 @@ private fun ChannelBrowser(state: AppState, controller: PlayerController, video:
                         Text(t("epg_none"), Modifier.padding(16.dp), color = Color.White.copy(alpha = 0.7f))
                     } else {
                         androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize()) {
-                            itemsIndexed(programs, key = { _, p -> "${p.channel}|${p.start}" }) { _, p ->
+                            itemsIndexed(programs, key = { _, p -> "${shownEntry?.accountId}|${p.channel}|${p.start}" }) { _, p ->
                                 Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
                                     Row {
                                         Text(timeFormat.format(java.util.Date(p.start * 1000)) + " - " + timeFormat.format(java.util.Date(p.end * 1000)), color = Palette.WineSoft, style = MaterialTheme.typography.bodyMedium)
@@ -509,11 +509,12 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
         val searching = searchOpen && q.isNotEmpty()
         // inside the list of an earlier search the new search starts again from the list that the earlier one started from
         val base = if (searching && everywhere) live else if (searching && listNow.isSearch) controller.searchOrigin.ifEmpty { listNow.entries() } else listNow.entries()
-        if (!searching) base
+        // every channel once: the list is keyed by the channel
+        (if (!searching) base
         else base.filter { e ->
             e.name.contains(q, ignoreCase = true) || com.kutlusoy.proiptv.parse.TitleParser.parse(e.name).title.contains(q, ignoreCase = true) ||
                 state.guide.nowNext(e.accountId, e.epgId, state.tick).first?.title?.contains(q, ignoreCase = true) == true
-        }
+        }).distinctBy { it.key }
     }
     val playingKey = controller.playEntries.getOrNull(controller.index)?.key
     val list = androidx.compose.foundation.lazy.rememberLazyListState()

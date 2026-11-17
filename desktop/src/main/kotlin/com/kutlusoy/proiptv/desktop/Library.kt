@@ -140,12 +140,15 @@ class Library(private val store: Store) {
             if (!it.isSuccessful) throw java.io.IOException("HTTP ${it.code}")
             val reader = BufferedReader(InputStreamReader(it.body!!.byteStream(), Charsets.UTF_8), 64 * 1024)
             val groups = LinkedHashSet<String>()
-            var n = 0
+            val seen = HashSet<String>()
             for (e in M3uParser.parse(reader) { header -> header.epgUrl?.split(',')?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { m3uGuide[a.id] = it } }) {
                 val vod = e.url.contains("/movie/") || e.url.contains("/series/") || e.url.substringBefore('?').let { u -> VOD_EXT.any { x -> u.endsWith(x) } }
                 val kind = if (vod) Kind.MOVIE else Kind.LIVE
                 groups += "$kind|${e.group}"
-                entries.getOrPut(kind) { mutableListOf() } += Entry(a.id, kind, "m${n++}", e.name, e.group, e.logo, "", e.url, null, e.tvgId?.lowercase())
+                // the id comes from the address, not from the position, so favorites stay with their channel when the list changes
+                val id = com.kutlusoy.proiptv.parse.StableId.of(e.url)
+                if (!seen.add("$kind|$id")) continue
+                entries.getOrPut(kind) { mutableListOf() } += Entry(a.id, kind, id, e.name, e.group, e.logo, "", e.url, null, e.tvgId?.lowercase())
             }
             for (g in groups) {
                 val kind = g.substringBefore('|').toInt()

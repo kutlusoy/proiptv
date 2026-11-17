@@ -116,6 +116,12 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE accountId = :accountId AND kind = :kind AND remoteId = :remoteId")
     suspend fun find(accountId: Long, kind: Int, remoteId: String): Item?
 
+    @Query("SELECT * FROM items WHERE accountId = :accountId AND kind = :kind")
+    suspend fun ofKind(accountId: Long, kind: Int): List<Item>
+
+    @Query("SELECT COUNT(*) FROM items WHERE accountId = :accountId AND kind = :kind")
+    suspend fun countOf(accountId: Long, kind: Int): Int
+
     @Query("SELECT COUNT(*) FROM items WHERE accountId = :accountId AND kind = :kind")
     fun countFlow(accountId: Long, kind: Int): Flow<Int>
 
@@ -273,6 +279,9 @@ interface FavoriteDao {
 
     @Query("SELECT * FROM favorites WHERE listId = :listId ORDER BY sortKey")
     suspend fun entries(listId: Long): List<Favorite>
+
+    @Query("SELECT * FROM favorites WHERE accountId = :accountId")
+    suspend fun ofAccount(accountId: Long): List<Favorite>
 }
 
 @Dao
@@ -412,6 +421,9 @@ interface HistoryDao {
 
     @Query("DELETE FROM history WHERE accountId = :accountId")
     suspend fun deleteAccount(accountId: Long)
+
+    @Query("DELETE FROM history WHERE accountId = :accountId AND remoteId NOT IN (SELECT remoteId FROM items WHERE accountId = :accountId AND kind = 0)")
+    suspend fun pruneMissing(accountId: Long)
 
     @Query("DELETE FROM history")
     suspend fun clear()
