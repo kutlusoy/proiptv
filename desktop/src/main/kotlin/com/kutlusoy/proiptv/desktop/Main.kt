@@ -82,7 +82,7 @@ private fun runApplication() = application {
             if (!onScreen(bounds.toRectangle())) return@collectLatest
             when {
                 state.compact -> if (windowState.placement == WindowPlacement.Floating) state.store.update { c -> if (c.compactBounds == bounds) c else c.copy(compactBounds = bounds) }
-                windowState.placement == WindowPlacement.Fullscreen -> Unit
+                state.placement == WindowPlacement.Fullscreen -> Unit
                 windowState.placement == WindowPlacement.Maximized ->
                     state.store.update { c -> c.copy(windowBounds = (c.windowBounds ?: bounds).copy(maximized = true)) }
                 else -> state.store.update { c -> if (c.windowBounds == bounds.copy()) c else c.copy(windowBounds = bounds) }
@@ -111,7 +111,8 @@ private fun runApplication() = application {
             state.checkReminders()
         }
     }
-    LaunchedEffect(state.placement) { windowState.placement = state.placement }
+    // full screen is a window of the size of the screen (above the task bar), not the AWT full screen mode, which leaves the task bar visible for a maximized window
+    LaunchedEffect(state.placement) { windowState.placement = if (state.placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else state.placement }
 
     // AWT cannot make a shown window undecorated, so the window is created again when full screen changes (the state lives in AppState)
     androidx.compose.runtime.key(state.placement == WindowPlacement.Fullscreen, state.compact) {
@@ -128,7 +129,7 @@ private fun runApplication() = application {
         title = "ProIPTV",
         state = windowState,
         undecorated = state.placement == WindowPlacement.Fullscreen || state.compact,
-        alwaysOnTop = state.compact && state.pinned,
+        alwaysOnTop = (state.compact && state.pinned) || state.placement == WindowPlacement.Fullscreen,
         icon = painterResource("icon.png"),
         onPreviewKeyEvent = { e ->
             val c = state.controller
@@ -154,11 +155,11 @@ private fun runApplication() = application {
     ) {
         state.windowRef = window
         window.minimumSize = if (state.compact) java.awt.Dimension(240, 135) else java.awt.Dimension(640, 420)
-        androidx.compose.runtime.LaunchedEffect(state.compact) {
+        androidx.compose.runtime.LaunchedEffect(state.compact, state.placement == WindowPlacement.Fullscreen) {
             state.pendingBounds?.let { b ->
                 state.pendingBounds = null
                 // the window state is set too, so it cannot put the window back to the place of the other mode
-                windowState.placement = state.placement
+                windowState.placement = if (state.placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else state.placement
                 windowState.position = androidx.compose.ui.window.WindowPosition(b.x.dp, b.y.dp)
                 windowState.size = DpSize(b.width.dp, b.height.dp)
                 window.bounds = b

@@ -457,15 +457,25 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         compact = on
     }
 
+    private var boundsBeforeFullscreen: java.awt.Rectangle? = null
+
+    /**
+     * Full screen fills the whole screen above the task bar (the window gets the size of the screen and stays on top), the key F or Esc brings the window back
+     * as it was: same place and size, or maximized again.
+     */
     fun toggleFullscreen() {
-        if (compact) { compact = false; pendingBounds = normalBounds }
-        // leaving full screen brings back what the window was before: maximized stays maximized
-        if (placement == WindowPlacement.Fullscreen) placement = beforeFullscreen
-        else {
-            // the maximize button of the title bar does not go through this state, so the window itself is asked
-            val maximized = ((windowRef as? java.awt.Frame)?.extendedState ?: 0) and java.awt.Frame.MAXIMIZED_BOTH == java.awt.Frame.MAXIMIZED_BOTH
-            beforeFullscreen = if (maximized || placement == WindowPlacement.Maximized) WindowPlacement.Maximized else WindowPlacement.Floating
-            placement = WindowPlacement.Fullscreen
+        if (placement == WindowPlacement.Fullscreen) {
+            placement = beforeFullscreen
+            pendingBounds = if (beforeFullscreen == WindowPlacement.Maximized) null else boundsBeforeFullscreen
+            return
         }
+        // the maximize button of the title bar does not go through this state, so the window itself is asked
+        val maximized = ((windowRef as? java.awt.Frame)?.extendedState ?: 0) and java.awt.Frame.MAXIMIZED_BOTH == java.awt.Frame.MAXIMIZED_BOTH
+        beforeFullscreen = if (maximized || placement == WindowPlacement.Maximized) WindowPlacement.Maximized else WindowPlacement.Floating
+        boundsBeforeFullscreen = if (compact) normalBounds else windowRef?.bounds
+        if (compact) compact = false
+        val screen = windowRef?.graphicsConfiguration?.bounds ?: java.awt.Rectangle(java.awt.Toolkit.getDefaultToolkit().screenSize)
+        pendingBounds = screen
+        placement = WindowPlacement.Fullscreen
     }
 }
