@@ -48,6 +48,12 @@ class AppState(val store: Store, val scope: CoroutineScope) {
 
     var tab by mutableStateOf(Tab.HOME)
 
+    init {
+        // the mute is kept for the next start
+        AudioState.muted = store.config.muted
+        AudioState.onChange = { muted -> store.update { it.copy(muted = muted) } }
+    }
+
     /** True while a text field has the focus, so the keyboard shortcuts of the player step aside. */
     var typing by mutableStateOf(false)
     var data by mutableStateOf(LibraryData())

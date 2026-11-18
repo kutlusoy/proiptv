@@ -72,6 +72,7 @@ data class ConfigDto(
     val reminders: List<ReminderDto> = emptyList(),
     val playerSearchAll: Boolean = false,
     val playerColumns: Boolean = false,
+    val muted: Boolean = false,
     val windowBounds: BoundsDto? = null,
     val compactBounds: BoundsDto? = null,
 )

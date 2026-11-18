@@ -262,7 +262,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
             val l = state.hubs.acquire(item.accountNumber, item.channelId, item.title, item.maxConnections, com.kutlusoy.proiptv.net.Upstream.opener(item.url, item.userAgent))
             pipLease = l
             pipEntry = entry
-            state.pipEngine.playReader(l.hub.reader(), item.title, 0)
+            state.pipEngine.playReader(l.hub.reader(), item.title, 0, quiet = true)
         } catch (e: com.kutlusoy.proiptv.engine.BudgetExceeded) {
             pipMessage = Strings.get("player_no_connection", e.limit, e.openTitles.joinToString())
         }
@@ -277,17 +277,17 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     /**
-     * The two channels change places without a new connection: the player that showed the small picture becomes the big one (with sound, the
-     * controls and the buffer of its channel), the big player becomes the small picture (without sound).
+     * The two channels change places without a new connection to the provider: both hubs stay, only the two players start again on them. The one that
+     * shows the small picture before becomes the big one (with the sound output), the big one becomes the small picture (with the dummy output).
      */
     fun swapPip() {
         val small = pipEntry ?: return
         val big = playEntries.getOrNull(index) ?: return
         val smallItem = state.livePlayable(small) ?: return
-        val oldMain = state.engine
-        val wasMuted = oldMain.muted
+        val bigItem = state.livePlayable(big)
         state.swapEngines()
         val newMain = state.engine
+        val newSmall = state.pipEngine
         val bigLease = lease
         lease = pipLease
         pipLease = bigLease
@@ -301,10 +301,8 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         behindMs = 0
         recordingId = state.recordingManager.isRecording(smallItem.account, smallItem.channelId)
         state.recordHistory(small)
-        newMain.setVolume(volume)
-        if (wasMuted) newMain.setMute(true)
-        oldMain.setVolume(0)
-        oldMain.pause(false)
+        lease?.let { newMain.playReader(it.hub.reader(), smallItem.title, volume) } ?: newMain.play(smallItem, volume)
+        pipLease?.let { newSmall.playReader(it.hub.reader(), big.name, 0, quiet = true) } ?: bigItem?.let { newSmall.play(it, 0, 0, quiet = true) }
     }
 
     /** Plays the channel at this position of [list]. From now on zapping walks through that list. */
@@ -502,7 +500,11 @@ private fun ChannelBrowser(state: AppState, controller: PlayerController, video:
             // with the mouse over this side the guide of the running channel is shown again (over the list it follows the channel under the mouse)
             Column(Modifier.weight(1f).fillMaxHeight().onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { hovered = null }) {
                 Row(Modifier.weight(0.5f).fillMaxWidth()) {
-                    Box(Modifier.weight(0.62f).fillMaxHeight().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
+                    Box(Modifier.weight(0.62f).fillMaxHeight().background(Color.Black), contentAlignment = Alignment.Center) {
+                        video(Modifier.fillMaxSize())
+                        // the second channel, if there is one, in the corner of the preview
+                        PipWindow(state, controller, Modifier.align(Alignment.BottomEnd).padding(6.dp), width = 130.dp)
+                    }
                     Column(Modifier.weight(0.38f).fillMaxHeight().background(Palette.Surface).padding(16.dp), verticalArrangement = Arrangement.Center) {
                         Text(
                             t("tv_live_badge"), Modifier.background(Palette.Wine, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
@@ -761,12 +763,15 @@ private fun PipMenu(enabled: Boolean, label: String, onOpen: () -> Unit, content
 
 /** The second channel in a small window above the big picture, without sound. A click on it changes the places of the two channels. */
 @Composable
-private fun PipWindow(state: AppState, controller: PlayerController, modifier: Modifier) {
+private fun PipWindow(state: AppState, controller: PlayerController, modifier: Modifier, width: androidx.compose.ui.unit.Dp = 300.dp) {
     val entry = controller.pipEntry ?: return
     val swapText = t("pip_swap")
     val closeText = t("pip_close")
-    Box(modifier.width(300.dp).aspectRatio(16f / 9f).border(2.dp, Palette.WineSoft).background(Color.Black)) {
-        VideoSurface(state.pipEngine, Modifier.fillMaxSize().semantics { contentDescription = swapText }, onDoubleClick = {}, onScroll = {}, onTap = { controller.swapPip() })
+    Box(modifier.width(width).aspectRatio(16f / 9f).border(2.dp, Palette.WineSoft).background(Color.Black)) {
+        VideoSurface(
+            state.pipEngine, Modifier.fillMaxSize().semantics { contentDescription = swapText }, onDoubleClick = {}, onScroll = {}, onTap = { controller.swapPip() },
+            placeholder = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Icon(Icons.Filled.PictureInPictureAlt, null, Modifier.size(28.dp), tint = Palette.WineSoft) } },
+        )
         Text(
             com.kutlusoy.proiptv.parse.TitleParser.parse(entry.name).title, Modifier.align(Alignment.BottomStart).background(Color(0xAA000000)).padding(horizontal = 6.dp, vertical = 2.dp),
             color = Color.White, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -983,7 +988,7 @@ private fun TrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null) {
+private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null) {
     var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(engine) {
         var shown = -1L
@@ -1002,17 +1007,21 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
             }
         }
     }
-    androidx.compose.foundation.Canvas(
-        modifier.background(Color.Black)
-            .pointerInput(onTap != null) {
-                if (onTap != null) detectTapGestures(onTap = { onTap() }) else detectTapGestures(onDoubleTap = { onDoubleClick() })
-            }
-            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> onScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
-    ) {
-        val img = image ?: return@Canvas
-        val scale = minOf(size.width / img.width, size.height / img.height)
-        val w = (img.width * scale).toInt()
-        val h = (img.height * scale).toInt()
-        drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - w) / 2).toInt(), ((size.height - h) / 2).toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h))
+    Box(modifier.background(Color.Black)) {
+        androidx.compose.foundation.Canvas(
+            Modifier.fillMaxSize()
+                .pointerInput(onTap != null) {
+                    if (onTap != null) detectTapGestures(onTap = { onTap() }) else detectTapGestures(onDoubleTap = { onDoubleClick() })
+                }
+                .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> onScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
+        ) {
+            val img = image ?: return@Canvas
+            val scale = minOf(size.width / img.width, size.height / img.height)
+            val w = (img.width * scale).toInt()
+            val h = (img.height * scale).toInt()
+            drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - w) / 2).toInt(), ((size.height - h) / 2).toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h))
+        }
+        // until the first picture has arrived a symbol shows what is coming
+        if (image == null) placeholder?.invoke()
     }
 }
