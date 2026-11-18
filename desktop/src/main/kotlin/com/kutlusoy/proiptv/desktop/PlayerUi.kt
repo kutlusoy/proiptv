@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Cast
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.contentDescription
@@ -73,6 +74,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.kutlusoy.proiptv.ui.PlayerGlyph
 import com.kutlusoy.proiptv.ui.RoundControl
 import com.kutlusoy.proiptv.ui.TimeBar
@@ -145,6 +148,39 @@ class PlayerController(private val state: AppState, private val request: PlayReq
 
     var current: Playable? = null
         private set
+
+    /** The name of the TV the stream plays on (Google Cast), null while it plays here. The TV connects to the provider itself, so the connection of this PC is closed. */
+    var casting by mutableStateOf<String?>(null)
+    var castMessage by mutableStateOf<String?>(null)
+
+    fun castTo(device: CastClient.Device) {
+        val item = current ?: return
+        state.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                state.cast.play(device, item.url, item.title, item.live)
+                casting = device.name
+                castMessage = null
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    closePip()
+                    releaseHub(now = true)
+                    engine.stop()
+                    paused = true
+                }
+            } catch (e: Exception) {
+                Log.write("cast: ${e.message}")
+                runCatching { state.cast.close() }
+                castMessage = Strings.get("cast_failed")
+            }
+        }
+    }
+
+    /** Ends the cast and plays the stream here again. */
+    fun stopCast() {
+        if (casting == null) return
+        casting = null
+        state.scope.launch(kotlinx.coroutines.Dispatchers.IO) { state.cast.close() }
+        start()
+    }
     private var lastSaved = 0L
     private var lease: com.kutlusoy.proiptv.engine.HubLease? = null
 
@@ -174,6 +210,15 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         failed = null
         // another channel: the old connection is cut at once
         releaseHub(now = true)
+        if (casting != null) {
+            // the TV changes with it
+            current = item
+            state.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try { state.cast.load(item.url, item.title, item.live) } catch (e: Exception) { Log.write("cast: ${e.message}"); castMessage = Strings.get("cast_failed") }
+            }
+            paused = true
+            return
+        }
         if (request is PlayRequest.Live) {
             val entry = playEntries[index]
             state.recordHistory(entry)
@@ -334,6 +379,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     fun stop() {
+        if (casting != null) { casting = null; state.cast.close() }
         state.typing = false
         closePip()
         saveProgress()
@@ -469,6 +515,20 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     // the small picture lies above the big one (not in the channel browser, which has its own small window)
     if (layoutMode == 1 || layoutMode == 2) PipWindow(state, controller, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 84.dp))
     if (layoutMode == 0) PipWindow(state, controller, Modifier.align(Alignment.BottomEnd).padding(8.dp), width = 180.dp)
+    controller.casting?.let { name ->
+        Row(Modifier.align(Alignment.Center).background(Color(0xCC000000)).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Cast, null, tint = Palette.WineSoft)
+            Text(Strings.get("cast_playing", name), Modifier.padding(horizontal = 12.dp), color = Color.White)
+            androidx.compose.material3.TextButton(onClick = { controller.stopCast() }) { Text(t("cast_stop")) }
+        }
+    }
+    controller.castMessage?.let { msg ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { controller.castMessage = null },
+            text = { Text(msg) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { controller.castMessage = null }) { Text(t("action_close")) } },
+        )
+    }
     controller.pipMessage?.let { msg ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { controller.pipMessage = null },
@@ -807,7 +867,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             confirmButton = { androidx.compose.material3.TextButton(onClick = { recordError = null }) { Text(t("action_close")) } },
         )
     }
-    if (tracksOpen) TracksDialog(state.engine) { tracksOpen = false }
+    if (tracksOpen) TracksDialog(state, controller) { tracksOpen = false }
     Row(
         modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -956,7 +1016,10 @@ private fun RecordChoice(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TracksDialog(engine: VlcEngine, onClose: () -> Unit) {
+private fun TracksDialog(state: AppState, controller: PlayerController, onClose: () -> Unit) {
+    val engine = state.engine
+    var castOpen by remember { mutableStateOf(false) }
+    if (castOpen) CastDialog(state, controller) { castOpen = false; onClose() }
     var tracks by remember { mutableStateOf(engine.tracks()) }
     val data = tracks
     androidx.compose.material3.AlertDialog(
@@ -972,6 +1035,29 @@ private fun TracksDialog(engine: VlcEngine, onClose: () -> Unit) {
                 Text(t("player_subtitles"), Modifier.padding(top = 12.dp), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                 data.subtitles.forEach { tr ->
                     TrackRow(if (tr.id == -1) t("player_off") else tr.name, tr.id == data.subtitleSelected) { engine.selectSubtitle(tr.id); tracks = engine.tracks() }
+                }
+                Text(t("cast_open"), Modifier.padding(top = 12.dp).fillMaxWidth().clickable { castOpen = true }.padding(vertical = 8.dp), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = Palette.WineSoft)
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
+    )
+}
+
+/** The TVs of the network (Google Cast). A tap sends the running stream to that TV. */
+@Composable
+private fun CastDialog(state: AppState, controller: PlayerController, onClose: () -> Unit) {
+    DisposableEffect(Unit) {
+        state.cast.startSearch()
+        onDispose { state.cast.stopSearch() }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(t("cast_open")) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (state.cast.devices.isEmpty()) Text(t("cast_searching") + "\n" + t("cast_none"), color = Color.Gray)
+                state.cast.devices.forEach { d ->
+                    Text(d.name, Modifier.fillMaxWidth().clickable { controller.castTo(d); onClose() }.padding(vertical = 12.dp, horizontal = 4.dp))
                 }
             }
         },

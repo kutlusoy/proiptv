@@ -121,6 +121,7 @@ private fun runApplication() = application {
             state.hubs.closeAll()
             state.engine.release()
             state.releasePip()
+            state.cast.close()
             Http.client.dispatcher.executorService.shutdown()
             exitApplication()
         },

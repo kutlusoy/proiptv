@@ -30,6 +30,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     val engine: VlcEngine get() = if (firstIsMain) firstEngine.value else secondEngine.value
 
     /** The player of the small picture. */
+    val cast = CastClient()
     val pipEngine: VlcEngine get() = if (firstIsMain) secondEngine.value else firstEngine.value
 
     fun swapEngines() { firstIsMain = !firstIsMain }
