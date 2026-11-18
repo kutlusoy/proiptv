@@ -47,6 +47,10 @@ data class ProgressDto(
     val key: String get() = "$account|$kind|$remoteId"
 }
 
+/** Position and size of a window, in the units of the Java window (the same as the size in dp). */
+@Serializable
+data class BoundsDto(val x: Int, val y: Int, val width: Int, val height: Int, val maximized: Boolean = false)
+
 @Serializable
 data class ConfigDto(
     val accounts: List<AccountDto> = emptyList(),
@@ -68,6 +72,8 @@ data class ConfigDto(
     val reminders: List<ReminderDto> = emptyList(),
     val playerSearchAll: Boolean = false,
     val playerColumns: Boolean = false,
+    val windowBounds: BoundsDto? = null,
+    val compactBounds: BoundsDto? = null,
 )
 
 /** Passwords are protected with Windows DPAPI, so only the same Windows user can read them. Other systems keep them unprotected (development only). */

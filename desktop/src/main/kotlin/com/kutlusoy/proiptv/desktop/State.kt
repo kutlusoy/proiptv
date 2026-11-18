@@ -417,7 +417,8 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         if (on) {
             normalBounds = bounds
             if (placement == WindowPlacement.Fullscreen) placement = WindowPlacement.Floating
-            pendingBounds = compactBounds(0.25, null)
+            // the small window comes back where it was and as big as it was
+            pendingBounds = store.config.compactBounds?.toRectangle()?.takeIf { onScreen(it) } ?: compactBounds(0.25, null)
         } else {
             pendingBounds = normalBounds
         }
