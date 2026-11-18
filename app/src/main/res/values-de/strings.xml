@@ -101,6 +101,9 @@
     <string name="player_list_current">Aktuelle Liste</string>
     <string name="player_list_search">Aktuelle Suche</string>
     <string name="player_mute">Ton aus</string>
+    <string name="pip_open">Sender als PIP öffnen</string>
+    <string name="pip_swap">Plätze der beiden Sender tauschen</string>
+    <string name="pip_close">Kleines Bild schließen</string>
     <string name="player_columns">Kategorien und Sender nebeneinander</string>
     <string name="player_filter_categories">In %1$d Kategorien suchen</string>
     <string name="player_filter_channels">In %1$d Sendern suchen</string>

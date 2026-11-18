@@ -22,6 +22,14 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     val library = Library(store)
     val engine by lazy { VlcEngine() }
 
+    /** The second player of the picture in picture: it plays a second channel without sound. Only created when it is needed. */
+    private val pipEngineLazy = lazy { VlcEngine("vlc-pip.log", audio = false) }
+    val pipEngine: VlcEngine get() = pipEngineLazy.value
+    fun releasePip() { if (pipEngineLazy.isInitialized()) pipEngine.release() }
+
+    /** A second channel needs a second connection: that is possible with several accounts or when an account allows more than one connection. */
+    val pipAvailable: Boolean get() = accounts.count { it.enabled } > 1 || data.status.values.any { (it.info?.maxConnections ?: 1) > 1 }
+
     var tab by mutableStateOf(Tab.HOME)
 
     /** True while a text field has the focus, so the keyboard shortcuts of the player step aside. */

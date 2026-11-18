@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -246,6 +248,45 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         )
     }
 
+    /** The channel in the small picture (without sound) and the message when it could not be opened. */
+    var pipEntry by mutableStateOf<Entry?>(null)
+    var pipMessage by mutableStateOf<String?>(null)
+    private var pipLease: com.kutlusoy.proiptv.engine.HubLease? = null
+
+    /** Opens a channel in the small picture. It uses a second connection, so it can fail with the limit of the account. */
+    fun openPip(entry: Entry) {
+        val item = state.livePlayable(entry)
+        if (item == null) { pipMessage = Strings.get("player_failed"); return }
+        closePip()
+        try {
+            val l = state.hubs.acquire(item.accountNumber, item.channelId, item.title, item.maxConnections, com.kutlusoy.proiptv.net.Upstream.opener(item.url, item.userAgent))
+            pipLease = l
+            pipEntry = entry
+            state.pipEngine.playReader(l.hub.reader(), item.title, 0)
+        } catch (e: com.kutlusoy.proiptv.engine.BudgetExceeded) {
+            pipMessage = Strings.get("player_no_connection", e.limit, e.openTitles.joinToString())
+        }
+    }
+
+    fun closePip() {
+        if (pipEntry == null && pipLease == null) return
+        state.pipEngine.stop()
+        pipLease?.closeNow()
+        pipLease = null
+        pipEntry = null
+    }
+
+    /** The two channels change places: the small one becomes the big one with sound, the big one goes into the small picture. */
+    fun swapPip() {
+        val small = pipEntry ?: return
+        val big = playEntries.getOrNull(index) ?: return
+        closePip()
+        val at = playEntries.indexOfFirst { it.key == small.key }
+        if (at >= 0) index = at else { playEntries = listOf(small) + playEntries; index = 0 }
+        start()
+        openPip(big)
+    }
+
     /** Plays the channel at this position of [list]. From now on zapping walks through that list. */
     fun play(list: List<Entry>, i: Int, fromSearch: Boolean = false, origin: List<Entry> = emptyList()) {
         if (request !is PlayRequest.Live || i !in list.indices) return
@@ -276,6 +317,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
 
     fun stop() {
         state.typing = false
+        closePip()
         saveProgress()
         engine.stop()
         // leaving the player: the provider connection is closed at once
@@ -405,6 +447,15 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             ControlBar(state, controller, Modifier, floating = false)
         }
     }
+    }
+    // the small picture lies above the big one (not in the channel browser, which has its own small window)
+    if (layoutMode == 1 || layoutMode == 2) PipWindow(state, controller, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 84.dp))
+    controller.pipMessage?.let { msg ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { controller.pipMessage = null },
+            text = { Text(msg) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { controller.pipMessage = null }) { Text(t("action_close")) } },
+        )
     }
     }
 }
@@ -559,6 +610,7 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
     val nextText = t("player_list_next")
     val searchText = t("player_search")
     val columnsText = t("player_columns")
+    val pipOpenText = t("pip_open")
     val typingFocus = Modifier.onFocusChanged { state.typing = it.isFocused }
     // when the panel goes away no field has the focus any more, so the shortcuts of the player work again
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { state.typing = false } }
@@ -596,8 +648,10 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
         androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list) {
             itemsIndexed(shown, key = { _, e -> e.key }) { i, e ->
                 val now = state.guide.nowNext(e.accountId, e.epgId, state.tick).first
+                Box(Modifier.animateItem()) {
+                PipMenu(state.pipAvailable, pipOpenText, { controller.openPip(e) }) {
                 Row(
-                    Modifier.fillMaxWidth().animateItem().then(if (e.key == playingKey) Modifier.background(Palette.Wine, RoundedCornerShape(6.dp)) else Modifier)
+                    Modifier.fillMaxWidth().then(if (e.key == playingKey) Modifier.background(Palette.Wine, RoundedCornerShape(6.dp)) else Modifier)
                         .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { onHover(e) }
                         .clickable {
                             val searching = searchOpen && q.isNotEmpty()
@@ -613,6 +667,8 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
                         val sub = listOfNotNull(account, now?.title).joinToString(" \u00B7 ")
                         if (sub.isNotEmpty()) Text(sub, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
                     }
+                }
+                }
                 }
             }
         }
@@ -673,6 +729,31 @@ private fun ChannelPanel(state: AppState, controller: PlayerController, modifier
         }
     } else {
         pane(modifier)
+    }
+}
+
+/** The right click on a channel: "open as picture in picture", only when a second connection is possible. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun PipMenu(enabled: Boolean, label: String, onOpen: () -> Unit, content: @Composable () -> Unit) {
+    if (enabled) androidx.compose.foundation.ContextMenuArea(items = { listOf(androidx.compose.foundation.ContextMenuItem(label, onOpen)) }, content = content) else content()
+}
+
+/** The second channel in a small window above the big picture, without sound. A click on it changes the places of the two channels. */
+@Composable
+private fun PipWindow(state: AppState, controller: PlayerController, modifier: Modifier) {
+    val entry = controller.pipEntry ?: return
+    val swapText = t("pip_swap")
+    val closeText = t("pip_close")
+    Box(modifier.width(300.dp).aspectRatio(16f / 9f).border(2.dp, Palette.WineSoft).background(Color.Black)) {
+        VideoSurface(state.pipEngine, Modifier.fillMaxSize().semantics { contentDescription = swapText }, onDoubleClick = {}, onScroll = {}, onTap = { controller.swapPip() })
+        Text(
+            com.kutlusoy.proiptv.parse.TitleParser.parse(entry.name).title, Modifier.align(Alignment.BottomStart).background(Color(0xAA000000)).padding(horizontal = 6.dp, vertical = 2.dp),
+            color = Color.White, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
+        IconButton(onClick = { controller.closePip() }, Modifier.align(Alignment.TopEnd).size(28.dp).background(Color(0xAA000000)).semantics { contentDescription = closeText }) {
+            Icon(Icons.Filled.Close, closeText, Modifier.size(16.dp), tint = Color.White)
+        }
     }
 }
 
@@ -882,7 +963,7 @@ private fun TrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit) {
+private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null) {
     var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(engine) {
         var shown = -1L
@@ -903,7 +984,9 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
     }
     androidx.compose.foundation.Canvas(
         modifier.background(Color.Black)
-            .pointerInput(Unit) { detectTapGestures(onDoubleTap = { onDoubleClick() }) }
+            .pointerInput(onTap != null) {
+                if (onTap != null) detectTapGestures(onTap = { onTap() }) else detectTapGestures(onDoubleTap = { onDoubleClick() })
+            }
             .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> onScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
     ) {
         val img = image ?: return@Canvas

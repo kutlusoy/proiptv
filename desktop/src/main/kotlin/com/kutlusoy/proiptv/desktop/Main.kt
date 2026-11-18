@@ -120,6 +120,7 @@ private fun runApplication() = application {
             state.recordingManager.stopAll()
             state.hubs.closeAll()
             state.engine.release()
+            state.releasePip()
             Http.client.dispatcher.executorService.shutdown()
             exitApplication()
         },

@@ -62,7 +62,8 @@ class Frame(val width: Int, val height: Int, val pixels: ByteArray, val version:
  * libVLC draws into memory (video callbacks) and the screen shows the pictures as a Compose image.
  * That works without any window handle, so the video is always inside the app window.
  */
-class VlcEngine {
+/** [logName] is the log file of this instance, [audio] false opens no sound output at all: the small picture of the PIP has its own log and no sound. */
+class VlcEngine(private val logName: String = "vlc.log", private val audio: Boolean = true) {
     private var lib: LibVlc? = null
     private var instance: Pointer? = null
     private var player: Pointer? = null
@@ -158,7 +159,7 @@ class VlcEngine {
             }
             val name = if (System.getProperty("os.name").lowercase().contains("win")) "libvlc" else "vlc"
             val loaded = Native.load(name, LibVlc::class.java)
-            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=none", "--file-logging", "--logfile=${File(Store.defaultDir(), "vlc.log").also { it.delete() }.absolutePath}", "--log-verbose=${if (System.getenv("PROIPTV_VLC_VERBOSE") != null) 2 else 1}")
+            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=none", *(if (audio) emptyArray() else arrayOf("--no-audio")), "--file-logging", "--logfile=${File(Store.defaultDir(), logName).also { it.delete() }.absolutePath}", "--log-verbose=${if (System.getenv("PROIPTV_VLC_VERBOSE") != null) 2 else 1}")
             val inst = loaded.libvlc_new(args.size, args)
             if (inst == null) {
                 error = loaded.libvlc_errmsg() ?: "libvlc_new failed"
