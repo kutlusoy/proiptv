@@ -209,3 +209,19 @@ private fun androidx.compose.foundation.layout.BoxScope.RowArrow(align: Alignmen
         modifier = Modifier.align(align).padding(horizontal = 4.dp).size(40.dp).background(Color(0xCC000000), androidx.compose.foundation.shape.CircleShape),
     ) { Icon(icon, description, tint = Color.White) }
 }
+
+/** A small label with the name of a control and, when there is one, its key, after the mouse rests on it. The player controls sit at the bottom edge, so the label opens above the mouse. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+fun Tip(text: String, key: String? = null, content: @Composable () -> Unit) {
+    androidx.compose.foundation.TooltipArea(
+        tooltip = {
+            androidx.compose.material3.Surface(color = Color(0xF2222222), shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp), shadowElevation = 4.dp) {
+                Text(if (key != null) "$text  ($key)" else text, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = Color.White)
+            }
+        },
+        delayMillis = 500,
+        tooltipPlacement = androidx.compose.foundation.TooltipPlacement.CursorPoint(offset = androidx.compose.ui.unit.DpOffset(0.dp, (-40).dp)),
+        content = content,
+    )
+}
