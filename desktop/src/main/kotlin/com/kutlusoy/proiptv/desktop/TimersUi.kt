@@ -56,9 +56,9 @@ fun TimersDialog(state: AppState, onClose: () -> Unit) {
                                 Text(row.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Text(format.format(Date(row.whenMs)), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
                             }
-                            IconButton(onClick = { row.reminder?.let { state.removeReminder(it) }; row.recording?.let { state.recordingManager.delete(it.id) } }) {
+                            Tip(t("action_delete")) { IconButton(onClick = { row.reminder?.let { state.removeReminder(it) }; row.recording?.let { state.recordingManager.delete(it.id) } }) {
                                 Icon(Icons.Filled.Close, t("action_delete"))
-                            }
+                            } }
                         }
                     }
                 }

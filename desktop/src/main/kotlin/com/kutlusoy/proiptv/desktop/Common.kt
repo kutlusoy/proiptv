@@ -66,7 +66,7 @@ fun ProIptvTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun <T> DropdownField(selected: String, options: List<Pair<T, String>>, onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
+fun <T> DropdownField(selected: String, options: List<Pair<T, String>>, onSelect: (T) -> Unit, modifier: Modifier = Modifier, counts: Map<T, Int> = emptyMap()) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         Row(
@@ -79,7 +79,16 @@ fun <T> DropdownField(selected: String, options: List<Pair<T, String>>, onSelect
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             options.forEach { (value, label) ->
-                DropdownMenuItem(text = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }, onClick = { open = false; onSelect(value) })
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(label, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            // how many items the entry holds, like in the channel list of the player
+                            counts[value]?.let { Text(it.toString(), Modifier.padding(start = 24.dp), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.55f)) }
+                        }
+                    },
+                    onClick = { open = false; onSelect(value) },
+                )
             }
         }
     }
@@ -208,4 +217,20 @@ private fun androidx.compose.foundation.layout.BoxScope.RowArrow(align: Alignmen
         onClick = onClick,
         modifier = Modifier.align(align).padding(horizontal = 4.dp).size(40.dp).background(Color(0xCC000000), androidx.compose.foundation.shape.CircleShape),
     ) { Icon(icon, description, tint = Color.White) }
+}
+
+/** A small label with the name of a control and, when there is one, its key, after the mouse rests on it. With [above] the label opens above the mouse (the player controls sit at the bottom edge). */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+fun Tip(text: String, key: String? = null, above: Boolean = false, content: @Composable () -> Unit) {
+    androidx.compose.foundation.TooltipArea(
+        tooltip = {
+            androidx.compose.material3.Surface(color = Color(0xF2222222), shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp), shadowElevation = 4.dp) {
+                Text(if (key != null) "$text  ($key)" else text, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = Color.White)
+            }
+        },
+        delayMillis = 500,
+        tooltipPlacement = androidx.compose.foundation.TooltipPlacement.CursorPoint(offset = androidx.compose.ui.unit.DpOffset(0.dp, if (above) (-40).dp else 24.dp)),
+        content = content,
+    )
 }

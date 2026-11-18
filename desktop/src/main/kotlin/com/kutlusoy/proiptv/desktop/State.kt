@@ -30,6 +30,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     val engine: VlcEngine get() = if (firstIsMain) firstEngine.value else secondEngine.value
 
     /** The player of the small picture. */
+    val cast = CastClient()
     val pipEngine: VlcEngine get() = if (firstIsMain) secondEngine.value else firstEngine.value
 
     fun swapEngines() { firstIsMain = !firstIsMain }
@@ -439,6 +440,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     var compact by mutableStateOf(false)
     var pinned by mutableStateOf(true)
     private var normalBounds: java.awt.Rectangle? = null
+    private var beforeFullscreen = WindowPlacement.Floating
     var pendingBounds: java.awt.Rectangle? = null
 
     /** The small borderless window for watching next to other work: always on top (pin), movable, resizable. */
@@ -446,7 +448,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         if (on == compact) return
         if (on) {
             normalBounds = bounds
-            if (placement == WindowPlacement.Fullscreen) placement = WindowPlacement.Floating
+            if (placement == WindowPlacement.Fullscreen) placement = beforeFullscreen
             // the small window comes back where it was and as big as it was
             pendingBounds = store.config.compactBounds?.toRectangle()?.takeIf { onScreen(it) } ?: compactBounds(0.25, null)
         } else {
@@ -455,8 +457,25 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         compact = on
     }
 
+    private var boundsBeforeFullscreen: java.awt.Rectangle? = null
+
+    /**
+     * Full screen fills the whole screen above the task bar (the window gets the size of the screen and stays on top), the key F or Esc brings the window back
+     * as it was: same place and size, or maximized again.
+     */
     fun toggleFullscreen() {
-        if (compact) { compact = false; pendingBounds = normalBounds }
-        placement = if (placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
+        if (placement == WindowPlacement.Fullscreen) {
+            placement = beforeFullscreen
+            pendingBounds = if (beforeFullscreen == WindowPlacement.Maximized) null else boundsBeforeFullscreen
+            return
+        }
+        // the maximize button of the title bar does not go through this state, so the window itself is asked
+        val maximized = ((windowRef as? java.awt.Frame)?.extendedState ?: 0) and java.awt.Frame.MAXIMIZED_BOTH == java.awt.Frame.MAXIMIZED_BOTH
+        beforeFullscreen = if (maximized || placement == WindowPlacement.Maximized) WindowPlacement.Maximized else WindowPlacement.Floating
+        boundsBeforeFullscreen = if (compact) normalBounds else windowRef?.bounds
+        if (compact) compact = false
+        val screen = windowRef?.graphicsConfiguration?.bounds ?: java.awt.Rectangle(java.awt.Toolkit.getDefaultToolkit().screenSize)
+        pendingBounds = screen
+        placement = WindowPlacement.Fullscreen
     }
 }

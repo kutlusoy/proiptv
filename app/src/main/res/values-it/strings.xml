@@ -104,6 +104,12 @@
     <string name="pip_open">Apri il canale in picture in picture</string>
     <string name="pip_swap">Scambia i due canali</string>
     <string name="pip_close">Chiudi l\'immagine piccola</string>
+    <string name="cast_open">Invia a Google Cast TV</string>
+    <string name="cast_searching">Ricerca di televisori nella rete…</string>
+    <string name="cast_none">Nessun televisore trovato. Il PC e il televisore devono essere nella stessa rete.</string>
+    <string name="cast_playing">In riproduzione su %1$s</string>
+    <string name="cast_stop">Interrompi e riproduci qui</string>
+    <string name="cast_failed">Il televisore non ha potuto riprodurre questo flusso.</string>
     <string name="player_columns">Categorie e canali affiancati</string>
     <string name="player_filter_categories">Cerca in %1$d categorie</string>
     <string name="player_filter_channels">Cerca in %1$d canali</string>

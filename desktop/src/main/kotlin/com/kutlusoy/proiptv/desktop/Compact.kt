@@ -99,10 +99,10 @@ fun FrameWindowScope.CompactOverlay(state: AppState) {
             listOf("1/2" to 0.5, "1/4" to 0.25, "1/8" to 0.125, "1/16" to 0.0625).forEach { (label, share) ->
                 TextButton(onClick = { window.bounds = compactBounds(share, window.bounds) }) { Text(label, style = MaterialTheme.typography.labelMedium) }
             }
-            IconButton(onClick = { state.pinned = !state.pinned }, Modifier.size(36.dp)) {
+            Tip(t("player_pin")) { IconButton(onClick = { state.pinned = !state.pinned }, Modifier.size(36.dp)) {
                 Icon(Icons.Filled.PushPin, t("player_pin"), tint = if (state.pinned) Color(0xFFFF5252) else Color.White)
-            }
-            IconButton(onClick = { state.setCompact(false, window.bounds) }, Modifier.size(36.dp)) { Icon(Icons.Filled.CloseFullscreen, t("player_restore"), tint = Color.White) }
+            } }
+            Tip(t("player_restore")) { IconButton(onClick = { state.setCompact(false, window.bounds) }, Modifier.size(36.dp)) { Icon(Icons.Filled.CloseFullscreen, t("player_restore"), tint = Color.White) } }
         }
         for (corner in Corner.values()) ResizeHandle(corner, Modifier.align(corner.alignment))
     }

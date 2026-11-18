@@ -105,6 +105,12 @@
     <string name="pip_open">Open channel as picture in picture</string>
     <string name="pip_swap">Change places of the two channels</string>
     <string name="pip_close">Close the small picture</string>
+    <string name="cast_open">Send to Google Cast TV</string>
+    <string name="cast_searching">Looking for TVs in the network…</string>
+    <string name="cast_none">No TV found. The PC and the TV must be in the same network.</string>
+    <string name="cast_playing">Playing on %1$s</string>
+    <string name="cast_stop">Stop and play here</string>
+    <string name="cast_failed">The TV could not play this stream.</string>
     <string name="player_columns">Categories and channels side by side</string>
     <string name="player_filter_categories">Search %1$d categories</string>
     <string name="player_filter_channels">Search %1$d channels</string>

@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Cast
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.contentDescription
@@ -73,6 +74,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.kutlusoy.proiptv.ui.PlayerGlyph
 import com.kutlusoy.proiptv.ui.RoundControl
 import com.kutlusoy.proiptv.ui.TimeBar
@@ -145,6 +148,39 @@ class PlayerController(private val state: AppState, private val request: PlayReq
 
     var current: Playable? = null
         private set
+
+    /** The name of the TV the stream plays on (Google Cast), null while it plays here. The TV connects to the provider itself, so the connection of this PC is closed. */
+    var casting by mutableStateOf<String?>(null)
+    var castMessage by mutableStateOf<String?>(null)
+
+    fun castTo(device: CastClient.Device) {
+        val item = current ?: return
+        state.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                state.cast.play(device, item.url, item.title, item.live)
+                casting = device.name
+                castMessage = null
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    closePip()
+                    releaseHub(now = true)
+                    engine.stop()
+                    paused = true
+                }
+            } catch (e: Exception) {
+                Log.write("cast: ${e.message}")
+                runCatching { state.cast.close() }
+                castMessage = Strings.get("cast_failed")
+            }
+        }
+    }
+
+    /** Ends the cast and plays the stream here again. */
+    fun stopCast() {
+        if (casting == null) return
+        casting = null
+        state.scope.launch(kotlinx.coroutines.Dispatchers.IO) { state.cast.close() }
+        start()
+    }
     private var lastSaved = 0L
     private var lease: com.kutlusoy.proiptv.engine.HubLease? = null
 
@@ -174,6 +210,15 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         failed = null
         // another channel: the old connection is cut at once
         releaseHub(now = true)
+        if (casting != null) {
+            // the TV changes with it
+            current = item
+            state.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try { state.cast.load(item.url, item.title, item.live) } catch (e: Exception) { Log.write("cast: ${e.message}"); castMessage = Strings.get("cast_failed") }
+            }
+            paused = true
+            return
+        }
         if (request is PlayRequest.Live) {
             val entry = playEntries[index]
             state.recordHistory(entry)
@@ -334,6 +379,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     fun stop() {
+        if (casting != null) { casting = null; state.cast.close() }
         state.typing = false
         closePip()
         saveProgress()
@@ -469,6 +515,20 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     // the small picture lies above the big one (not in the channel browser, which has its own small window)
     if (layoutMode == 1 || layoutMode == 2) PipWindow(state, controller, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 84.dp))
     if (layoutMode == 0) PipWindow(state, controller, Modifier.align(Alignment.BottomEnd).padding(8.dp), width = 180.dp)
+    controller.casting?.let { name ->
+        Row(Modifier.align(Alignment.Center).background(Color(0xCC000000)).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Cast, null, tint = Palette.WineSoft)
+            Text(Strings.get("cast_playing", name), Modifier.padding(horizontal = 12.dp), color = Color.White)
+            androidx.compose.material3.TextButton(onClick = { controller.stopCast() }) { Text(t("cast_stop")) }
+        }
+    }
+    controller.castMessage?.let { msg ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { controller.castMessage = null },
+            text = { Text(msg) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { controller.castMessage = null }) { Text(t("action_close")) } },
+        )
+    }
     controller.pipMessage?.let { msg ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { controller.pipMessage = null },
@@ -807,26 +867,26 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             confirmButton = { androidx.compose.material3.TextButton(onClick = { recordError = null }) { Text(t("action_close")) } },
         )
     }
-    if (tracksOpen) TracksDialog(state.engine) { tracksOpen = false }
+    if (tracksOpen) TracksDialog(state, controller) { tracksOpen = false }
     Row(
         modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // the same round controls and symbols as in the Android player: pause, stop, record
-        if (controller.live) RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp)
-        RoundControl(if (controller.paused) PlayerGlyph.PLAY else PlayerGlyph.PAUSE, t(if (controller.paused) "player_play" else "player_pause"), { controller.togglePause() }, diameter = 38.dp)
-        RoundControl(PlayerGlyph.STOP, t("player_stop"), { controller.stop() }, diameter = 38.dp)
+        if (controller.live) Tip(t("player_channel_list"), above = true) { RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp) }
+        Tip(t(if (controller.paused) "player_play" else "player_pause"), "Space", above = true) { RoundControl(if (controller.paused) PlayerGlyph.PLAY else PlayerGlyph.PAUSE, t(if (controller.paused) "player_play" else "player_pause"), { controller.togglePause() }, diameter = 38.dp) }
+        Tip(t("player_stop"), "Esc", above = true) { RoundControl(PlayerGlyph.STOP, t("player_stop"), { controller.stop() }, diameter = 38.dp) }
         if (controller.live) {
             val recording = controller.recordingId != null
-            RoundControl(if (recording) PlayerGlyph.REC_STOP else PlayerGlyph.REC, t(if (recording) "rec_stop" else "rec_record"), { if (recording) controller.stopRecording() else recordOpen = true }, diameter = 38.dp)
+            Tip(t(if (recording) "rec_stop" else "rec_record"), above = true) { RoundControl(if (recording) PlayerGlyph.REC_STOP else PlayerGlyph.REC, t(if (recording) "rec_stop" else "rec_record"), { if (recording) controller.stopRecording() else recordOpen = true }, diameter = 38.dp) }
         }
         if (controller.canZap) {
-            RoundControl(PlayerGlyph.UP, t("player_channel_prev"), { controller.zap(-1) }, diameter = 38.dp)
-            RoundControl(PlayerGlyph.DOWN, t("player_channel_next"), { controller.zap(1) }, diameter = 38.dp)
+            Tip(t("player_channel_prev"), "↑", above = true) { RoundControl(PlayerGlyph.UP, t("player_channel_prev"), { controller.zap(-1) }, diameter = 38.dp) }
+            Tip(t("player_channel_next"), "↓", above = true) { RoundControl(PlayerGlyph.DOWN, t("player_channel_next"), { controller.zap(1) }, diameter = 38.dp) }
         }
         if (controller.live && controller.timeShift) {
-            IconButton(enabled = controller.bufferedMs > 5_000, onClick = { controller.shift(-30_000) }) { Icon(Icons.Filled.Replay30, t("player_back_30")) }
-            IconButton(enabled = controller.behindMs > 3_000, onClick = { controller.shift(30_000) }) { Icon(Icons.Filled.Forward30, t("player_forward_30")) }
+            Tip(t("player_back_30"), above = true) { IconButton(enabled = controller.bufferedMs > 5_000, onClick = { controller.shift(-30_000) }) { Icon(Icons.Filled.Replay30, t("player_back_30")) } }
+            Tip(t("player_forward_30"), above = true) { IconButton(enabled = controller.behindMs > 3_000, onClick = { controller.shift(30_000) }) { Icon(Icons.Filled.Forward30, t("player_forward_30")) } }
             if (controller.behindMs > 3_000) {
                 androidx.compose.material3.TextButton(onClick = { controller.goLive() }) { Text("${t("player_live")}  -${clock(controller.behindMs)}") }
             }
@@ -853,17 +913,19 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         // the symbol shows and switches the mute (the key M does the same); a volume of zero shows the crossed symbol too
         val muteText = t("player_mute")
         val silent = state.engine.muted || controller.volume == 0
+        Tip(muteText, "M", above = true) {
         IconButton(
             onClick = { if (controller.volume == 0 && !state.engine.muted) controller.changeVolume(50) else state.engine.toggleMute() },
             modifier = Modifier.size(32.dp).semantics { contentDescription = muteText },
         ) {
             Icon(if (silent) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, muteText, Modifier.size(20.dp), tint = if (silent) Palette.WineSoft else LocalContentColor.current)
         }
+        }
         Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp).alpha(if (silent) 0.4f else 1f))
-        if (controller.live) RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp)
-        RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp)
-        IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) }
-        IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) }
+        if (controller.live) Tip(t("player_guide"), above = true) { RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp) }
+        Tip(t("player_more"), above = true) { RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp) }
+        Tip(t("player_compact"), "P", above = true) { IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) } }
+        Tip(t("player_fullscreen"), "F", above = true) { IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) } }
     }
 }
 
@@ -956,7 +1018,10 @@ private fun RecordChoice(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TracksDialog(engine: VlcEngine, onClose: () -> Unit) {
+private fun TracksDialog(state: AppState, controller: PlayerController, onClose: () -> Unit) {
+    val engine = state.engine
+    var castOpen by remember { mutableStateOf(false) }
+    if (castOpen) CastDialog(state, controller) { castOpen = false; onClose() }
     var tracks by remember { mutableStateOf(engine.tracks()) }
     val data = tracks
     androidx.compose.material3.AlertDialog(
@@ -972,6 +1037,29 @@ private fun TracksDialog(engine: VlcEngine, onClose: () -> Unit) {
                 Text(t("player_subtitles"), Modifier.padding(top = 12.dp), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                 data.subtitles.forEach { tr ->
                     TrackRow(if (tr.id == -1) t("player_off") else tr.name, tr.id == data.subtitleSelected) { engine.selectSubtitle(tr.id); tracks = engine.tracks() }
+                }
+                Text(t("cast_open"), Modifier.padding(top = 12.dp).fillMaxWidth().clickable { castOpen = true }.padding(vertical = 8.dp), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = Palette.WineSoft)
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
+    )
+}
+
+/** The TVs of the network (Google Cast). A tap sends the running stream to that TV. */
+@Composable
+private fun CastDialog(state: AppState, controller: PlayerController, onClose: () -> Unit) {
+    DisposableEffect(Unit) {
+        state.cast.startSearch()
+        onDispose { state.cast.stopSearch() }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(t("cast_open")) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (state.cast.devices.isEmpty()) Text(t("cast_searching") + "\n" + t("cast_none"), color = Color.Gray)
+                state.cast.devices.forEach { d ->
+                    Text(d.name, Modifier.fillMaxWidth().clickable { controller.castTo(d); onClose() }.padding(vertical = 12.dp, horizontal = 4.dp))
                 }
             }
         },

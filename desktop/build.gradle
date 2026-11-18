@@ -91,6 +91,14 @@ dependencies {
     implementation 'net.sf.kxml:kxml2:2.3.0'
     implementation 'io.coil-kt.coil3:coil-compose:3.3.0'
     implementation 'io.coil-kt.coil3:coil-network-okhttp:3.3.0'
+    // Google Cast: finds the TVs in the network and sends them the address of the stream
+    implementation('su.litvak.chromecast:api-v2:0.11.3') {
+        // the library asks for version ranges, which are pinned here so the build is the same every time
+        exclude group: 'com.fasterxml.jackson.core'
+    }
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.10.5.1'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.10.5'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.10.5'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
