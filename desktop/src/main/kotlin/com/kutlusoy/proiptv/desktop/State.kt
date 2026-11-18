@@ -20,12 +20,25 @@ sealed interface PlayRequest {
 
 class AppState(val store: Store, val scope: CoroutineScope) {
     val library = Library(store)
-    val engine by lazy { VlcEngine() }
+    // two players: the big picture with the sound and, for the picture in picture, a second one that plays quietly. A swap only changes their roles,
+    // so no connection is built again.
+    private val firstEngine = lazy { VlcEngine() }
+    private val secondEngine = lazy { VlcEngine("vlc-pip.log", heal = false) }
+    private var firstIsMain by mutableStateOf(true)
 
-    /** The second player of the picture in picture: it plays a second channel without sound. Only created when it is needed. */
-    private val pipEngineLazy = lazy { VlcEngine("vlc-pip.log", audio = false) }
-    val pipEngine: VlcEngine get() = pipEngineLazy.value
-    fun releasePip() { if (pipEngineLazy.isInitialized()) pipEngine.release() }
+    /** The player of the big picture. */
+    val engine: VlcEngine get() = if (firstIsMain) firstEngine.value else secondEngine.value
+
+    /** The player of the small picture. */
+    val pipEngine: VlcEngine get() = if (firstIsMain) secondEngine.value else firstEngine.value
+
+    fun swapEngines() { firstIsMain = !firstIsMain }
+
+    /** Releases the player that is not the main one (the main one is released by the caller), when it was created. */
+    fun releasePip() {
+        val other = if (firstIsMain) secondEngine else firstEngine
+        if (other.isInitialized()) other.value.release()
+    }
 
     /**
      * A second channel needs a second connection: that is possible with several accounts, or with an account that allows more than one. An account

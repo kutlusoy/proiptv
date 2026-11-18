@@ -276,15 +276,35 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         pipEntry = null
     }
 
-    /** The two channels change places: the small one becomes the big one with sound, the big one goes into the small picture. */
+    /**
+     * The two channels change places without a new connection: the player that showed the small picture becomes the big one (with sound, the
+     * controls and the buffer of its channel), the big player becomes the small picture (without sound).
+     */
     fun swapPip() {
         val small = pipEntry ?: return
         val big = playEntries.getOrNull(index) ?: return
-        closePip()
+        val smallItem = state.livePlayable(small) ?: return
+        val oldMain = state.engine
+        val wasMuted = oldMain.muted
+        state.swapEngines()
+        val newMain = state.engine
+        val bigLease = lease
+        lease = pipLease
+        pipLease = bigLease
+        pipEntry = big
         val at = playEntries.indexOfFirst { it.key == small.key }
         if (at >= 0) index = at else { playEntries = listOf(small) + playEntries; index = 0 }
-        start()
-        openPip(big)
+        current = smallItem
+        title = smallItem.title
+        paused = false
+        failed = null
+        behindMs = 0
+        recordingId = state.recordingManager.isRecording(smallItem.account, smallItem.channelId)
+        state.recordHistory(small)
+        newMain.setVolume(volume)
+        if (wasMuted) newMain.setMute(true)
+        oldMain.setVolume(0)
+        oldMain.pause(false)
     }
 
     /** Plays the channel at this position of [list]. From now on zapping walks through that list. */
