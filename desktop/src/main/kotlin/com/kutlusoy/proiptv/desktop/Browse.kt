@@ -141,15 +141,23 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 add(ALL_KEY to t("live_all"))
                 categories.forEach { add("${it.accountId}|${it.id}" to ((state.accountLabel(it.accountId)?.let { n -> "$n \u00B7 " } ?: "") + it.name.ifBlank { t("live_other") })) }
             }
+            val categoryCounts = remember(all) { all.groupingBy { it.accountId + "|" + it.categoryId }.eachCount() }
+            val counts = remember(all, categories, lists, categoryCounts, state.favorites) { buildMap<String, Int> {
+                lists.forEach { put("$FAV_PREFIX${it.id}", all.count { e -> state.inList(e, it.id) }) }
+                put(ALL_KEY, all.size)
+                categories.forEach { put("${it.accountId}|${it.id}", categoryCounts["${it.accountId}|${it.id}"] ?: 0) }
+            } }
             if (enabled.size > 1) {
+                val accountCounts = remember(data.entries(kind)) { data.entries(kind).groupingBy { it.accountId }.eachCount() }
                 DropdownField(
                     enabled.firstOrNull { it.id == activeAccount }?.name ?: t("live_all_accounts"),
                     listOf<Pair<String?, String>>(null to t("live_all_accounts")) + enabled.map { it.id to it.name },
                     { accountFilter = it; if (!category.startsWith(FAV_PREFIX) && category != ALL_KEY) category = ALL_KEY },
                     Modifier.weight(0.3f).widthIn(min = 140.dp, max = 260.dp),
+                    counts = (accountCounts + (null to data.entries(kind).size)).mapKeys { it.key as String? },
                 )
             }
-            DropdownField(options.firstOrNull { it.first == category }?.second ?: t("live_all"), options, { category = it }, Modifier.weight(0.45f).widthIn(min = 160.dp, max = 360.dp))
+            DropdownField(options.firstOrNull { it.first == category }?.second ?: t("live_all"), options, { category = it }, Modifier.weight(0.45f).widthIn(min = 160.dp, max = 360.dp), counts = counts)
             TextInput(
                 query, { query = it }, singleLine = true, modifier = Modifier.weight(0.55f),
                 placeholder = { Text(t(if (kind == Kind.LIVE) "live_search" else "live_search")) },

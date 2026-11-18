@@ -66,7 +66,7 @@ fun ProIptvTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun <T> DropdownField(selected: String, options: List<Pair<T, String>>, onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
+fun <T> DropdownField(selected: String, options: List<Pair<T, String>>, onSelect: (T) -> Unit, modifier: Modifier = Modifier, counts: Map<T, Int> = emptyMap()) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         Row(
@@ -79,7 +79,16 @@ fun <T> DropdownField(selected: String, options: List<Pair<T, String>>, onSelect
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             options.forEach { (value, label) ->
-                DropdownMenuItem(text = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }, onClick = { open = false; onSelect(value) })
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(label, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            // how many items the entry holds, like in the channel list of the player
+                            counts[value]?.let { Text(it.toString(), Modifier.padding(start = 24.dp), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.55f)) }
+                        }
+                    },
+                    onClick = { open = false; onSelect(value) },
+                )
             }
         }
     }
