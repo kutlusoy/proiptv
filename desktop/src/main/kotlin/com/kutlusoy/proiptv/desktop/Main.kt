@@ -154,7 +154,14 @@ private fun runApplication() = application {
         state.windowRef = window
         window.minimumSize = if (state.compact) java.awt.Dimension(240, 135) else java.awt.Dimension(640, 420)
         androidx.compose.runtime.LaunchedEffect(state.compact) {
-            state.pendingBounds?.let { window.bounds = it; state.pendingBounds = null }
+            state.pendingBounds?.let { b ->
+                state.pendingBounds = null
+                // the window state is set too, so it cannot put the window back to the place of the other mode
+                windowState.placement = state.placement
+                windowState.position = androidx.compose.ui.window.WindowPosition(b.x.dp, b.y.dp)
+                windowState.size = DpSize(b.width.dp, b.height.dp)
+                window.bounds = b
+            }
         }
         ProIptvTheme {
             Surface(Modifier.fillMaxSize()) {
