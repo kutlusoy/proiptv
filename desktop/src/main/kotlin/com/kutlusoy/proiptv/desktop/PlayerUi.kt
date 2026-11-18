@@ -345,7 +345,10 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
         if (!engine.available) {
             Text(engine.error ?: "libVLC not found", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp))
         } else {
-            VideoSurface(engine, modifier, onDoubleClick = { state.toggleFullscreen() }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
+            VideoSurface(engine, modifier, onDoubleClick = {
+                // in the channel browser a double click makes the stream big (like the menu button), in the big picture it makes the window borderless
+                if (controller.listOpen && controller.live && !state.compact) controller.listOpen = false else state.toggleFullscreen()
+            }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
         }
         controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp)) }
         if (controller.reconnecting && controller.failed == null) Text(t("player_retrying"), Modifier.background(Color(0xAA000000)).padding(12.dp), color = Color.White)
@@ -407,6 +410,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
 }
 
 /** The browser of the player: the channel list at the left, at the right the running channel as a preview next to its info card, and its guide below. */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun ChannelBrowser(state: AppState, controller: PlayerController, video: @Composable (Modifier) -> Unit, modifier: Modifier) {
     val playing = controller.playEntries.getOrNull(controller.index)
@@ -424,7 +428,8 @@ private fun ChannelBrowser(state: AppState, controller: PlayerController, video:
         val left by androidx.compose.animation.core.animateDpAsState(if (controller.columnMode) wide else narrow, androidx.compose.animation.core.tween(220), label = "list width")
         Row(Modifier.fillMaxSize()) {
             ChannelPanel(state, controller, Modifier.width(left).fillMaxHeight(), onHover = { hovered = it })
-            Column(Modifier.weight(1f).fillMaxHeight()) {
+            // with the mouse over this side the guide of the running channel is shown again (over the list it follows the channel under the mouse)
+            Column(Modifier.weight(1f).fillMaxHeight().onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { hovered = null }) {
                 Row(Modifier.weight(0.5f).fillMaxWidth()) {
                     Box(Modifier.weight(0.62f).fillMaxHeight().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
                     Column(Modifier.weight(0.38f).fillMaxHeight().background(Palette.Surface).padding(16.dp), verticalArrangement = Arrangement.Center) {
