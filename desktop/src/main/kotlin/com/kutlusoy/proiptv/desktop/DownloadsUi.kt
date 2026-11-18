@@ -120,13 +120,13 @@ private fun DownloadRow(state: AppState, d: DownloadDto, label: String, onDelete
             }
         }
         if (done) Icon(Icons.Filled.PlayArrow, null)
-        if (d.status == DlStatus.FAILED) IconButton(onClick = { state.downloadManager.retry(d.id) }) { Icon(Icons.Filled.Refresh, t("dl_retry")) }
-        if (d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED) IconButton(onClick = { state.downloadManager.pause(d.id) }) { Icon(Icons.Filled.Pause, t("dl_pause")) }
-        if (d.status == DlStatus.PAUSED) IconButton(onClick = { state.downloadManager.resumePaused(d.id) }) { Icon(Icons.Filled.PlayArrow, t("dl_resume")) }
+        if (d.status == DlStatus.FAILED) Tip(t("dl_retry")) { IconButton(onClick = { state.downloadManager.retry(d.id) }) { Icon(Icons.Filled.Refresh, t("dl_retry")) } }
+        if (d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED) Tip(t("dl_pause")) { IconButton(onClick = { state.downloadManager.pause(d.id) }) { Icon(Icons.Filled.Pause, t("dl_pause")) } }
+        if (d.status == DlStatus.PAUSED) Tip(t("dl_resume")) { IconButton(onClick = { state.downloadManager.resumePaused(d.id) }) { Icon(Icons.Filled.PlayArrow, t("dl_resume")) } }
         if (d.status == DlStatus.RUNNING || d.status == DlStatus.QUEUED || d.status == DlStatus.PAUSED) {
-            IconButton(onClick = { state.downloadManager.delete(d.id) }) { Icon(Icons.Filled.Stop, t("dl_stop")) }
+            Tip(t("dl_stop")) { IconButton(onClick = { state.downloadManager.delete(d.id) }) { Icon(Icons.Filled.Stop, t("dl_stop")) } }
         } else {
-            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, t("action_delete")) }
+            Tip(t("action_delete")) { IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, t("action_delete")) } }
         }
     }
 }

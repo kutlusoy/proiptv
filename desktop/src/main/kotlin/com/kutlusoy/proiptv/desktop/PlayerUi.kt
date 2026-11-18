@@ -873,20 +873,20 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // the same round controls and symbols as in the Android player: pause, stop, record
-        if (controller.live) Tip(t("player_channel_list")) { RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp) }
-        Tip(t(if (controller.paused) "player_play" else "player_pause"), "Space") { RoundControl(if (controller.paused) PlayerGlyph.PLAY else PlayerGlyph.PAUSE, t(if (controller.paused) "player_play" else "player_pause"), { controller.togglePause() }, diameter = 38.dp) }
-        Tip(t("player_stop"), "Esc") { RoundControl(PlayerGlyph.STOP, t("player_stop"), { controller.stop() }, diameter = 38.dp) }
+        if (controller.live) Tip(t("player_channel_list"), above = true) { RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp) }
+        Tip(t(if (controller.paused) "player_play" else "player_pause"), "Space", above = true) { RoundControl(if (controller.paused) PlayerGlyph.PLAY else PlayerGlyph.PAUSE, t(if (controller.paused) "player_play" else "player_pause"), { controller.togglePause() }, diameter = 38.dp) }
+        Tip(t("player_stop"), "Esc", above = true) { RoundControl(PlayerGlyph.STOP, t("player_stop"), { controller.stop() }, diameter = 38.dp) }
         if (controller.live) {
             val recording = controller.recordingId != null
-            Tip(t(if (recording) "rec_stop" else "rec_record")) { RoundControl(if (recording) PlayerGlyph.REC_STOP else PlayerGlyph.REC, t(if (recording) "rec_stop" else "rec_record"), { if (recording) controller.stopRecording() else recordOpen = true }, diameter = 38.dp) }
+            Tip(t(if (recording) "rec_stop" else "rec_record"), above = true) { RoundControl(if (recording) PlayerGlyph.REC_STOP else PlayerGlyph.REC, t(if (recording) "rec_stop" else "rec_record"), { if (recording) controller.stopRecording() else recordOpen = true }, diameter = 38.dp) }
         }
         if (controller.canZap) {
-            Tip(t("player_channel_prev"), "↑") { RoundControl(PlayerGlyph.UP, t("player_channel_prev"), { controller.zap(-1) }, diameter = 38.dp) }
-            Tip(t("player_channel_next"), "↓") { RoundControl(PlayerGlyph.DOWN, t("player_channel_next"), { controller.zap(1) }, diameter = 38.dp) }
+            Tip(t("player_channel_prev"), "↑", above = true) { RoundControl(PlayerGlyph.UP, t("player_channel_prev"), { controller.zap(-1) }, diameter = 38.dp) }
+            Tip(t("player_channel_next"), "↓", above = true) { RoundControl(PlayerGlyph.DOWN, t("player_channel_next"), { controller.zap(1) }, diameter = 38.dp) }
         }
         if (controller.live && controller.timeShift) {
-            Tip(t("player_back_30")) { IconButton(enabled = controller.bufferedMs > 5_000, onClick = { controller.shift(-30_000) }) { Icon(Icons.Filled.Replay30, t("player_back_30")) } }
-            Tip(t("player_forward_30")) { IconButton(enabled = controller.behindMs > 3_000, onClick = { controller.shift(30_000) }) { Icon(Icons.Filled.Forward30, t("player_forward_30")) } }
+            Tip(t("player_back_30"), above = true) { IconButton(enabled = controller.bufferedMs > 5_000, onClick = { controller.shift(-30_000) }) { Icon(Icons.Filled.Replay30, t("player_back_30")) } }
+            Tip(t("player_forward_30"), above = true) { IconButton(enabled = controller.behindMs > 3_000, onClick = { controller.shift(30_000) }) { Icon(Icons.Filled.Forward30, t("player_forward_30")) } }
             if (controller.behindMs > 3_000) {
                 androidx.compose.material3.TextButton(onClick = { controller.goLive() }) { Text("${t("player_live")}  -${clock(controller.behindMs)}") }
             }
@@ -913,7 +913,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         // the symbol shows and switches the mute (the key M does the same); a volume of zero shows the crossed symbol too
         val muteText = t("player_mute")
         val silent = state.engine.muted || controller.volume == 0
-        Tip(muteText, "M") {
+        Tip(muteText, "M", above = true) {
         IconButton(
             onClick = { if (controller.volume == 0 && !state.engine.muted) controller.changeVolume(50) else state.engine.toggleMute() },
             modifier = Modifier.size(32.dp).semantics { contentDescription = muteText },
@@ -922,10 +922,10 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         }
         }
         Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp).alpha(if (silent) 0.4f else 1f))
-        if (controller.live) Tip(t("player_guide")) { RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp) }
-        Tip(t("player_more")) { RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp) }
-        Tip(t("player_compact"), "P") { IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) } }
-        Tip(t("player_fullscreen"), "F") { IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) } }
+        if (controller.live) Tip(t("player_guide"), above = true) { RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp) }
+        Tip(t("player_more"), above = true) { RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp) }
+        Tip(t("player_compact"), "P", above = true) { IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) } }
+        Tip(t("player_fullscreen"), "F", above = true) { IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) } }
     }
 }
 

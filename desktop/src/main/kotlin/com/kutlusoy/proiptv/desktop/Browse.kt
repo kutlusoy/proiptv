@@ -153,9 +153,9 @@ fun BrowseScreen(state: AppState, kind: Int) {
             TextInput(
                 query, { query = it }, singleLine = true, modifier = Modifier.weight(0.55f),
                 placeholder = { Text(t(if (kind == Kind.LIVE) "live_search" else "live_search")) },
-                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
+                trailingIcon = { if (query.isNotEmpty()) Tip(t("action_close")) { IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } } },
             )
-            IconButton(onClick = { state.reload() }, enabled = !state.loading && !state.guideLoading) { Icon(Icons.Filled.Refresh, t("settings_refresh")) }
+            Tip(t("settings_refresh")) { IconButton(onClick = { state.reload() }, enabled = !state.loading && !state.guideLoading) { Icon(Icons.Filled.Refresh, t("settings_refresh")) } }
         }
         if (kind == Kind.LIVE && !inFavorites) {
             Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -169,7 +169,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 6.dp)) {
                 Text(t("fav_hint_touch").substringBefore('.') + ".", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.55f), modifier = Modifier.weight(1f))
                 Box {
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, t("action_more")) }
+                    Tip(t("action_more")) { IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, t("action_more")) } }
                     androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         androidx.compose.material3.DropdownMenuItem(text = { Text(t("fav_new_list")) }, onClick = { menu = false; listDialog = "new" })
                         androidx.compose.material3.DropdownMenuItem(text = { Text(t("fav_rename")) }, onClick = { menu = false; listDialog = "rename" })
@@ -258,12 +258,12 @@ private fun ChannelRow(state: AppState, e: Entry, onMove: ((Int) -> Unit)? = nul
         }
         if (info.year > 0) Badge(info.year.toString())
         if (onMove != null) {
-            IconButton(onClick = { onMove(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("fav_move_up")) }
-            IconButton(onClick = { onMove(1) }) { Icon(Icons.Filled.KeyboardArrowDown, t("fav_move_down")) }
+            Tip(t("fav_move_up")) { IconButton(onClick = { onMove(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("fav_move_up")) } }
+            Tip(t("fav_move_down")) { IconButton(onClick = { onMove(1) }) { Icon(Icons.Filled.KeyboardArrowDown, t("fav_move_down")) } }
         }
-        IconButton(onClick = { state.toggleFavorite(e) }) {
+        Tip(t(if (state.isFavorite(e)) "fav_remove" else "fav_add")) { IconButton(onClick = { state.toggleFavorite(e) }) {
             Icon(if (state.isFavorite(e)) Icons.Filled.Star else Icons.Filled.StarBorder, null, tint = if (state.isFavorite(e)) Color(0xFFFFC107) else Color.White.copy(alpha = 0.4f))
-        }
+        } }
     }
 }
 
@@ -325,12 +325,12 @@ private fun Poster(state: AppState, e: Entry, onClick: () -> Unit) {
 private fun DetailHeader(state: AppState, e: Entry, onBack: () -> Unit) {
     val info = remember(e.name) { TitleParser.parse(e.name) }
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, t("action_close")) }
+        Tip(t("action_close")) { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, t("action_close")) } }
         Text(info.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (info.year > 0) Badge(info.year.toString())
-        IconButton(onClick = { state.toggleFavorite(e) }) {
+        Tip(t(if (state.isFavorite(e)) "fav_remove" else "fav_add")) { IconButton(onClick = { state.toggleFavorite(e) }) {
             Icon(if (state.isFavorite(e)) Icons.Filled.Star else Icons.Filled.StarBorder, t(if (state.isFavorite(e)) "fav_remove" else "fav_add"), tint = if (state.isFavorite(e)) Color(0xFFFFC107) else Color.White)
-        }
+        } }
     }
 }
 
@@ -450,7 +450,7 @@ private fun SeriesDetail(state: AppState, e: Entry) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 DropdownField(t("series_season", active), seasons.map { it to t("series_season", it) }, { season = it }, Modifier.width(240.dp))
                 Box {
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, t("action_more")) }
+                    Tip(t("action_more")) { IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, t("action_more")) } }
                     androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         androidx.compose.material3.DropdownMenuItem(
                             text = { Text(t("dl_season")) },
@@ -489,15 +489,15 @@ private fun SeriesDetail(state: AppState, e: Entry) {
                         ep.plot?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.75f)) }
                     }
                     val dl = state.downloadOf(e.accountId, Kind.EPISODE, ep.id)
-                    IconButton(enabled = dl == null, onClick = { state.downloadEpisodes(e, listOf(ep)) }) {
+                    Tip(t("dl_download")) { IconButton(enabled = dl == null, onClick = { state.downloadEpisodes(e, listOf(ep)) }) {
                         Icon(Icons.Filled.Download, t("dl_download"), tint = if (dl?.status == DlStatus.DONE) Palette.WineSoft else Color.White.copy(alpha = if (dl == null) 0.8f else 0.4f))
-                    }
-                    IconButton(onClick = { state.progress.setWatched(e.accountId, Kind.EPISODE, listOf(ep.id), !watched) }) {
+                    } }
+                    Tip(t(if (watched) "detail_mark_unwatched" else "detail_mark_watched")) { IconButton(onClick = { state.progress.setWatched(e.accountId, Kind.EPISODE, listOf(ep.id), !watched) }) {
                         Icon(
                             Icons.Filled.CheckCircle, t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"),
                             tint = if (watched) Palette.WineSoft else Color.White.copy(alpha = 0.3f),
                         )
-                    }
+                    } }
                     Icon(Icons.Filled.PlayArrow, null)
                 }
             }

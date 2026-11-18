@@ -124,9 +124,9 @@ fun EpgScreen(state: AppState) {
                 TextInput(
                     query, { query = it }, singleLine = true, modifier = Modifier.weight(0.6f),
                     placeholder = { Text(t("epg_search")) },
-                    trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } },
+                    trailingIcon = { if (query.isNotEmpty()) Tip(t("action_close")) { IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } } },
                 )
-                IconButton(onClick = { coroutines.launch { scroll.animateScrollTo((scroll.value - with(density) { (HOUR_WIDTH * 2).toPx().toInt() }).coerceAtLeast(0)) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, t("epg_earlier")) }
+                Tip(t("epg_earlier")) { IconButton(onClick = { coroutines.launch { scroll.animateScrollTo((scroll.value - with(density) { (HOUR_WIDTH * 2).toPx().toInt() }).coerceAtLeast(0)) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, t("epg_earlier")) } }
                 OutlinedButton(onClick = { jumpToNow() }) { Text(t("epg_now")) }
                 state.recordingStore.version
                 val timerCount = state.reminders.count { it.startMs > System.currentTimeMillis() } + state.recordingStore.all().count { it.status == RecStatus.SCHEDULED && (it.plannedStart ?: it.startedAt) > System.currentTimeMillis() }
@@ -134,8 +134,8 @@ fun EpgScreen(state: AppState) {
                     ClockGlyph(color = Color.White)
                     Text("  " + t("timers_title") + if (timerCount > 0) " ($timerCount)" else "")
                 }
-                IconButton(onClick = { coroutines.launch { scroll.animateScrollTo(scroll.value + with(density) { (HOUR_WIDTH * 2).toPx().toInt() }) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, t("epg_later")) }
-                IconButton(onClick = { state.refreshGuide() }, enabled = !state.guideLoading) { Icon(Icons.Filled.Refresh, t("account_sync_guide")) }
+                Tip(t("epg_later")) { IconButton(onClick = { coroutines.launch { scroll.animateScrollTo(scroll.value + with(density) { (HOUR_WIDTH * 2).toPx().toInt() }) } }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, t("epg_later")) } }
+                Tip(t("account_sync_guide")) { IconButton(onClick = { state.refreshGuide() }, enabled = !state.guideLoading) { Icon(Icons.Filled.Refresh, t("account_sync_guide")) } }
             }
             if (channels.isEmpty()) {
                 Text(t(if (state.guideLoading) "series_loading" else "epg_empty"), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(8.dp))
@@ -236,7 +236,7 @@ private fun DetailPanel(state: AppState, sel: Selected, channels: List<Entry>, o
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(TitleParser.parse(sel.entry.name).title.ifBlank { sel.entry.name }, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.7f))
-            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, t("action_close")) }
+            Tip(t("action_close")) { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, t("action_close")) } }
         }
         Text(p.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text(clockOf(p.start) + " - " + clockOf(p.end) + "  ·  " + ((p.end - p.start) / 60) + " min", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f))

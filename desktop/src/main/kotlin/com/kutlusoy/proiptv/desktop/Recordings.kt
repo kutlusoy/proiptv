@@ -291,21 +291,21 @@ fun RecordingsScreen(state: AppState) {
                     // the channel logo opens the channel again, for running and finished recordings
                     val channel = state.data.entries(Kind.LIVE).firstOrNull { it.accountId == r.account && it.remoteId == r.channelRemoteId }
                     if (channel != null) {
-                        IconButton(
+                        Tip(goText) { IconButton(
                             onClick = {
                                 val sameAccount = state.data.entries(Kind.LIVE).filter { it.accountId == r.account }
                                 state.player = PlayRequest.Live(sameAccount, sameAccount.indexOf(channel).coerceAtLeast(0))
                             },
                             Modifier.width(56.dp).semantics { contentDescription = goText },
-                        ) { Logo(channel.logo, Modifier.size(width = 48.dp, height = 32.dp), name = channel.name) }
+                        ) { Logo(channel.logo, Modifier.size(width = 48.dp, height = 32.dp), name = channel.name) } }
                     }
-                    if (active) IconButton(onClick = { state.recordingManager.stop(r.id) }, Modifier.semantics { contentDescription = stopText }) { RecStopIcon() }
-                    if (playable) IconButton(onClick = { play() }) { Icon(Icons.Filled.PlayArrow, t("rec_play")) }
+                    if (active) Tip(stopText) { IconButton(onClick = { state.recordingManager.stop(r.id) }, Modifier.semantics { contentDescription = stopText }) { RecStopIcon() } }
+                    if (playable) Tip(t("rec_play")) { IconButton(onClick = { play() }) { Icon(Icons.Filled.PlayArrow, t("rec_play")) } }
                     if (r.path.isNotEmpty() && file.exists()) {
-                        IconButton(onClick = { showInFolder(file) }, Modifier.semantics { contentDescription = showText }) { Icon(Icons.Filled.FolderOpen, showText) }
+                        Tip(showText) { IconButton(onClick = { showInFolder(file) }, Modifier.semantics { contentDescription = showText }) { Icon(Icons.Filled.FolderOpen, showText) } }
                     }
                     // a running recording is stopped first, then it can be deleted
-                    IconButton(onClick = { deleting = r }, enabled = !active) { Icon(Icons.Filled.Delete, t("action_delete")) }
+                    Tip(t("action_delete")) { IconButton(onClick = { deleting = r }, enabled = !active) { Icon(Icons.Filled.Delete, t("action_delete")) } }
                 }
             }
         }
