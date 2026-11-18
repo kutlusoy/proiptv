@@ -101,6 +101,9 @@
     <string name="player_list_current">Lista actual</string>
     <string name="player_list_search">Búsqueda actual</string>
     <string name="player_mute">Silenciar</string>
+    <string name="pip_open">Abrir el canal en imagen en imagen</string>
+    <string name="pip_swap">Intercambiar los dos canales</string>
+    <string name="pip_close">Cerrar la imagen pequeña</string>
     <string name="player_columns">Categorías y canales en columnas</string>
     <string name="player_filter_categories">Buscar en %1$d categorías</string>
     <string name="player_filter_channels">Buscar en %1$d canales</string>

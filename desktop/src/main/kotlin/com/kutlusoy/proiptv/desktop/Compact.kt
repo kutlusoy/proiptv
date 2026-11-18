@@ -42,6 +42,17 @@ import kotlin.math.sqrt
 private const val MIN_WIDTH = 240
 
 /** Size of the small window as a share of the screen area, with a 16:9 picture. */
+/** Whether a window at these bounds can be seen on one of the screens (a monitor that was disconnected must not hide the window). */
+fun onScreen(r: Rectangle): Boolean =
+    runCatching {
+        java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.any {
+            val visible = it.defaultConfiguration.bounds.intersection(r)
+            visible.width >= 160 && visible.height >= 80
+        }
+    }.getOrDefault(true)
+
+fun BoundsDto.toRectangle() = Rectangle(x, y, width, height)
+
 fun compactBounds(share: Double, current: Rectangle?): Rectangle {
     val screen = java.awt.Toolkit.getDefaultToolkit().screenSize
     var w = (sqrt(share) * screen.width).toInt()

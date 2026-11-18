@@ -20,9 +20,39 @@ sealed interface PlayRequest {
 
 class AppState(val store: Store, val scope: CoroutineScope) {
     val library = Library(store)
-    val engine by lazy { VlcEngine() }
+    // two players: the big picture with the sound and, for the picture in picture, a second one that plays quietly. A swap only changes their roles,
+    // so no connection is built again.
+    private val firstEngine = lazy { VlcEngine() }
+    private val secondEngine = lazy { VlcEngine("vlc-pip.log", heal = false) }
+    private var firstIsMain by mutableStateOf(true)
+
+    /** The player of the big picture. */
+    val engine: VlcEngine get() = if (firstIsMain) firstEngine.value else secondEngine.value
+
+    /** The player of the small picture. */
+    val pipEngine: VlcEngine get() = if (firstIsMain) secondEngine.value else firstEngine.value
+
+    fun swapEngines() { firstIsMain = !firstIsMain }
+
+    /** Releases the player that is not the main one (the main one is released by the caller), when it was created. */
+    fun releasePip() {
+        val other = if (firstIsMain) secondEngine else firstEngine
+        if (other.isInitialized()) other.value.release()
+    }
+
+    /**
+     * A second channel needs a second connection: that is possible with several accounts, or with an account that allows more than one. An account
+     * that says nothing about its connections (a playlist) can be tried, the provider decides.
+     */
+    val pipAvailable: Boolean get() = accounts.count { it.enabled } > 1 || data.status.values.any { (it.info?.maxConnections ?: 2) > 1 }
 
     var tab by mutableStateOf(Tab.HOME)
+
+    init {
+        // the mute is kept for the next start
+        AudioState.muted = store.config.muted
+        AudioState.onChange = { muted -> store.update { it.copy(muted = muted) } }
+    }
 
     /** True while a text field has the focus, so the keyboard shortcuts of the player step aside. */
     var typing by mutableStateOf(false)
@@ -417,7 +447,8 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         if (on) {
             normalBounds = bounds
             if (placement == WindowPlacement.Fullscreen) placement = WindowPlacement.Floating
-            pendingBounds = compactBounds(0.25, null)
+            // the small window comes back where it was and as big as it was
+            pendingBounds = store.config.compactBounds?.toRectangle()?.takeIf { onScreen(it) } ?: compactBounds(0.25, null)
         } else {
             pendingBounds = normalBounds
         }

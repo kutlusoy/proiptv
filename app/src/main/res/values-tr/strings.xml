@@ -97,6 +97,9 @@
     <string name="player_list_current">Geçerli liste</string>
     <string name="player_list_search">Geçerli arama</string>
     <string name="player_mute">Sesi kapat</string>
+    <string name="pip_open">Kanalı resim içinde resim olarak aç</string>
+    <string name="pip_swap">İki kanalın yerini değiştir</string>
+    <string name="pip_close">Küçük resmi kapat</string>
     <string name="player_columns">Kategoriler ve kanallar yan yana</string>
     <string name="player_filter_categories">%1$d kategoride ara</string>
     <string name="player_filter_channels">%1$d kanalda ara</string>

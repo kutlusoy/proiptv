@@ -68,6 +68,7 @@ audio_output/libmmdevice_plugin.dll
 audio_output/libwasapi_plugin.dll
 audio_output/libdirectsound_plugin.dll
 audio_output/libwaveout_plugin.dll
+audio_output/libadummy_plugin.dll
 audio_filter/libaudio_format_plugin.dll
 audio_filter/libscaletempo_plugin.dll
 audio_filter/libsamplerate_plugin.dll

@@ -102,6 +102,9 @@
     <string name="player_list_current">Current list</string>
     <string name="player_list_search">Current search</string>
     <string name="player_mute">Mute</string>
+    <string name="pip_open">Open channel as picture in picture</string>
+    <string name="pip_swap">Change places of the two channels</string>
+    <string name="pip_close">Close the small picture</string>
     <string name="player_columns">Categories and channels side by side</string>
     <string name="player_filter_categories">Search %1$d categories</string>
     <string name="player_filter_channels">Search %1$d channels</string>

@@ -45,6 +45,7 @@ interface LibVlc : Library {
     fun libvlc_media_player_set_time(player: Pointer, time: Long)
     fun libvlc_media_player_get_length(player: Pointer): Long
     fun libvlc_audio_set_volume(player: Pointer, volume: Int): Int
+    fun libvlc_audio_output_set(player: Pointer, name: String): Int
     fun libvlc_audio_set_mute(player: Pointer, mute: Int)
     fun libvlc_audio_get_track_description(player: Pointer): Pointer?
     fun libvlc_audio_get_track(player: Pointer): Int
@@ -62,7 +63,20 @@ class Frame(val width: Int, val height: Int, val pixels: ByteArray, val version:
  * libVLC draws into memory (video callbacks) and the screen shows the pictures as a Compose image.
  * That works without any window handle, so the video is always inside the app window.
  */
-class VlcEngine {
+/** The mute is one for the whole program (both players) and is kept for the next start. */
+object AudioState {
+    var muted by androidx.compose.runtime.mutableStateOf(false)
+    var onChange: ((Boolean) -> Unit)? = null
+
+    fun set(value: Boolean) {
+        if (muted == value) return
+        muted = value
+        onChange?.invoke(value)
+    }
+}
+
+/** [logName] is the log file of this instance. [heal] is false for the second player of the picture in picture: the mute of Windows is cleared only once, by the first. */
+class VlcEngine(private val logName: String = "vlc.log", heal: Boolean = true) {
     private var lib: LibVlc? = null
     private var instance: Pointer? = null
     private var player: Pointer? = null
@@ -158,7 +172,7 @@ class VlcEngine {
             }
             val name = if (System.getProperty("os.name").lowercase().contains("win")) "libvlc" else "vlc"
             val loaded = Native.load(name, LibVlc::class.java)
-            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=none", "--file-logging", "--logfile=${File(Store.defaultDir(), "vlc.log").also { it.delete() }.absolutePath}", "--log-verbose=${if (System.getenv("PROIPTV_VLC_VERBOSE") != null) 2 else 1}")
+            val args = arrayOf("--no-video-title-show", "--no-osd", "--no-snapshot-preview", "--network-caching=1500", "--avcodec-hw=none", "--file-logging", "--logfile=${File(Store.defaultDir(), logName).also { it.delete() }.absolutePath}", "--log-verbose=${if (System.getenv("PROIPTV_VLC_VERBOSE") != null) 2 else 1}")
             val inst = loaded.libvlc_new(args.size, args)
             if (inst == null) {
                 error = loaded.libvlc_errmsg() ?: "libvlc_new failed"
@@ -188,7 +202,7 @@ class VlcEngine {
         return candidates.firstOrNull { File(it, "libvlc.dll").exists() || File(it, "libvlc.so").exists() }
     }
 
-    fun play(item: Playable, volume: Int, startMs: Long = 0) {
+    fun play(item: Playable, volume: Int, startMs: Long = 0, quiet: Boolean = false) {
         val l = lib ?: return
         val i = instance ?: return
         val p = player ?: return
@@ -201,7 +215,8 @@ class VlcEngine {
         l.libvlc_media_player_set_media(p, media)
         l.libvlc_media_release(media)
         volumePercent = volume
-        l.libvlc_audio_set_volume(p, volume)
+        setOutput(p, quiet)
+        l.libvlc_audio_set_volume(p, if (AudioState.muted) 0 else volume)
         soundOn(p, item.url.substringBefore('?').takeLast(40))
         val result = l.libvlc_media_player_play(p)
         Log.write("play ${item.url.substringBefore('?').takeLast(60)} result=$result")
@@ -209,7 +224,7 @@ class VlcEngine {
     }
 
     /** Plays what a reader delivers (the shared stream buffer): one connection can then show the channel and record it, and the buffer allows to go back in time. */
-    fun playReader(reader: HubReader, title: String, volume: Int) {
+    fun playReader(reader: HubReader, title: String, volume: Int, quiet: Boolean = false) {
         val l = lib ?: return
         val i = instance ?: return
         val p = player ?: return
@@ -222,7 +237,8 @@ class VlcEngine {
         l.libvlc_media_player_set_media(p, media)
         l.libvlc_media_release(media)
         volumePercent = volume
-        l.libvlc_audio_set_volume(p, volume)
+        setOutput(p, quiet)
+        l.libvlc_audio_set_volume(p, if (AudioState.muted) 0 else volume)
         soundOn(p, "stream $title")
         val result = l.libvlc_media_player_play(p)
         Log.write("play stream $title result=$result")
@@ -242,7 +258,7 @@ class VlcEngine {
     fun length(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_length(it) } ?: 0 }
     fun seek(ms: Long) { val l = lib ?: return; player?.let { l.libvlc_media_player_set_time(it, ms.coerceAtLeast(0)) } }
     @Volatile
-    private var soundHealed = false
+    private var soundHealed = !heal
 
     @Volatile
     private var volumePercent = 100
@@ -251,13 +267,11 @@ class VlcEngine {
     fun setVolume(percent: Int) {
         val l = lib ?: return
         volumePercent = percent.coerceIn(0, 200)
-        muted = false
+        AudioState.set(false)
         player?.let { l.libvlc_audio_set_mute(it, 0); l.libvlc_audio_set_volume(it, volumePercent) }
     }
 
-    /** Compose state, so the volume symbol in the player follows the mute. */
-    var muted by androidx.compose.runtime.mutableStateOf(false)
-        private set
+    val muted: Boolean get() = AudioState.muted
 
     /** The mute sets the volume of libVLC to zero and back to what it was: the mute of libVLC itself did not always come back on Windows. */
     fun setMute(mute: Boolean) {
@@ -266,15 +280,25 @@ class VlcEngine {
             l.libvlc_audio_set_mute(it, 0)
             l.libvlc_audio_set_volume(it, if (mute) 0 else volumePercent)
         }
-        muted = mute
+        AudioState.set(mute)
     }
 
-    fun toggleMute() = setMute(!muted)
+    fun toggleMute() = setMute(!AudioState.muted)
+
+    /**
+     * The sound output of this player: the big picture uses the sound output of Windows, the small picture a dummy that throws the sound away. Only one
+     * player has a real output, so the volume and the mute of Windows are not shared by two players. Has to be set before the player starts.
+     */
+    private fun setOutput(p: Pointer, quiet: Boolean) {
+        val l = lib ?: return
+        for (name in if (quiet) listOf("adummy") else listOf("mmdevice", "directsound", "waveout")) {
+            if (l.libvlc_audio_output_set(p, name) == 0) return
+        }
+    }
 
     /** Every new picture starts with sound on, a mute from before does not stay for the next title. After a few seconds the audio tracks go into the log, so a missing sound can be traced. */
     private fun soundOn(p: Pointer, what: String) {
         val l = lib ?: return
-        muted = false
         l.libvlc_audio_set_mute(p, 0)
         Thread {
             runCatching {

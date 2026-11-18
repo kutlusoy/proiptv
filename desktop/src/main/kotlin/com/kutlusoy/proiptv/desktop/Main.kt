@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.Box
@@ -60,7 +61,34 @@ private fun runApplication() = application {
     val updater = remember { Updater() }
     val update = remember { UpdateState(updater, scope, store) }
     val screen = remember { java.awt.Toolkit.getDefaultToolkit().screenSize }
-    val windowState = rememberWindowState(size = DpSize(minOf(1280, (screen.width * 0.9).toInt()).dp, minOf(800, (screen.height * 0.88).toInt()).dp))
+    // the window comes back where it was and as big as it was (when that place is still on a screen)
+    val savedBounds = remember { state.store.config.windowBounds?.takeIf { onScreen(it.toRectangle()) } }
+    val windowState = rememberWindowState(
+        position = savedBounds?.let { androidx.compose.ui.window.WindowPosition(it.x.dp, it.y.dp) } ?: androidx.compose.ui.window.WindowPosition.PlatformDefault,
+        size = savedBounds?.let { DpSize(it.width.dp, it.height.dp) }
+            ?: DpSize(minOf(1280, (screen.width * 0.9).toInt()).dp, minOf(800, (screen.height * 0.88).toInt()).dp),
+    )
+    LaunchedEffect(Unit) {
+        if (savedBounds?.maximized == true) state.placement = WindowPlacement.Maximized
+    }
+    LaunchedEffect(Unit) {
+        // every move and resize is stored a moment after it stopped: the normal window and the small window have their own place
+        androidx.compose.runtime.snapshotFlow { listOf(windowState.position, windowState.size, windowState.placement, state.compact) }.collectLatest {
+            kotlinx.coroutines.delay(800)
+            val position = windowState.position as? androidx.compose.ui.window.WindowPosition.Absolute ?: return@collectLatest
+            val size = windowState.size
+            if (size.width.value < 100 || size.height.value < 60) return@collectLatest
+            val bounds = BoundsDto(position.x.value.toInt(), position.y.value.toInt(), size.width.value.toInt(), size.height.value.toInt())
+            if (!onScreen(bounds.toRectangle())) return@collectLatest
+            when {
+                state.compact -> if (windowState.placement == WindowPlacement.Floating) state.store.update { c -> if (c.compactBounds == bounds) c else c.copy(compactBounds = bounds) }
+                windowState.placement == WindowPlacement.Fullscreen -> Unit
+                windowState.placement == WindowPlacement.Maximized ->
+                    state.store.update { c -> c.copy(windowBounds = (c.windowBounds ?: bounds).copy(maximized = true)) }
+                else -> state.store.update { c -> if (c.windowBounds == bounds.copy()) c else c.copy(windowBounds = bounds) }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         state.reload()
@@ -92,6 +120,7 @@ private fun runApplication() = application {
             state.recordingManager.stopAll()
             state.hubs.closeAll()
             state.engine.release()
+            state.releasePip()
             Http.client.dispatcher.executorService.shutdown()
             exitApplication()
         },
@@ -125,7 +154,14 @@ private fun runApplication() = application {
         state.windowRef = window
         window.minimumSize = if (state.compact) java.awt.Dimension(240, 135) else java.awt.Dimension(640, 420)
         androidx.compose.runtime.LaunchedEffect(state.compact) {
-            state.pendingBounds?.let { window.bounds = it; state.pendingBounds = null }
+            state.pendingBounds?.let { b ->
+                state.pendingBounds = null
+                // the window state is set too, so it cannot put the window back to the place of the other mode
+                windowState.placement = state.placement
+                windowState.position = androidx.compose.ui.window.WindowPosition(b.x.dp, b.y.dp)
+                windowState.size = DpSize(b.width.dp, b.height.dp)
+                window.bounds = b
+            }
         }
         ProIptvTheme {
             Surface(Modifier.fillMaxSize()) {
