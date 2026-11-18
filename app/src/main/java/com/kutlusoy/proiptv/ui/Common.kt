@@ -190,6 +190,7 @@ fun <T> DropdownField(
     modifier: Modifier = Modifier,
     label: String? = null,
     top: Boolean = false,
+    counts: Map<T, Int> = emptyMap(),
 ) {
     val topFocus = LocalTopFocus.current
     var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -208,7 +209,16 @@ fun <T> DropdownField(
             }
             androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                 options.forEach { (value, name) ->
-                    androidx.compose.material3.DropdownMenuItem(text = { androidx.compose.material3.Text(name) }, onClick = { open = false; onSelect(value) })
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = {
+                            androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                androidx.compose.material3.Text(name, Modifier.weight(1f, fill = false), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                // how many titles the entry holds
+                                counts[value]?.let { androidx.compose.material3.Text(it.toString(), Modifier.padding(start = 16.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) }
+                            }
+                        },
+                        onClick = { open = false; onSelect(value) },
+                    )
                 }
             }
         }

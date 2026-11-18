@@ -270,6 +270,16 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
         }
     }
     val counts by vm.categoryCounts(ids, kind).collectAsState(initial = emptyList())
+    val listCounts by vm.listCounts(ids, kind).collectAsState(initial = emptyList())
+    val accountCounts by vm.accountCounts(enabled.map { it.id }, kind).collectAsState(initial = emptyList())
+    // the number behind every entry of the menu
+    fun countOf(key: String): Int? = when (key) {
+        FAV_KEY, CONT_KEY, HIST_KEY -> null
+        ALL_KEY -> counts.sumOf { it.n }
+        else -> if (key.startsWith(FAVL_PREFIX)) listCounts.firstOrNull { it.listId == key.removePrefix(FAVL_PREFIX).toLongOrNull() }?.n ?: 0
+        else if (effective != null) counts.firstOrNull { it.accountId == effective && it.categoryRemoteId == key }?.n
+        else counts.firstOrNull { "${it.accountId}|${it.categoryRemoteId}" == key }?.n
+    }
     val contentEntry = remember { androidx.compose.ui.focus.FocusRequester() }
     val selectedEntry = remember { androidx.compose.ui.focus.FocusRequester() }
     var newListDialog by remember { mutableStateOf(false) }
@@ -280,12 +290,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     Row(Modifier.fillMaxSize()) {
     if (tvLists) {
         val entries = options.map { (key, label) ->
-            val n = when (key) {
-                FAV_KEY, CONT_KEY, HIST_KEY -> null
-                ALL_KEY -> counts.sumOf { it.n }
-                else -> if (key.startsWith(FAVL_PREFIX)) null else if (effective != null) counts.firstOrNull { it.accountId == effective && it.categoryRemoteId == key }?.n
-                else counts.firstOrNull { "${it.accountId}|${it.categoryRemoteId}" == key }?.n
-            }
+            val n = countOf(key)
             TvVodEntry(key, label, n)
         }
         TvVodSidebar(entries, current, contentEntry, selectedEntry) { select(it) }
@@ -327,6 +332,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                 options = options,
                 onSelect = { select(it) },
                 modifier = Modifier.weight(1f),
+                counts = options.mapNotNull { (k, _) -> countOf(k)?.let { k to it } }.toMap(),
             )
             if (enabled.size > 1) {
                 DropdownField<Long?>(
@@ -334,6 +340,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                     options = listOf<Pair<Long?, String>>(null to stringResource(R.string.live_all_accounts)) + enabled.map { it.id to it.name },
                     onSelect = { accountSel = it },
                     modifier = Modifier.weight(0.7f),
+                    counts = accountCounts.associate { c -> (c.accountId as Long?) to c.n } + (null to accountCounts.sumOf { it.n }),
                 )
             }
             IconButton(onClick = { if (searching) { query = ""; searching = false } else searching = true }, modifier = Modifier.focusHighlight()) {

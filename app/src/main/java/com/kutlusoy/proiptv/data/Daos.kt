@@ -68,6 +68,10 @@ private const val GUIDE_WORDS =
 /** How many titles a category has, for the list column of the TV layout. */
 data class CategoryCount(val accountId: Long, val categoryRemoteId: String, val n: Int)
 
+/** How many titles an account has, and how many entries a favorites list has (only titles that still exist), for the numbers in the selection menus. */
+data class AccountCount(val accountId: Long, val n: Int)
+data class ListCount(val listId: Long, val n: Int)
+
 /** Quick filters of the channel list: bit 1 HD, bit 2 catch-up available, bit 4 only favorites. */
 private const val QUICK_FILTERS =
     " AND (:flags & 1 = 0 OR name LIKE '%HD%' OR name LIKE '%4K%') AND (:flags & 2 = 0 OR archiveDays > 0) " +
@@ -125,6 +129,9 @@ interface ItemDao {
 
     @Query("SELECT accountId, categoryRemoteId, COUNT(*) AS n FROM items WHERE kind = :kind AND accountId IN (:ids) GROUP BY accountId, categoryRemoteId")
     fun categoryCounts(ids: List<Long>, kind: Int): Flow<List<CategoryCount>>
+
+    @Query("SELECT accountId, COUNT(*) AS n FROM items WHERE kind = :kind AND accountId IN (:ids) GROUP BY accountId")
+    fun accountCounts(ids: List<Long>, kind: Int): Flow<List<AccountCount>>
 
     @Query("SELECT * FROM items WHERE kind = 0 AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) ORDER BY accountId, ord LIMIT 400")
     fun liveChannels(ids: List<Long>, cat: String?): Flow<List<Item>>
@@ -249,6 +256,12 @@ interface FavoriteDao {
 
     @Query("SELECT COUNT(*) > 0 FROM favorite_lists WHERE id = :id AND builtin = 1")
     suspend fun isBuiltin(id: Long): Boolean
+
+    @Query(
+        "SELECT f.listId AS listId, COUNT(*) AS n FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
+            "WHERE f.kind = :kind AND f.accountId IN (:ids) GROUP BY f.listId",
+    )
+    fun listCounts(ids: List<Long>, kind: Int): Flow<List<ListCount>>
 
     @Query("DELETE FROM favorites WHERE listId = :id")
     suspend fun deleteListEntries(id: Long)
