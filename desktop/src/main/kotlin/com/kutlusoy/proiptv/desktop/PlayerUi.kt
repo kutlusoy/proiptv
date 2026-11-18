@@ -468,6 +468,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     }
     // the small picture lies above the big one (not in the channel browser, which has its own small window)
     if (layoutMode == 1 || layoutMode == 2) PipWindow(state, controller, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 84.dp))
+    if (layoutMode == 0) PipWindow(state, controller, Modifier.align(Alignment.BottomEnd).padding(8.dp), width = 180.dp)
     controller.pipMessage?.let { msg ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { controller.pipMessage = null },
