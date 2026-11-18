@@ -440,6 +440,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     var compact by mutableStateOf(false)
     var pinned by mutableStateOf(true)
     private var normalBounds: java.awt.Rectangle? = null
+    private var beforeFullscreen = WindowPlacement.Floating
     var pendingBounds: java.awt.Rectangle? = null
 
     /** The small borderless window for watching next to other work: always on top (pin), movable, resizable. */
@@ -447,7 +448,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         if (on == compact) return
         if (on) {
             normalBounds = bounds
-            if (placement == WindowPlacement.Fullscreen) placement = WindowPlacement.Floating
+            if (placement == WindowPlacement.Fullscreen) placement = beforeFullscreen
             // the small window comes back where it was and as big as it was
             pendingBounds = store.config.compactBounds?.toRectangle()?.takeIf { onScreen(it) } ?: compactBounds(0.25, null)
         } else {
@@ -458,6 +459,13 @@ class AppState(val store: Store, val scope: CoroutineScope) {
 
     fun toggleFullscreen() {
         if (compact) { compact = false; pendingBounds = normalBounds }
-        placement = if (placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
+        // leaving full screen brings back what the window was before: maximized stays maximized
+        if (placement == WindowPlacement.Fullscreen) placement = beforeFullscreen
+        else {
+            // the maximize button of the title bar does not go through this state, so the window itself is asked
+            val maximized = ((windowRef as? java.awt.Frame)?.extendedState ?: 0) and java.awt.Frame.MAXIMIZED_BOTH == java.awt.Frame.MAXIMIZED_BOTH
+            beforeFullscreen = if (maximized || placement == WindowPlacement.Maximized) WindowPlacement.Maximized else WindowPlacement.Floating
+            placement = WindowPlacement.Fullscreen
+        }
     }
 }
