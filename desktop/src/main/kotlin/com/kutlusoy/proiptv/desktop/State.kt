@@ -27,8 +27,11 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     val pipEngine: VlcEngine get() = pipEngineLazy.value
     fun releasePip() { if (pipEngineLazy.isInitialized()) pipEngine.release() }
 
-    /** A second channel needs a second connection: that is possible with several accounts or when an account allows more than one connection. */
-    val pipAvailable: Boolean get() = accounts.count { it.enabled } > 1 || data.status.values.any { (it.info?.maxConnections ?: 1) > 1 }
+    /**
+     * A second channel needs a second connection: that is possible with several accounts, or with an account that allows more than one. An account
+     * that says nothing about its connections (a playlist) can be tried, the provider decides.
+     */
+    val pipAvailable: Boolean get() = accounts.count { it.enabled } > 1 || data.status.values.any { (it.info?.maxConnections ?: 2) > 1 }
 
     var tab by mutableStateOf(Tab.HOME)
 
