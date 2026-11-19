@@ -123,7 +123,7 @@ class Library(private val store: Store) {
             api.stream(streamAction).use { s ->
                 for (o in s.items) {
                     val id = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
-                    if (hide && (o.str("is_adult") == "1" || com.kutlusoy.proiptv.parse.AdultCategory.matches(categoryNames[o.str("category_id").orEmpty()]))) continue
+                    if (hide && (o.str("is_adult") == "1" || com.kutlusoy.proiptv.parse.AdultCategory.matches(categoryNames[o.str("category_id").orEmpty()]) || com.kutlusoy.proiptv.parse.AdultCategory.matches(o.str("name")))) continue
                     if (kind == Kind.LIVE && o.str("category_id").orEmpty() in hidden) continue
                     entries.getOrPut(kind) { mutableListOf() } += Entry(
                         a.id, kind, id, o.str("name").orEmpty().decodeEntities(), o.str("category_id").orEmpty(),
@@ -161,7 +161,7 @@ class Library(private val store: Store) {
                 val id = com.kutlusoy.proiptv.parse.StableId.of(e.url)
                 if (!seen.add("$kind|$id")) continue
                 if (kind == Kind.LIVE && e.group in hiddenGroups) continue
-                if (hideAdult && com.kutlusoy.proiptv.parse.AdultCategory.matches(e.group)) continue
+                if (hideAdult && (com.kutlusoy.proiptv.parse.AdultCategory.matches(e.group) || com.kutlusoy.proiptv.parse.AdultCategory.matches(e.name))) continue
                 entries.getOrPut(kind) { mutableListOf() } += Entry(a.id, kind, id, e.name, e.group, e.logo, "", e.url, null, e.tvgId?.lowercase())
             }
             for (g in groups) {

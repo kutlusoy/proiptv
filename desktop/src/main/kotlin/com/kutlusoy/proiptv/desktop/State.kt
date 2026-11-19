@@ -114,7 +114,12 @@ class AppState(val store: Store, val scope: CoroutineScope) {
             // only the channels of the same account are considered, a favorite never moves to another account
             val found = matchers["${f.account}|${f.kind}"]?.resolve(f.remoteId, f.name, f.epgId)
             val entry = found?.let { entriesOf["${f.account}|${f.kind}|${it.remoteId}"] }
-            if (entry == null) { favoritesChanged = true; continue }
+            if (entry == null) {
+                // channels of switched off categories are not in the lists, their favorites stay for the day the category is switched on again
+                if (found == null && f.kind == Kind.LIVE && accounts.firstOrNull { it.id == f.account }?.hiddenLive?.isNotEmpty() == true) { kept += f; continue }
+                favoritesChanged = true
+                continue
+            }
             val updated = f.copy(remoteId = entry.remoteId, name = entry.name, epgId = entry.epgId ?: f.epgId)
             if (updated != f) favoritesChanged = true
             if (kept.none { it.listId == updated.listId && it.account == updated.account && it.kind == updated.kind && it.remoteId == updated.remoteId }) kept += updated

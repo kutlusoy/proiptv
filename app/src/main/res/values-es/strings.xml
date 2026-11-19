@@ -296,7 +296,7 @@
     <string name="player_restore">Ventana normal</string>
     <string name="settings_group_content">Contenido</string>
     <string name="settings_hide_adult">Ocultar canales para adultos</string>
-    <string name="settings_hide_adult_hint">Oculta los títulos que el proveedor Xtream marca como para adultos. Las listas se recargan al cambiarlo. Las categorías cuyo nombre empieza por XXX también cuentan como contenido para adultos.</string>
+    <string name="settings_hide_adult_hint">Oculta los títulos que el proveedor Xtream marca como para adultos. Las listas se recargan al cambiarlo. Las categorías y los canales cuyo nombre empieza por XXX también cuentan como contenido para adultos.</string>
     <string name="update_download">Descargar actualización</string>
     <string name="update_ready">La actualización %1$s está descargada y comprobada. ¿Instalarla ahora?</string>
     <string name="update_install_now">Instalar ahora</string>

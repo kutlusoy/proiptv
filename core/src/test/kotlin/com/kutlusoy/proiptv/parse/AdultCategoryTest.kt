@@ -11,6 +11,7 @@ class AdultCategoryTest {
         assertTrue(AdultCategory.matches("xxx | Movies"))
         assertTrue(AdultCategory.matches("[XXX] Live"))
         assertTrue(AdultCategory.matches("  XXX - DE"))
+        assertTrue(AdultCategory.matches("XXX: Some Channel HD"))
     }
 
     @Test

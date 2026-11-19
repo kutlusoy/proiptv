@@ -296,7 +296,7 @@
     <string name="player_restore">Normal pencere</string>
     <string name="settings_group_content">İçerik</string>
     <string name="settings_hide_adult">Yetişkin kanallarını gizle</string>
-    <string name="settings_hide_adult_hint">Xtream sağlayıcısının yetişkin olarak işaretlediği başlıkları gizler. Değiştirildiğinde listeler yeniden yüklenir. Adı XXX ile başlayan kategoriler de yetişkin içeriği sayılır.</string>
+    <string name="settings_hide_adult_hint">Xtream sağlayıcısının yetişkin olarak işaretlediği başlıkları gizler. Değiştirildiğinde listeler yeniden yüklenir. Adı XXX ile başlayan kategoriler ve kanallar da yetişkin içeriği sayılır.</string>
     <string name="update_download">Güncellemeyi indir</string>
     <string name="update_ready">%1$s güncellemesi indirildi ve doğrulandı. Şimdi kurulsun mu?</string>
     <string name="update_install_now">Şimdi kur</string>

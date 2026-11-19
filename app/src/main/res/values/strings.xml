@@ -297,7 +297,7 @@
     <string name="player_restore">Normal window</string>
     <string name="settings_group_content">Content</string>
     <string name="settings_hide_adult">Hide adult channels</string>
-    <string name="settings_hide_adult_hint">Hides titles that the Xtream provider marks as adult. The lists are reloaded when this is changed. Categories whose name starts with XXX count as adult too.</string>
+    <string name="settings_hide_adult_hint">Hides titles that the Xtream provider marks as adult. The lists are reloaded when this is changed. Categories and channels whose name starts with XXX count as adult too.</string>
     <string name="update_download">Download update</string>
     <string name="update_ready">Update %1$s is downloaded and checked. Install it now?</string>
     <string name="update_install_now">Install now</string>

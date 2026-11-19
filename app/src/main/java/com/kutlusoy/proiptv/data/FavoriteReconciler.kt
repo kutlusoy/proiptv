@@ -20,12 +20,15 @@ class FavoriteReconciler(private val db: AppDatabase) {
 
     suspend fun run(accountId: Long, before: Map<String, FavoriteSnapshot> = emptyMap()) {
         val favorites = db.favorites().ofAccount(accountId)
+        // channels of switched off categories are not in the lists, their favorites stay for the day the category is switched on again
+        val hasHidden = db.items().hiddenIds(accountId, Kind.LIVE).isNotEmpty()
         for (kind in favorites.map { it.kind }.distinct()) {
             if (db.items().countOf(accountId, kind) == 0) continue
             val match = FavoriteMatch(db.items().ofKind(accountId, kind).map { MatchCandidate(it.remoteId, it.name, it.epgId) })
             for (f in favorites.filter { it.kind == kind }) {
                 val old = before["$kind|${f.remoteId}"]
                 val found = match.resolve(f.remoteId, f.name, old?.epgId)
+                if (found == null && kind == Kind.LIVE && hasHidden) continue
                 if (found?.remoteId == f.remoteId) {
                     // the channel was renamed: the favorite takes the new name
                     if (found.name != f.name) db.favorites().add(f.copy(name = found.name))

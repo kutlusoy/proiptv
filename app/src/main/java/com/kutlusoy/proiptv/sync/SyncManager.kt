@@ -215,7 +215,7 @@ class SyncManager(
             for (o in s.items) {
                 val remote = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
                 val name = o.str("name").orEmpty().decodeEntities()
-                if (hide && (o.str("is_adult") == "1" || com.kutlusoy.proiptv.parse.AdultCategory.matches(groupNames[o.str("category_id").orEmpty()]))) continue
+                if (hide && (o.str("is_adult") == "1" || com.kutlusoy.proiptv.parse.AdultCategory.matches(groupNames[o.str("category_id").orEmpty()]) || com.kutlusoy.proiptv.parse.AdultCategory.matches(name))) continue
                 if (o.str("category_id").orEmpty() in hiddenCategories) continue
                 val info = TitleParser.parse(name, groupNames[o.str("category_id").orEmpty()].orEmpty())
                 batch += Item(
@@ -256,7 +256,7 @@ class SyncManager(
             for (e in M3uParser.parse(reader) { epgFromHeader = it.epgUrl }) {
                 val kind = detectKind(e.url)
                 if (kind == Kind.LIVE && e.group in hiddenGroups) continue
-                if (hideAdultNow && com.kutlusoy.proiptv.parse.AdultCategory.matches(e.group)) continue
+                if (hideAdultNow && (com.kutlusoy.proiptv.parse.AdultCategory.matches(e.group) || com.kutlusoy.proiptv.parse.AdultCategory.matches(e.name))) continue
                 val map = groups.getValue(kind)
                 map.getOrPut(e.group) { map.size }
                 val ord = if (kind == Kind.LIVE) counters[0]++ else counters[1]++
