@@ -110,6 +110,7 @@
     <string name="cast_playing">Lecture sur %1$s</string>
     <string name="cast_stop">Arrêter et lire ici</string>
     <string name="cast_failed">Le téléviseur n\'a pas pu lire ce flux.</string>
+    <string name="filter_genre_all">Tous les genres</string>
     <string name="player_columns">Catégories et chaînes côte à côte</string>
     <string name="player_filter_categories">Chercher dans %1$d catégories</string>
     <string name="player_filter_channels">Chercher dans %1$d chaînes</string>

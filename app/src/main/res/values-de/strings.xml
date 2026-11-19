@@ -110,6 +110,7 @@
     <string name="cast_playing">Läuft auf %1$s</string>
     <string name="cast_stop">Beenden und hier abspielen</string>
     <string name="cast_failed">Der Fernseher konnte diesen Stream nicht abspielen.</string>
+    <string name="filter_genre_all">Alle Genres</string>
     <string name="player_columns">Kategorien und Sender nebeneinander</string>
     <string name="player_filter_categories">In %1$d Kategorien suchen</string>
     <string name="player_filter_channels">In %1$d Sendern suchen</string>

@@ -53,6 +53,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -85,6 +87,8 @@ fun BrowseScreen(state: AppState, kind: Int) {
     androidx.compose.runtime.LaunchedEffect(query) { state.browseQuery[kind] = query }
     var favOnly by remember(kind) { mutableStateOf(false) }
     var historyOnly by remember(kind) { mutableStateOf(false) }
+    // movies and series: one genre of the titles can be chosen (the genre text of the provider, split into its names)
+    var genre by remember(kind) { mutableStateOf<String?>(null) }
     var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
     androidx.compose.runtime.LaunchedEffect(accountFilter) {
         // the chosen account is kept, so the list is the same after the player was closed
@@ -94,7 +98,9 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val categories = data.categories(kind).filter { activeAccount == null || it.accountId == activeAccount }
     val all = data.entries(kind).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
     val q = query.trim()
-    val scrollKey = "$kind|$activeAccount|$category|$q"
+    val genres = remember(all, kind) { if (kind == Kind.LIVE) emptyList() else com.kutlusoy.proiptv.parse.Genres.count(all.asSequence().map { it.genre }) }
+    if (genre != null && genres.none { it.first.equals(genre, ignoreCase = true) }) genre = null
+    val scrollKey = "$kind|$activeAccount|$category|$q|$genre"
     val listState = remember(scrollKey) { state.scrollMemory["$scrollKey|l"].let { m -> androidx.compose.foundation.lazy.LazyListState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
     val gridState = remember(scrollKey) { state.scrollMemory["$scrollKey|g"].let { m -> androidx.compose.foundation.lazy.grid.LazyGridState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
     androidx.compose.runtime.LaunchedEffect(scrollKey) {
@@ -103,9 +109,10 @@ fun BrowseScreen(state: AppState, kind: Int) {
     androidx.compose.runtime.LaunchedEffect(scrollKey) {
         androidx.compose.runtime.snapshotFlow { intArrayOf(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset) }.collect { state.scrollMemory["$scrollKey|g"] = it }
     }
-    val shown = remember(all, category, q, favOnly, state.favorites, state.guide, state.tick / 60) {
+    val shown = remember(all, category, q, favOnly, genre, state.favorites, state.guide, state.tick / 60) {
         all.asSequence()
             .filter { e -> !favOnly || state.isFavorite(e) }
+            .filter { e -> genre == null || com.kutlusoy.proiptv.parse.Genres.has(e.genre, genre!!) }
             .filter { e ->
                 when {
                     category == ALL_KEY -> true
@@ -163,6 +170,30 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 placeholder = { Text(t(if (kind == Kind.LIVE) "live_search" else "live_search")) },
                 trailingIcon = { if (query.isNotEmpty()) Tip(t("action_close")) { IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } } },
             )
+            if (genres.isNotEmpty()) {
+                var genreMenu by remember { mutableStateOf(false) }
+                Box {
+                    Tip(genre ?: t("filter_genre_all")) {
+                        IconButton(onClick = { genreMenu = true }) {
+                            Icon(Icons.Filled.FilterList, t("detail_genre"), tint = if (genre != null) Palette.WineSoft else LocalContentColor.current)
+                        }
+                    }
+                    androidx.compose.material3.DropdownMenu(expanded = genreMenu, onDismissRequest = { genreMenu = false }) {
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(t("filter_genre_all"), fontWeight = if (genre == null) FontWeight.Bold else FontWeight.Normal) }, onClick = { genre = null; genreMenu = false })
+                        genres.forEach { (name, n) ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(name, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = if (name.equals(genre, true)) FontWeight.Bold else FontWeight.Normal)
+                                        Text(n.toString(), Modifier.padding(start = 24.dp), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.55f))
+                                    }
+                                },
+                                onClick = { genre = name; genreMenu = false },
+                            )
+                        }
+                    }
+                }
+            }
             Tip(t("settings_refresh")) { IconButton(onClick = { state.reload() }, enabled = !state.loading && !state.guideLoading) { Icon(Icons.Filled.Refresh, t("settings_refresh")) } }
         }
         if (kind == Kind.LIVE && !inFavorites) {
@@ -483,8 +514,9 @@ private fun SeriesDetail(state: AppState, e: Entry) {
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { play(ep, p?.positionMs?.takeIf { it > 5_000 } ?: 0) }.padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box {
-                        Logo(ep.image ?: e.logo, Modifier.size(width = 140.dp, height = 80.dp), ContentScale.Crop)
+                    // the box has the size of the picture: a bar that fills its width must not stretch the box over the whole row (the title and the buttons would be pushed out)
+                    Box(Modifier.size(width = 140.dp, height = 80.dp)) {
+                        Logo(ep.image ?: e.logo, Modifier.fillMaxSize(), ContentScale.Crop)
                         if (p != null && p.positionMs > 0 && p.durationMs > 0) {
                             androidx.compose.material3.LinearProgressIndicator(
                                 progress = { (p.positionMs.toFloat() / p.durationMs).coerceIn(0f, 1f) },

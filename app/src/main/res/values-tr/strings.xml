@@ -106,6 +106,7 @@
     <string name="cast_playing">%1$s üzerinde oynatılıyor</string>
     <string name="cast_stop">Durdur ve burada oynat</string>
     <string name="cast_failed">Televizyon bu yayını oynatamadı.</string>
+    <string name="filter_genre_all">Tüm türler</string>
     <string name="player_columns">Kategoriler ve kanallar yan yana</string>
     <string name="player_filter_categories">%1$d kategoride ara</string>
     <string name="player_filter_channels">%1$d kanalda ara</string>

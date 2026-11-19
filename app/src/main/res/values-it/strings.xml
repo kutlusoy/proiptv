@@ -110,6 +110,7 @@
     <string name="cast_playing">In riproduzione su %1$s</string>
     <string name="cast_stop">Interrompi e riproduci qui</string>
     <string name="cast_failed">Il televisore non ha potuto riprodurre questo flusso.</string>
+    <string name="filter_genre_all">Tutti i generi</string>
     <string name="player_columns">Categorie e canali affiancati</string>
     <string name="player_filter_categories">Cerca in %1$d categorie</string>
     <string name="player_filter_channels">Cerca in %1$d canali</string>
