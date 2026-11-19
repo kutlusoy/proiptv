@@ -62,7 +62,7 @@ class DownloadsTest {
         val store = DownloadStore(tempDir())
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         try {
-            val manager = DownloadManager(store, scope, OkHttpClient(), dir) { server.url("/f").toString() to null }
+            val manager = DownloadManager(store, scope, OkHttpClient(), { dir }) { server.url("/f").toString() to null }
             manager.enqueue(listOf(movie()))
             waitFor { store.get(1)?.status == DlStatus.DONE }
             assertEquals(DlStatus.DONE, store.get(1)?.status)
@@ -95,7 +95,7 @@ class DownloadsTest {
         val store = DownloadStore(tempDir())
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         try {
-            val manager = DownloadManager(store, scope, OkHttpClient(), tempDir()) { server.url("/f").toString() to null }
+            val manager = DownloadManager(store, scope, OkHttpClient(), tempDir().let { d -> { d } }) { server.url("/f").toString() to null }
             manager.enqueue(listOf(movie()))
             waitFor { (store.get(1)?.bytes ?: 0) > 0 }
             manager.pause(1)
@@ -118,7 +118,7 @@ class DownloadsTest {
         val store = DownloadStore(tempDir())
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         try {
-            val manager = DownloadManager(store, scope, OkHttpClient(), tempDir()) { null }
+            val manager = DownloadManager(store, scope, OkHttpClient(), tempDir().let { d -> { d } }) { null }
             manager.enqueue(listOf(movie()))
             waitFor { store.get(1)?.status == DlStatus.FAILED }
             assertEquals(DownloadManager.ERR_SOURCE, store.get(1)?.error)
