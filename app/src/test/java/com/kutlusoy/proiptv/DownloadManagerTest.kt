@@ -65,7 +65,7 @@ class DownloadManagerTest {
             }
         }
         server.start()
-        manager = DownloadManager(null, db, scope, OkHttpClient(), dir) { server.url("/movie.mp4").toString() to null }
+        manager = DownloadManager(null, db, scope, OkHttpClient(), { dir }) { server.url("/movie.mp4").toString() to null }
     }
 
     @After

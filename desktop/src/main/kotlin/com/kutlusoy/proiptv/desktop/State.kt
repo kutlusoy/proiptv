@@ -356,10 +356,11 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         },
     )
     val recordingStore = RecordingStore(store.dir)
-    val recordingManager = RecordingManager(recordingStore, hubs, scope, DownloadManager.mediaDir("Recordings"))
+    val recordingManager = RecordingManager(recordingStore, hubs, scope, { DownloadManager.mediaDir("Recordings") })
 
     val downloads = DownloadStore(store.dir)
-    val downloadManager = DownloadManager(downloads, scope, com.kutlusoy.proiptv.net.Http.client, DownloadManager.mediaDir("Downloads"), ::downloadSource)
+    init { DownloadManager.chosenRoot = { store.config.storageDir?.let { java.io.File(it) }?.takeIf { it.isDirectory } } }
+    val downloadManager = DownloadManager(downloads, scope, com.kutlusoy.proiptv.net.Http.client, { DownloadManager.mediaDir("Downloads") }, ::downloadSource)
 
     init {
         downloadManager.resume()

@@ -114,6 +114,7 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     modifier = Modifier.clickable { runCatching { java.awt.Desktop.getDesktop().mail(java.net.URI("mailto:kutlusoy.dev@gmail.com")) } },
                 )
             }
+            Group(t("settings_storage")) { StorageGroup(state) }
             Group(t("settings_backup")) { BackupGroup(state) }
             UpdateGroup(state, updater, update)
             Group(t("settings_tmdb")) {
@@ -267,12 +268,42 @@ private fun errorText(e: UpdateUi.Error): String = when (e.code) {
     UpdateException.Code.INSTALL_FAILED -> Strings.get("update_err_install", e.detail.orEmpty())
 }
 
-private fun chooseFile(title: String, save: Boolean, name: String = ""): java.io.File? {
+private fun chooseFile(title: String, save: Boolean, name: String = "", startIn: java.io.File? = null): java.io.File? {
     val dialog = java.awt.FileDialog(null as java.awt.Frame?, title, if (save) java.awt.FileDialog.SAVE else java.awt.FileDialog.LOAD)
+    startIn?.takeIf { it.isDirectory }?.let { dialog.directory = it.absolutePath }
     if (save) dialog.file = name
     dialog.isVisible = true
     val file = dialog.file ?: return null
     return java.io.File(dialog.directory, file)
+}
+
+/** The folder for backups inside the chosen storage place (the dialogs open there); null at the standard place. */
+private fun backupFolder(state: AppState): java.io.File? =
+    state.store.config.storageDir?.let { java.io.File(it, "Backups") }?.also { runCatching { it.mkdirs() } }
+
+/** Where downloads, recordings and backups are kept: the standard place until a folder (also on an external drive) is chosen. */
+@Composable
+private fun StorageGroup(state: AppState) {
+    var chosen by remember { mutableStateOf(state.store.config.storageDir) }
+    val available = chosen?.let { java.io.File(it).isDirectory } ?: true
+    val shown = chosen ?: DownloadManager.mediaDir("").parentFile?.absolutePath.orEmpty()
+    Text(shown, style = MaterialTheme.typography.bodyMedium)
+    if (chosen == null) Hint(t("storage_default")) else if (!available) Text(t("storage_missing"), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = {
+            val chooser = javax.swing.JFileChooser(chosen?.let { java.io.File(it) }).apply {
+                fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
+                dialogTitle = Strings.get("storage_choose")
+            }
+            if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
+                val dir = chooser.selectedFile
+                chosen = dir.absolutePath
+                state.store.update { c -> c.copy(storageDir = dir.absolutePath) }
+            }
+        }) { Text(t("storage_choose")) }
+        OutlinedButton(onClick = { chosen = null; state.store.update { c -> c.copy(storageDir = null) } }, enabled = chosen != null) { Text(t("storage_reset")) }
+    }
+    Hint(t("storage_hint"))
 }
 
 /** Backup of accounts, favorites and settings, the same file format as in the Android app. */
@@ -302,7 +333,7 @@ private fun BackupGroup(state: AppState) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = { exportDialog = true }) { Text(t("backup_create")) }
         OutlinedButton(onClick = {
-            val file = chooseFile(Strings.get("backup_restore"), save = false) ?: return@OutlinedButton
+            val file = chooseFile(Strings.get("backup_restore"), save = false, startIn = backupFolder(state)) ?: return@OutlinedButton
             val text = runCatching { file.readText(Charsets.UTF_8) }.getOrNull()
             if (text == null) message = Strings.get("backup_invalid")
             else try {
@@ -329,7 +360,7 @@ private fun BackupGroup(state: AppState) {
                 androidx.compose.material3.TextButton(onClick = {
                     exportDialog = false
                     val name = "proiptv-backup-" + java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date()) + ".json"
-                    val file = chooseFile(Strings.get("backup_create"), save = true, name = name)
+                    val file = chooseFile(Strings.get("backup_create"), save = true, name = name, startIn = backupFolder(state))
                     if (file != null) {
                         message = runCatching { file.writeText(state.createBackup(exportPassword.ifEmpty { null }), Charsets.UTF_8) }
                             .fold({ Strings.get("backup_done") }, { it.message ?: "error" })

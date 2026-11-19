@@ -153,6 +153,8 @@ fun SettingsScreen(vm: MainViewModel) {
                     Hint(stringResource(R.string.settings_guide_info))
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Labeled(stringResource(R.string.settings_storage)) { StorageSettings() }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Labeled(stringResource(R.string.settings_backup)) { BackupSettings() }
             }
 

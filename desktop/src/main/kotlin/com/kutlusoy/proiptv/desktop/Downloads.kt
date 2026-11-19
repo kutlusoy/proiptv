@@ -105,9 +105,12 @@ class DownloadManager(
     private val store: DownloadStore,
     private val scope: CoroutineScope,
     private val client: OkHttpClient,
-    private val dir: File,
+    private val dirOf: () -> File,
     private val resolve: (DownloadDto) -> Pair<String, String?>?,
 ) {
+    /** The folder can be changed in the settings, so it is asked every time. */
+    private val dir: File get() = dirOf()
+
     private var worker: Job? = null
     private var running: Job? = null
     private var currentId = -1L
@@ -281,8 +284,13 @@ class DownloadManager(
         private const val MIN_FREE = 100L * 1024 * 1024
         private const val REPORT_MS = 1000L
 
-        /** The folder for downloads and recordings: the Videos folder of the user. */
+        /** The folder the user chose in the settings (null: the standard place). Set when the program starts and when the setting changes. */
+        @Volatile
+        var chosenRoot: () -> File? = { null }
+
+        /** The folder for downloads and recordings: the one from the settings, else the Videos folder of the user. */
         fun mediaDir(sub: String): File {
+            chosenRoot()?.let { return File(it, sub) }
             val home = System.getProperty("user.home")
             val videos = File(home, "Videos")
             return File(if (videos.isDirectory) videos else File(home), "ProIPTV/$sub")

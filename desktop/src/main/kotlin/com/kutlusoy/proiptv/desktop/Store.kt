@@ -72,6 +72,8 @@ data class ConfigDto(
     val history: List<String> = emptyList(),
     val hideAdult: Boolean = true,
     val autoplayNext: Boolean = true,
+    /** The folder for downloads, recordings and backups; null: the standard place. */
+    val storageDir: String? = null,
     val reminders: List<ReminderDto> = emptyList(),
     val playerSearchAll: Boolean = false,
     val playerColumns: Boolean = false,

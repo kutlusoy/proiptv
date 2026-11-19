@@ -31,6 +31,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("autoplay_next", true)
         set(value) = sp.edit().putBoolean("autoplay_next", value).apply()
 
+    /** The folder of the app on the volume that was chosen for downloads, recordings and backups; null: the standard places. */
+    var storageRoot: String?
+        get() = sp.getString("storage_root", null)
+        set(value) = sp.edit().apply { if (value == null) remove("storage_root") else putString("storage_root", value) }.apply()
+
     var tmdbKey: String
         get() = sp.getString("tmdb_key", "") ?: ""
         set(value) = sp.edit().putString("tmdb_key", value.trim()).apply()
