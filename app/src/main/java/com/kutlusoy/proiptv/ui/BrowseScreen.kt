@@ -145,7 +145,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     var query by rememberSaveable(kind) { mutableStateOf("") }
     // quick filters of the channel list (bit 1 HD, 2 catch-up, 4 favorites), not combined with the favorites view
     var quick by rememberSaveable(kind) { mutableIntStateOf(0) }
-    // movies and series: one genre of the titles can be chosen
+    // series: one genre of the titles can be chosen
     var genre by rememberSaveable(kind) { mutableStateOf<String?>(null) }
     var favMode by rememberSaveable(kind) { mutableStateOf(prefs.browseFav(kind)) }
     var contMode by rememberSaveable(kind) { mutableStateOf(false) }
@@ -277,7 +277,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val listCounts by vm.listCounts(ids, kind).collectAsState(initial = emptyList())
     val accountCounts by vm.accountCounts(enabled.map { it.id }, kind).collectAsState(initial = emptyList())
     val genreRows by vm.genreCounts(ids, kind).collectAsState(initial = emptyList())
-    val genres = remember(genreRows, kind) { if (kind == Kind.LIVE) emptyList() else com.kutlusoy.proiptv.parse.Genres.countStored(genreRows.map { it.genre to it.n }) }
+    val genres = remember(genreRows, kind) { if (kind != Kind.SERIES) emptyList() else com.kutlusoy.proiptv.parse.Genres.countStored(genreRows.map { it.genre to it.n }) }
     LaunchedEffect(genres) { if (genre != null && genres.isNotEmpty() && genres.none { it.first.equals(genre, ignoreCase = true) }) genre = null }
     // the number behind every entry of the menu
     fun countOf(key: String): Int? = when (key) {

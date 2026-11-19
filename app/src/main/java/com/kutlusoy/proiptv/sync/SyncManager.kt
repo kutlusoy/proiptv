@@ -226,7 +226,7 @@ class SyncManager(
                     archiveDays = if (o.int("tv_archive") == 1) o.int("tv_archive_duration") ?: 0 else 0,
                     rating = o.str("rating")?.takeIf { it.isNotBlank() },
                     plot = o.str("plot")?.takeIf { it.isNotBlank() }?.decodeEntities(),
-                    genre = if (kind == Kind.LIVE) "" else com.kutlusoy.proiptv.parse.Genres.encode(o.str("genre")?.decodeEntities()),
+                    genre = if (kind != Kind.SERIES) "" else com.kutlusoy.proiptv.parse.Genres.encode(o.str("genre")?.decodeEntities()),
                     ord = ord++, gen = gen,
                 )
                 if (batch.size >= BATCH) {

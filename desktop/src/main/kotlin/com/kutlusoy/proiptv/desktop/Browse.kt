@@ -87,7 +87,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
     androidx.compose.runtime.LaunchedEffect(query) { state.browseQuery[kind] = query }
     var favOnly by remember(kind) { mutableStateOf(false) }
     var historyOnly by remember(kind) { mutableStateOf(false) }
-    // movies and series: one genre of the titles can be chosen (the genre text of the provider, split into its names)
+    // series: one genre of the titles can be chosen (the genre text of the provider, split into its names)
     var genre by remember(kind) { mutableStateOf<String?>(null) }
     var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
     androidx.compose.runtime.LaunchedEffect(accountFilter) {
@@ -98,7 +98,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val categories = data.categories(kind).filter { activeAccount == null || it.accountId == activeAccount }
     val all = data.entries(kind).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
     val q = query.trim()
-    val genres = remember(all, kind) { if (kind == Kind.LIVE) emptyList() else com.kutlusoy.proiptv.parse.Genres.count(all.asSequence().map { it.genre }) }
+    val genres = remember(all, kind) { if (kind != Kind.SERIES) emptyList() else com.kutlusoy.proiptv.parse.Genres.count(all.asSequence().map { it.genre }) }
     if (genre != null && genres.none { it.first.equals(genre, ignoreCase = true) }) genre = null
     val scrollKey = "$kind|$activeAccount|$category|$q|$genre"
     val listState = remember(scrollKey) { state.scrollMemory["$scrollKey|l"].let { m -> androidx.compose.foundation.lazy.LazyListState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }

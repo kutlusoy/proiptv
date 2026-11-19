@@ -123,7 +123,7 @@ class Library(private val store: Store) {
                         o.str("container_extension")?.takeIf { it.isNotBlank() } ?: "mp4", null,
                         o.str("rating")?.takeIf { it.isNotBlank() },
                         o.str("epg_channel_id")?.takeIf { it.isNotBlank() }?.lowercase(),
-                        if (kind == Kind.LIVE) null else o.str("genre")?.decodeEntities()?.trim()?.takeIf { it.isNotEmpty() && it != "null" },
+                        if (kind != Kind.SERIES) null else o.str("genre")?.decodeEntities()?.trim()?.takeIf { it.isNotEmpty() && it != "null" },
                     )
                 }
             }
