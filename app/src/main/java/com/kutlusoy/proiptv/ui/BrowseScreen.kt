@@ -38,6 +38,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -104,7 +106,7 @@ import kotlinx.coroutines.delay
 private val ItemSaver = Saver<Item?, Any>(
     save = { item ->
         item?.let { i ->
-            arrayListOf<Any?>(i.id, i.accountId, i.kind, i.remoteId, i.name, i.categoryRemoteId, i.logo, i.epgId, i.url, i.ext, i.archiveDays, i.catchupSource, i.rating, i.plot, i.ord, i.gen, i.country, i.year)
+            arrayListOf<Any?>(i.id, i.accountId, i.kind, i.remoteId, i.name, i.categoryRemoteId, i.logo, i.epgId, i.url, i.ext, i.archiveDays, i.catchupSource, i.rating, i.plot, i.ord, i.gen, i.country, i.year, i.genre)
         } ?: arrayListOf<Any?>()
     },
     restore = { raw ->
@@ -114,7 +116,7 @@ private val ItemSaver = Saver<Item?, Any>(
                 id = v[0] as Long, accountId = v[1] as Long, kind = v[2] as Int, remoteId = v[3] as String, name = v[4] as String,
                 categoryRemoteId = v[5] as String, logo = v[6] as String?, epgId = v[7] as String?, url = v[8] as String?, ext = v[9] as String?,
                 archiveDays = v[10] as Int, catchupSource = v[11] as String?, rating = v[12] as String?, plot = v[13] as String?,
-                ord = v[14] as Int, gen = v[15] as Int, country = v[16] as String, year = v[17] as Int,
+                ord = v[14] as Int, gen = v[15] as Int, country = v[16] as String, year = v[17] as Int, genre = (v.getOrNull(18) as String?).orEmpty(),
         )
     },
 )
@@ -143,6 +145,8 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     var query by rememberSaveable(kind) { mutableStateOf("") }
     // quick filters of the channel list (bit 1 HD, 2 catch-up, 4 favorites), not combined with the favorites view
     var quick by rememberSaveable(kind) { mutableIntStateOf(0) }
+    // series: one genre of the titles can be chosen
+    var genre by rememberSaveable(kind) { mutableStateOf<String?>(null) }
     var favMode by rememberSaveable(kind) { mutableStateOf(prefs.browseFav(kind)) }
     var contMode by rememberSaveable(kind) { mutableStateOf(false) }
     val tvNow = LocalTv.current
@@ -272,6 +276,9 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     val counts by vm.categoryCounts(ids, kind).collectAsState(initial = emptyList())
     val listCounts by vm.listCounts(ids, kind).collectAsState(initial = emptyList())
     val accountCounts by vm.accountCounts(enabled.map { it.id }, kind).collectAsState(initial = emptyList())
+    val genreRows by vm.genreCounts(ids, kind).collectAsState(initial = emptyList())
+    val genres = remember(genreRows, kind) { if (kind != Kind.SERIES) emptyList() else com.kutlusoy.proiptv.parse.Genres.countStored(genreRows.map { it.genre to it.n }) }
+    LaunchedEffect(genres) { if (genre != null && genres.isNotEmpty() && genres.none { it.first.equals(genre, ignoreCase = true) }) genre = null }
     // the number behind every entry of the menu
     fun countOf(key: String): Int? = when (key) {
         FAV_KEY, CONT_KEY, HIST_KEY -> null
@@ -307,6 +314,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                 sort = quick and 24, onSort = { bit -> quick = if (quick and bit != 0) quick and bit.inv() else (quick and 24.inv()) or bit },
                 searching = searching, onSearch = { if (searching) { query = ""; searching = false } else searching = true },
                 menu = {
+                    GenreButton(genres, genre) { genre = it }
                     var open by remember { mutableStateOf(false) }
                     Box {
                         IconButton(onClick = { open = true }, modifier = Modifier.focusHighlight()) { Icon(Icons.Filled.MoreVert, stringResource(R.string.action_more)) }
@@ -343,6 +351,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                     counts = accountCounts.associate { c -> (c.accountId as Long?) to c.n } + (null to accountCounts.sumOf { it.n }),
                 )
             }
+            GenreButton(genres, genre) { genre = it }
             IconButton(onClick = { if (searching) { query = ""; searching = false } else searching = true }, modifier = Modifier.focusHighlight()) {
                 Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, stringResource(if (searching) R.string.action_close else R.string.live_search))
             }
@@ -370,7 +379,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             }
         }
 
-        val useRows = kind != Kind.LIVE && !favMode && !contMode && category == null && query.isBlank() && effective != null && categories.isNotEmpty()
+        val useRows = kind != Kind.LIVE && !favMode && !contMode && category == null && query.isBlank() && genre == null && effective != null && categories.isNotEmpty()
         Box(Modifier.fillMaxSize().focusRequester(contentEntry).focusGroup()) {
         androidx.compose.runtime.CompositionLocalProvider(LocalRestoreId provides restoreId) {
         if (showHist) {
@@ -387,7 +396,7 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
             }
         } else {
             val cat = if (effective != null && !tvSearch) category else null
-            val flow = remember(kind, ids, cat, query, quick) { vm.pager(kind, ids, cat, query, quick) }
+            val flow = remember(kind, ids, cat, query, quick, genre) { vm.pager(kind, ids, cat, query, quick, genre) }
             val paged = flow.collectAsLazyPagingItems()
             val source = Source.Browse(kind, ids, cat, query, flags = quick)
             if (paged.itemCount == 0) {
@@ -766,4 +775,44 @@ internal fun ListsDialog(vm: MainViewModel, item: Item, onDismiss: () -> Unit) {
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.fav_done)) } },
     )
+}
+
+/** The filter symbol: a menu with the genres of the titles (with their number), the symbol is colored while a genre is on. Not shown without genres. */
+@Composable
+private fun GenreButton(genres: List<Pair<String, Int>>, genre: String?, onSelect: (String?) -> Unit) {
+    if (genres.isEmpty()) return
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }, modifier = Modifier.focusHighlight()) {
+            val color = if (genre != null) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current
+            val description = stringResource(R.string.detail_genre)
+            // the filter symbol: three bars that get shorter (the icon set of the app has no filter symbol)
+            androidx.compose.foundation.Canvas(Modifier.size(24.dp).semantics { contentDescription = description }) {
+                val w = size.width
+                val h = size.height
+                val stroke = h * 0.1f
+                listOf(0.26f to 0.82f, 0.5f to 0.56f, 0.74f to 0.3f).forEach { (y, len) ->
+                    val x0 = (w - w * len) / 2
+                    drawLine(color, androidx.compose.ui.geometry.Offset(x0, h * y), androidx.compose.ui.geometry.Offset(x0 + w * len, h * y), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                }
+            }
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.filter_genre_all), fontWeight = if (genre == null) FontWeight.Bold else FontWeight.Normal) },
+                onClick = { open = false; onSelect(null) },
+            )
+            genres.forEach { (name, n) ->
+                DropdownMenuItem(
+                    text = {
+                        androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(name, Modifier.weight(1f, fill = false), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, fontWeight = if (name.equals(genre, true)) FontWeight.Bold else FontWeight.Normal)
+                            Text(n.toString(), Modifier.padding(start = 16.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                        }
+                    },
+                    onClick = { open = false; onSelect(name) },
+                )
+            }
+        }
+    }
 }

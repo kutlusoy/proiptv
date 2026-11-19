@@ -69,6 +69,7 @@ private const val GUIDE_WORDS =
 data class CategoryCount(val accountId: Long, val categoryRemoteId: String, val n: Int)
 
 /** How many titles an account has, and how many entries a favorites list has (only titles that still exist), for the numbers in the selection menus. */
+data class GenreCount(val genre: String, val n: Int)
 data class AccountCount(val accountId: Long, val n: Int)
 data class ListCount(val listId: Long, val n: Int)
 
@@ -94,9 +95,10 @@ interface ItemDao {
     @Query(
         "SELECT * FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
             "AND (:country IS NULL OR country = :country) AND (:year IS NULL OR year = :year) " +
+            "AND (:genre IS NULL OR genre LIKE '%|' || :genre || '|%') " +
             "AND " + NAME_OR_NOW_PLAYING + QUICK_FILTERS + " ORDER BY CASE WHEN :flags & 8 <> 0 THEN name END COLLATE NOCASE ASC, CASE WHEN :flags & 16 <> 0 THEN name END COLLATE NOCASE DESC, accountId, ord",
     )
-    fun paging(kind: Int, ids: List<Long>, cat: String?, w1: String, w2: String, w3: String, w4: String, country: String?, year: Int?, flags: Int): PagingSource<Int, Item>
+    fun paging(kind: Int, ids: List<Long>, cat: String?, w1: String, w2: String, w3: String, w4: String, country: String?, year: Int?, flags: Int, genre: String?): PagingSource<Int, Item>
 
     @Query(
         "SELECT COUNT(*) FROM items WHERE kind = :kind AND accountId IN (:ids) AND (:cat IS NULL OR categoryRemoteId = :cat) " +
@@ -129,6 +131,9 @@ interface ItemDao {
 
     @Query("SELECT accountId, categoryRemoteId, COUNT(*) AS n FROM items WHERE kind = :kind AND accountId IN (:ids) GROUP BY accountId, categoryRemoteId")
     fun categoryCounts(ids: List<Long>, kind: Int): Flow<List<CategoryCount>>
+
+    @Query("SELECT genre, COUNT(*) AS n FROM items WHERE kind = :kind AND accountId IN (:ids) AND genre <> '' GROUP BY genre")
+    fun genreCounts(ids: List<Long>, kind: Int): Flow<List<GenreCount>>
 
     @Query("SELECT accountId, COUNT(*) AS n FROM items WHERE kind = :kind AND accountId IN (:ids) GROUP BY accountId")
     fun accountCounts(ids: List<Long>, kind: Int): Flow<List<AccountCount>>

@@ -111,6 +111,7 @@
     <string name="cast_playing">Playing on %1$s</string>
     <string name="cast_stop">Stop and play here</string>
     <string name="cast_failed">The TV could not play this stream.</string>
+    <string name="filter_genre_all">All genres</string>
     <string name="player_columns">Categories and channels side by side</string>
     <string name="player_filter_categories">Search %1$d categories</string>
     <string name="player_filter_channels">Search %1$d channels</string>

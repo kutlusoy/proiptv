@@ -118,6 +118,8 @@ private fun runApplication() = application {
     androidx.compose.runtime.key(state.placement == WindowPlacement.Fullscreen, state.compact) {
     Window(
         onCloseRequest = {
+            // closing the window while a movie or episode runs keeps the place
+            state.controller?.saveProgress()
             state.recordingManager.stopAll()
             state.hubs.closeAll()
             state.engine.release()

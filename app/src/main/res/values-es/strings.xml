@@ -110,6 +110,7 @@
     <string name="cast_playing">Reproduciendo en %1$s</string>
     <string name="cast_stop">Detener y reproducir aquí</string>
     <string name="cast_failed">El televisor no pudo reproducir esta transmisión.</string>
+    <string name="filter_genre_all">Todos los géneros</string>
     <string name="player_columns">Categorías y canales en columnas</string>
     <string name="player_filter_categories">Buscar en %1$d categorías</string>
     <string name="player_filter_channels">Buscar en %1$d canales</string>

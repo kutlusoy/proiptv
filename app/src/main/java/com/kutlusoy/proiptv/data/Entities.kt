@@ -84,6 +84,8 @@ data class Item(
     val gen: Int = 0,
     val country: String = "",
     val year: Int = 0,
+    /** The genres of a movie or series between bars ("|Horror|Action|"), empty when the provider gives none in the list. */
+    val genre: String = "",
 )
 
 @Entity(tableName = "programs", indices = [Index("accountId", "epgId", "start")])
