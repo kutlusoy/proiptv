@@ -163,6 +163,7 @@
     <string name="detail_play">Play</string>
     <string name="detail_resume">Resume from %1$s</string>
     <string name="detail_restart">From the start</string>
+    <string name="detail_autoplay">Autoplay</string>
     <string name="detail_cast">Cast</string>
     <string name="detail_director">Director</string>
     <string name="detail_released">Released</string>

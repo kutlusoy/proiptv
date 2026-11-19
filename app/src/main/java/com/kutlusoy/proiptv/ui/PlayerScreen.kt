@@ -216,6 +216,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var browseCount by remember { mutableIntStateOf(1) }
     var item by remember { mutableStateOf<Item?>(null) }
     var target by remember { mutableStateOf((request as? PlayRequest.Single)?.target) }
+    // the next episodes of the season (autoplay)
+    var queue by remember { mutableStateOf((request as? PlayRequest.Single)?.following.orEmpty()) }
     var catchup by remember { mutableStateOf<PlayTarget?>(null) }
     var forceHls by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
@@ -329,6 +331,20 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     scope.launch {
                         delay(1000)
                         reload++
+                    }
+                }
+                if (state == Player.STATE_ENDED && activeNow?.live == false && request is PlayRequest.Single && catchup == null) {
+                    val finished = activeNow
+                    val length = exo.duration
+                    scope.launch {
+                        // an episode or movie that has ended counts as watched; with autoplay the next episode of the season follows
+                        finished?.let { app.repo.saveProgress(it, length, length) }
+                        if (!app.prefs.autoplayNext) return@launch
+                        val nextFn = queue.firstOrNull() ?: return@launch
+                        queue = queue.drop(1)
+                        val next = nextFn() ?: return@launch
+                        skipResume = true
+                        target = next
                     }
                 }
             }

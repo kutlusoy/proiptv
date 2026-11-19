@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -470,7 +471,12 @@ private fun SeriesDetail(state: AppState, e: Entry) {
     val next = remember(list, version) { SeriesProgress.next(list, ::progressOf) }
     fun play(ep: XtreamEpisode, startMs: Long = 0) {
         val local = state.downloadOf(e.accountId, Kind.EPISODE, ep.id)?.let { state.localPlayable(it) }
-        (local ?: state.library.episodePlayable(e, ep))?.let { state.player = PlayRequest.Single(it, startMs) }
+        // the rest of the season follows when autoplay is on
+        val season = list.filter { it.season == ep.season }
+        val following = season.drop(season.indexOfFirst { it.id == ep.id } + 1).map { nextEp ->
+            { state.downloadOf(e.accountId, Kind.EPISODE, nextEp.id)?.let { state.localPlayable(it) } ?: state.library.episodePlayable(e, nextEp) }
+        }
+        (local ?: state.library.episodePlayable(e, ep))?.let { state.player = PlayRequest.Single(it, startMs, following) }
     }
     var menu by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -479,9 +485,17 @@ private fun SeriesDetail(state: AppState, e: Entry) {
         next?.let { n ->
             val ep = n.episode
             val resume = progressOf(ep.id)?.positionMs?.takeIf { it > 5_000 } ?: 0
-            Button(onClick = { play(ep, resume) }) {
-                Icon(Icons.Filled.PlayArrow, null)
-                Text(t(if (n.continuing) "detail_continue_episode" else "detail_play_episode", ep.season, ep.number), Modifier.padding(start = 6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(onClick = { play(ep, resume) }) {
+                    Icon(Icons.Filled.PlayArrow, null)
+                    Text(t(if (n.continuing) "detail_continue_episode" else "detail_play_episode", ep.season, ep.number), Modifier.padding(start = 6.dp))
+                }
+                // the switch stands beside the button: with autoplay the whole season is played, one episode after the other
+                var autoplay by remember { mutableStateOf(state.store.config.autoplayNext) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Switch(checked = autoplay, onCheckedChange = { autoplay = it; state.store.update { c -> c.copy(autoplayNext = it) } })
+                    Text(t("detail_autoplay"), style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
         if (seasons.isNotEmpty()) {

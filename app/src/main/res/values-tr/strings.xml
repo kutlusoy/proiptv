@@ -158,6 +158,7 @@
     <string name="detail_play">Oynat</string>
     <string name="detail_resume">%1$s konumundan devam et</string>
     <string name="detail_restart">Baştan</string>
+    <string name="detail_autoplay">Otomatik oynat</string>
     <string name="detail_cast">Oyuncular</string>
     <string name="detail_director">Yönetmen</string>
     <string name="detail_released">Yayın tarihi</string>

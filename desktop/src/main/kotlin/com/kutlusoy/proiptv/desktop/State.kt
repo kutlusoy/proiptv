@@ -15,7 +15,8 @@ enum class Tab(val label: String) {
 sealed interface PlayRequest {
     /** [query] is the search of the list the player was started from (null when the list has no search), [origin] the list without that search, [allScope] whether that list is all channels of all accounts. */
     class Live(val entries: List<Entry>, val index: Int, val query: String? = null, val origin: List<Entry> = emptyList(), val allScope: Boolean = false) : PlayRequest
-    class Single(val item: Playable, val startMs: Long = 0) : PlayRequest
+    /** [following] are the next episodes of the season (resolved when it is their turn): with autoplay the next one starts when an episode has ended. */
+    class Single(val item: Playable, val startMs: Long = 0, val following: List<() -> Playable?> = emptyList()) : PlayRequest
 }
 
 class AppState(val store: Store, val scope: CoroutineScope) {

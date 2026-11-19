@@ -39,7 +39,8 @@ sealed interface UpdateUi {
 
 sealed interface PlayRequest {
     data class Zap(val source: Source, val index: Int, val direct: Boolean = false) : PlayRequest
-    data class Single(val target: PlayTarget, val fromStart: Boolean = false) : PlayRequest
+    /** [following] are the next episodes of the season (resolved when it is their turn): with autoplay the next one starts when an episode has ended. */
+    data class Single(val target: PlayTarget, val fromStart: Boolean = false, val following: List<suspend () -> PlayTarget?> = emptyList()) : PlayRequest
 }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {

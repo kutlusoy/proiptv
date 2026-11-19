@@ -392,7 +392,22 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         if (state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) state.toggleFullscreen()
     }
 
+    private var ended = false
+
+    /** An episode or movie that has ended is marked as watched; with autoplay the next episode of the season follows. */
+    private fun checkEnd() {
+        val r = request as? PlayRequest.Single ?: return
+        val item = current ?: return
+        if (ended || item.live || item.kind < 0 || item.account.isEmpty() || !engine.hasEnded()) return
+        ended = true
+        state.progress.setWatched(item.account, item.kind, listOf(item.remoteId), true)
+        if (!state.store.config.autoplayNext) return
+        val next = r.following.firstOrNull()?.invoke() ?: return
+        state.player = PlayRequest.Single(next, 0, r.following.drop(1))
+    }
+
     fun poll() {
+        checkEnd()
         position = engine.time()
         length = engine.length()
         lease?.let { l ->

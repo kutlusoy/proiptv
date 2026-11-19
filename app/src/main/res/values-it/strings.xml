@@ -162,6 +162,7 @@
     <string name="detail_play">Riproduci</string>
     <string name="detail_resume">Riprendi da %1$s</string>
     <string name="detail_restart">Dall\'inizio</string>
+    <string name="detail_autoplay">Riproduzione automatica</string>
     <string name="detail_cast">Cast</string>
     <string name="detail_director">Regia</string>
     <string name="detail_released">Uscita</string>

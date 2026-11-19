@@ -162,6 +162,7 @@
     <string name="detail_play">Lire</string>
     <string name="detail_resume">Reprendre à %1$s</string>
     <string name="detail_restart">Depuis le début</string>
+    <string name="detail_autoplay">Lecture automatique</string>
     <string name="detail_cast">Distribution</string>
     <string name="detail_director">Réalisation</string>
     <string name="detail_released">Sortie</string>

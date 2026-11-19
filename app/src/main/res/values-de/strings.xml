@@ -162,6 +162,7 @@
     <string name="detail_play">Abspielen</string>
     <string name="detail_resume">Fortsetzen ab %1$s</string>
     <string name="detail_restart">Von vorne</string>
+    <string name="detail_autoplay">Autoplay</string>
     <string name="detail_cast">Besetzung</string>
     <string name="detail_director">Regie</string>
     <string name="detail_released">Erschienen</string>
