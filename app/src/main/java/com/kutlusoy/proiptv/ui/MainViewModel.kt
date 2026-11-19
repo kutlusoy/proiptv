@@ -138,7 +138,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             repo.ensureDefaultLists(app.getString(R.string.fav_title))
-            // the lists stored by an older version were loaded without the filter for adult content: once load them again
+            // the lists stored by an older version were loaded without the filter for adult content (and categories named XXX): once load them again
             if (prefs.filterSync < FILTER_SYNC) {
                 prefs.filterSync = FILTER_SYNC
                 repo.db.accounts().list().filter { it.enabled }.forEach { repo.sync.sync(it.id) }
@@ -271,4 +271,4 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-private const val FILTER_SYNC = 1
+private const val FILTER_SYNC = 2

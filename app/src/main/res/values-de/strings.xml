@@ -296,7 +296,7 @@
     <string name="player_restore">Normales Fenster</string>
     <string name="settings_group_content">Inhalte</string>
     <string name="settings_hide_adult">Erwachsenen-Sender ausblenden</string>
-    <string name="settings_hide_adult_hint">Blendet Titel aus, die der Xtream-Anbieter als Erwachsenen-Inhalt kennzeichnet. Beim Ändern werden die Listen neu geladen.</string>
+    <string name="settings_hide_adult_hint">Blendet Titel aus, die der Xtream-Anbieter als Erwachsenen-Inhalt kennzeichnet. Beim Ändern werden die Listen neu geladen. Kategorien, deren Name mit XXX beginnt, zählen ebenfalls als Erwachsenen-Inhalt.</string>
     <string name="update_download">Update herunterladen</string>
     <string name="update_ready">Update %1$s ist heruntergeladen und geprüft. Jetzt installieren?</string>
     <string name="update_install_now">Jetzt installieren</string>

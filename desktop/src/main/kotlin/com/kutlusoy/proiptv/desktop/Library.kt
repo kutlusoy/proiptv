@@ -119,10 +119,11 @@ class Library(private val store: Store) {
                         Category(a.id, id, o.str("category_name").orEmpty().decodeEntities(), hidden = kind == Kind.LIVE && id in hidden)
                 }
             }
+            val categoryNames = categories[kind].orEmpty().filter { it.accountId == a.id }.associate { it.id to it.name }
             api.stream(streamAction).use { s ->
                 for (o in s.items) {
                     val id = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
-                    if (hide && o.str("is_adult") == "1") continue
+                    if (hide && (o.str("is_adult") == "1" || com.kutlusoy.proiptv.parse.AdultCategory.matches(categoryNames[o.str("category_id").orEmpty()]))) continue
                     if (kind == Kind.LIVE && o.str("category_id").orEmpty() in hidden) continue
                     entries.getOrPut(kind) { mutableListOf() } += Entry(
                         a.id, kind, id, o.str("name").orEmpty().decodeEntities(), o.str("category_id").orEmpty(),
@@ -150,6 +151,7 @@ class Library(private val store: Store) {
             val reader = BufferedReader(InputStreamReader(it.body!!.byteStream(), Charsets.UTF_8), 64 * 1024)
             val groups = LinkedHashSet<String>()
             val hiddenGroups = a.hiddenLive.toHashSet()
+            val hideAdult = store.config.hideAdult
             val seen = HashSet<String>()
             for (e in M3uParser.parse(reader) { header -> header.epgUrl?.split(',')?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { m3uGuide[a.id] = it } }) {
                 val vod = e.url.contains("/movie/") || e.url.contains("/series/") || e.url.substringBefore('?').let { u -> VOD_EXT.any { x -> u.endsWith(x) } }
@@ -159,6 +161,7 @@ class Library(private val store: Store) {
                 val id = com.kutlusoy.proiptv.parse.StableId.of(e.url)
                 if (!seen.add("$kind|$id")) continue
                 if (kind == Kind.LIVE && e.group in hiddenGroups) continue
+                if (hideAdult && com.kutlusoy.proiptv.parse.AdultCategory.matches(e.group)) continue
                 entries.getOrPut(kind) { mutableListOf() } += Entry(a.id, kind, id, e.name, e.group, e.logo, "", e.url, null, e.tvgId?.lowercase())
             }
             for (g in groups) {
