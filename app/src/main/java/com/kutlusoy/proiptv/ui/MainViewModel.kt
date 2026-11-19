@@ -212,6 +212,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     ) { a, b, c -> Triple(a, b, c) }
 
     // the loaded pages of the last list per area are kept, so the list is the same (and at the same place) after the player was closed
+    /** The genre that was chosen per area, so it is still there after a detail page. */
+    val browseGenre = HashMap<Int, String?>()
+
     private val pagers = HashMap<Int, Pair<List<Any?>, kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>>>>()
 
     fun pager(kind: Int, ids: List<Long>, category: String?, query: String, flags: Int = 0, genre: String? = null): kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>> {

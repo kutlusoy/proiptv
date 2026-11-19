@@ -75,6 +75,9 @@ class AppState(val store: Store, val scope: CoroutineScope) {
 
     /** What a list showed when the player was opened, so it looks the same after the player was closed: the search text per area and the scroll position per list view. */
     val browseQuery = HashMap<Int, String>()
+
+    /** The genre that was chosen per area (series), so it is still there after a detail page. */
+    val browseGenre = HashMap<Int, String?>()
     val scrollMemory = HashMap<String, IntArray>()
 
     fun reload() {

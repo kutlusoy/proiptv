@@ -88,7 +88,8 @@ fun BrowseScreen(state: AppState, kind: Int) {
     var favOnly by remember(kind) { mutableStateOf(false) }
     var historyOnly by remember(kind) { mutableStateOf(false) }
     // series: one genre of the titles can be chosen (the genre text of the provider, split into its names)
-    var genre by remember(kind) { mutableStateOf<String?>(null) }
+    var genre by remember(kind) { mutableStateOf(state.browseGenre[kind]) }
+    androidx.compose.runtime.LaunchedEffect(genre) { state.browseGenre[kind] = genre }
     var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
     androidx.compose.runtime.LaunchedEffect(accountFilter) {
         // the chosen account is kept, so the list is the same after the player was closed
@@ -99,7 +100,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val all = data.entries(kind).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
     val q = query.trim()
     val genres = remember(all, kind) { if (kind != Kind.SERIES) emptyList() else com.kutlusoy.proiptv.parse.Genres.count(all.asSequence().map { it.genre }) }
-    if (genre != null && genres.none { it.first.equals(genre, ignoreCase = true) }) genre = null
+    if (genre != null && genres.isNotEmpty() && genres.none { it.first.equals(genre, ignoreCase = true) }) genre = null
     val scrollKey = "$kind|$activeAccount|$category|$q|$genre"
     val listState = remember(scrollKey) { state.scrollMemory["$scrollKey|l"].let { m -> androidx.compose.foundation.lazy.LazyListState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
     val gridState = remember(scrollKey) { state.scrollMemory["$scrollKey|g"].let { m -> androidx.compose.foundation.lazy.grid.LazyGridState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
