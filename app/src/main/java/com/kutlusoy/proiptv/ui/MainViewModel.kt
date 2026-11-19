@@ -187,6 +187,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun categories(accountId: Long, kind: Int) = db.items().categories(accountId, kind)
 
+    fun hiddenCategories(accountId: Long, kind: Int) = db.items().hiddenFlow(accountId, kind)
+
     fun categoryCounts(ids: List<Long>, kind: Int) = db.items().categoryCounts(ids, kind)
 
     fun genreCounts(ids: List<Long>, kind: Int) = db.items().genreCounts(ids, kind)

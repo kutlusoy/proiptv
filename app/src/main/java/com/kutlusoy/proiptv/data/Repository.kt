@@ -55,12 +55,31 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
         return id
     }
 
+    /**
+     * The live categories that are switched off for an account. The channels of a category that was switched off go at once; a category that was switched on
+     * gets its channels back with a new load of the list (started here).
+     */
+    suspend fun setHiddenCategories(account: Account, hidden: List<HiddenCategory>) {
+        val before = db.items().hiddenIds(account.id, Kind.LIVE).toSet()
+        val after = hidden.map { it.remoteId }.toSet()
+        val off = (after - before).toList()
+        val on = (before - after).toList()
+        if (hidden.isNotEmpty()) db.items().hide(hidden)
+        if (on.isNotEmpty()) db.items().unhide(account.id, Kind.LIVE, on)
+        for (chunk in off.chunked(500)) {
+            db.items().deleteItemsIn(account.id, Kind.LIVE, chunk)
+            db.items().deleteCategoriesIn(account.id, Kind.LIVE, chunk)
+        }
+        if (on.isNotEmpty()) sync.sync(account.id)
+    }
+
     suspend fun setEnabled(account: Account, enabled: Boolean) = db.accounts().update(account.copy(enabled = enabled))
 
     suspend fun deleteAccount(id: Long) {
         sync.cancel(id)
         db.items().deleteAccount(id)
         db.items().deleteAccountCategories(id)
+        db.items().deleteHiddenOf(id)
         db.programs().deleteAccount(id)
         db.favorites().deleteAccount(id)
         db.progress().deleteAccount(id)

@@ -111,6 +111,10 @@
     <string name="cast_stop">Interrompi e riproduci qui</string>
     <string name="cast_failed">Il televisore non ha potuto riprodurre questo flusso.</string>
     <string name="filter_genre_all">Tutti i generi</string>
+    <string name="account_categories">Nascondi categorie</string>
+    <string name="account_categories_hint">Le categorie disattivate non compaiono nelle liste e non vengono cercate. Restano disattivate anche dopo un nuovo caricamento della lista.</string>
+    <string name="categories_all_on">Tutte attive</string>
+    <string name="categories_all_off">Tutte disattivate</string>
     <string name="player_columns">Categorie e canali affiancati</string>
     <string name="player_filter_categories">Cerca in %1$d categorie</string>
     <string name="player_filter_channels">Cerca in %1$d canali</string>

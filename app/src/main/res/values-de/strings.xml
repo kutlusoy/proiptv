@@ -111,6 +111,10 @@
     <string name="cast_stop">Beenden und hier abspielen</string>
     <string name="cast_failed">Der Fernseher konnte diesen Stream nicht abspielen.</string>
     <string name="filter_genre_all">Alle Genres</string>
+    <string name="account_categories">Kategorien ausblenden</string>
+    <string name="account_categories_hint">Ausgeschaltete Kategorien werden in den Listen nicht angezeigt und nicht durchsucht. Sie bleiben auch nach einem neuen Abgleich aus.</string>
+    <string name="categories_all_on">Alle an</string>
+    <string name="categories_all_off">Alle aus</string>
     <string name="player_columns">Kategorien und Sender nebeneinander</string>
     <string name="player_filter_categories">In %1$d Kategorien suchen</string>
     <string name="player_filter_channels">In %1$d Sendern suchen</string>

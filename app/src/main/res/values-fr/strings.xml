@@ -111,6 +111,10 @@
     <string name="cast_stop">Arrêter et lire ici</string>
     <string name="cast_failed">Le téléviseur n\'a pas pu lire ce flux.</string>
     <string name="filter_genre_all">Tous les genres</string>
+    <string name="account_categories">Masquer des catégories</string>
+    <string name="account_categories_hint">Les catégories désactivées ne sont pas affichées dans les listes et ne sont pas recherchées. Elles restent désactivées après un nouveau chargement de la liste.</string>
+    <string name="categories_all_on">Tout activer</string>
+    <string name="categories_all_off">Tout désactiver</string>
     <string name="player_columns">Catégories et chaînes côte à côte</string>
     <string name="player_filter_categories">Chercher dans %1$d catégories</string>
     <string name="player_filter_channels">Chercher dans %1$d chaînes</string>

@@ -111,6 +111,10 @@
     <string name="cast_stop">Detener y reproducir aquí</string>
     <string name="cast_failed">El televisor no pudo reproducir esta transmisión.</string>
     <string name="filter_genre_all">Todos los géneros</string>
+    <string name="account_categories">Ocultar categorías</string>
+    <string name="account_categories_hint">Las categorías desactivadas no se muestran en las listas ni se buscan. Siguen desactivadas tras una nueva carga de la lista.</string>
+    <string name="categories_all_on">Todas activadas</string>
+    <string name="categories_all_off">Todas desactivadas</string>
     <string name="player_columns">Categorías y canales en columnas</string>
     <string name="player_filter_categories">Buscar en %1$d categorías</string>
     <string name="player_filter_channels">Buscar en %1$d canales</string>

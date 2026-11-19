@@ -235,3 +235,12 @@ data class HistoryRow(
     @androidx.room.Embedded val item: Item,
     val listName: String?,
 )
+
+/** A category of the live channels that the user switched off for an account. The name is kept, so it can be switched on again after the list was loaded without it. */
+@Entity(tableName = "hidden_categories", primaryKeys = ["accountId", "kind", "remoteId"])
+data class HiddenCategory(
+    val accountId: Long,
+    val kind: Int,
+    val remoteId: String,
+    val name: String,
+)

@@ -178,8 +178,32 @@ interface ItemDao {
     @Query("DELETE FROM categories WHERE accountId = :accountId")
     suspend fun deleteAccountCategories(accountId: Long)
 
-    @Query("SELECT * FROM categories WHERE accountId = :accountId AND kind = :kind ORDER BY ord")
+    @Query(
+        "SELECT * FROM categories c WHERE c.accountId = :accountId AND c.kind = :kind AND NOT EXISTS " +
+            "(SELECT 1 FROM hidden_categories h WHERE h.accountId = c.accountId AND h.kind = c.kind AND h.remoteId = c.remoteId) ORDER BY c.ord",
+    )
     fun categories(accountId: Long, kind: Int): Flow<List<Category>>
+
+    @Query("SELECT * FROM hidden_categories WHERE accountId = :accountId AND kind = :kind ORDER BY name COLLATE NOCASE")
+    fun hiddenFlow(accountId: Long, kind: Int): Flow<List<HiddenCategory>>
+
+    @Query("SELECT remoteId FROM hidden_categories WHERE accountId = :accountId AND kind = :kind")
+    suspend fun hiddenIds(accountId: Long, kind: Int): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun hide(list: List<HiddenCategory>)
+
+    @Query("DELETE FROM hidden_categories WHERE accountId = :accountId AND kind = :kind AND remoteId IN (:ids)")
+    suspend fun unhide(accountId: Long, kind: Int, ids: List<String>)
+
+    @Query("DELETE FROM hidden_categories WHERE accountId = :accountId")
+    suspend fun deleteHiddenOf(accountId: Long)
+
+    @Query("DELETE FROM items WHERE accountId = :accountId AND kind = :kind AND categoryRemoteId IN (:ids)")
+    suspend fun deleteItemsIn(accountId: Long, kind: Int, ids: List<String>)
+
+    @Query("DELETE FROM categories WHERE accountId = :accountId AND kind = :kind AND remoteId IN (:ids)")
+    suspend fun deleteCategoriesIn(accountId: Long, kind: Int, ids: List<String>)
 
     @Transaction
     suspend fun replaceCategories(accountId: Long, kind: Int, list: List<Category>) {

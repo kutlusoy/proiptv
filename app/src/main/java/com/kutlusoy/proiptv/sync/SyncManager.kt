@@ -210,11 +210,13 @@ class SyncManager(
         var ord = 0
         val batch = ArrayList<Item>(BATCH)
         val groupNames = cats.associate { it.remoteId to it.name }
+        val hiddenCategories = if (kind == Kind.LIVE) db.items().hiddenIds(account.id, kind).toHashSet() else emptySet()
         api.stream(streamAction).use { s ->
             for (o in s.items) {
                 val remote = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
                 val name = o.str("name").orEmpty().decodeEntities()
                 if (hide && o.str("is_adult") == "1") continue
+                if (o.str("category_id").orEmpty() in hiddenCategories) continue
                 val info = TitleParser.parse(name, groupNames[o.str("category_id").orEmpty()].orEmpty())
                 batch += Item(
                     accountId = account.id, kind = kind, remoteId = remote,
@@ -246,11 +248,13 @@ class SyncManager(
         var epgFromHeader: String? = null
         val groups = mapOf(Kind.LIVE to LinkedHashMap<String, Int>(), Kind.MOVIE to LinkedHashMap<String, Int>())
         val counters = intArrayOf(0, 0)
+        val hiddenGroups = db.items().hiddenIds(account.id, Kind.LIVE).toHashSet()
         val batch = ArrayList<Item>(BATCH)
         open(account.url, account.userAgent).use { raw ->
             val reader = BufferedReader(InputStreamReader(raw.maybeGunzip(), Charsets.UTF_8), 64 * 1024)
             for (e in M3uParser.parse(reader) { epgFromHeader = it.epgUrl }) {
                 val kind = detectKind(e.url)
+                if (kind == Kind.LIVE && e.group in hiddenGroups) continue
                 val map = groups.getValue(kind)
                 map.getOrPut(e.group) { map.size }
                 val ord = if (kind == Kind.LIVE) counters[0]++ else counters[1]++
