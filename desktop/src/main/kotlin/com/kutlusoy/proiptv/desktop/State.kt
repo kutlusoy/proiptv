@@ -173,6 +173,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
                 com.kutlusoy.proiptv.data.BackupAccount(
                     it.name, it.type, it.url, it.username, if (withPasswords) Secrets.unprotect(it.password) else null,
                     it.epgUrl, it.userAgent, "auto", it.enabled, true, true,
+                    hiddenLive = it.hiddenLive.map { id -> com.kutlusoy.proiptv.data.BackupHidden(id, data.allCategories(Kind.LIVE).firstOrNull { c -> c.accountId == it.id && c.id == id }?.name ?: id) },
                 )
             },
             lists = lists, timeshift = c.timeshift, bufferMb = c.bufferMb,
@@ -190,7 +191,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
             val key = codec.accountKey(a.type, a.url, a.username)
             if (key in ids) continue
             val id = newAccountId()
-            val dto = AccountDto(id = id, name = a.name, type = a.type, url = a.url, username = a.username, password = Secrets.protect(a.password.orEmpty()), userAgent = a.userAgent, enabled = a.enabled, epgUrl = a.epgUrl)
+            val dto = AccountDto(id = id, name = a.name, type = a.type, url = a.url, username = a.username, password = Secrets.protect(a.password.orEmpty()), userAgent = a.userAgent, enabled = a.enabled, epgUrl = a.epgUrl, hiddenLive = a.hiddenLive.map { it.id })
             store.update { c -> c.copy(accounts = c.accounts + dto) }
             ids[key] = id
             added++
@@ -227,6 +228,13 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         favorites = store.config.favorites
         history = store.config.history
         reminders = store.config.reminders
+        reload()
+    }
+
+    /** The live categories that are switched off for an account; the lists are loaded again without their channels. */
+    fun setHiddenLive(id: String, hidden: List<String>) {
+        store.update { c -> c.copy(accounts = c.accounts.map { if (it.id == id) it.copy(hiddenLive = hidden) else it }) }
+        accounts = store.config.accounts
         reload()
     }
 

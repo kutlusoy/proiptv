@@ -35,4 +35,13 @@ class BackupFileTest {
         } catch (e: WrongPassword) {
         }
     }
+
+    @Test
+    fun switchedOffCategoriesAreKeptAndOldBackupsStillLoad() {
+        val account = BackupAccount("Tengri", "xtream", "http://t", "u", null, hiddenLive = listOf(BackupHidden("12", "FR SPORT"), BackupHidden("Movies")))
+        val back = BackupCodec.decode(BackupCodec.encode(data.copy(accounts = listOf(account)), null), null)
+        assertEquals(listOf(BackupHidden("12", "FR SPORT"), BackupHidden("Movies", "Movies")), back.accounts[0].hiddenLive)
+        val old = """{"format":1,"app":"proiptv","created":1,"encrypted":false,"data":{"accounts":[{"name":"A","type":"m3u","url":"u"}],"lists":[]}}"""
+        assertTrue(BackupCodec.decode(old, null).accounts[0].hiddenLive.isEmpty())
+    }
 }

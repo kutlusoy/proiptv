@@ -21,6 +21,8 @@ data class AccountDto(
     val userAgent: String? = null,
     val enabled: Boolean = true,
     val epgUrl: String? = null,
+    /** Live categories the user switched off (the id of the category, for a playlist the name of the group). */
+    val hiddenLive: List<String> = emptyList(),
 )
 
 @Serializable
