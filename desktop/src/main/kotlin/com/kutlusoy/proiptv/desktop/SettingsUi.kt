@@ -87,6 +87,12 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     Switch(checked = hide, onCheckedChange = { hide = it; state.store.update { c -> c.copy(hideAdult = it) }; state.reload() })
                 }
                 Hint(t("settings_hide_adult_hint"))
+                var fetchGenres by remember { mutableStateOf(state.store.config.fetchGenres) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("settings_fetch_genres"), Modifier.weight(1f))
+                    Switch(checked = fetchGenres, onCheckedChange = { fetchGenres = it; state.store.update { c -> c.copy(fetchGenres = it) }; state.startGenreCrawl() })
+                }
+                Hint(t("settings_fetch_genres_hint"))
             }
             Group(t("settings_group_playback")) {
                 val vlc = state.engine

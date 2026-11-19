@@ -111,6 +111,9 @@
     <string name="cast_stop">Detener y reproducir aquí</string>
     <string name="cast_failed">El televisor no pudo reproducir esta transmisión.</string>
     <string name="filter_genre_all">Todos los géneros</string>
+    <string name="settings_fetch_genres">Cargar los géneros de las películas</string>
+    <string name="settings_fetch_genres_hint">El género de una película solo está en sus detalles. La app los pide uno a uno en segundo plano (unos 2 por segundo) y los recuerda, para que el filtro de género funcione con las películas. Se detiene si el proveedor rechaza.</string>
+    <string name="genre_loading">Cargando géneros %1$d / %2$d</string>
     <string name="player_columns">Categorías y canales en columnas</string>
     <string name="player_filter_categories">Buscar en %1$d categorías</string>
     <string name="player_filter_channels">Buscar en %1$d canales</string>

@@ -112,6 +112,9 @@
     <string name="cast_stop">Stop and play here</string>
     <string name="cast_failed">The TV could not play this stream.</string>
     <string name="filter_genre_all">All genres</string>
+    <string name="settings_fetch_genres">Load genres of movies</string>
+    <string name="settings_fetch_genres_hint">Movie genres are only in the details of each movie. The app asks for them one by one in the background (about 2 per second) and remembers them, so the genre filter works for movies. It stops when the provider refuses.</string>
+    <string name="genre_loading">Loading genres %1$d / %2$d</string>
     <string name="player_columns">Categories and channels side by side</string>
     <string name="player_filter_categories">Search %1$d categories</string>
     <string name="player_filter_channels">Search %1$d channels</string>

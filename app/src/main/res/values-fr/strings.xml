@@ -111,6 +111,9 @@
     <string name="cast_stop">Arrêter et lire ici</string>
     <string name="cast_failed">Le téléviseur n\'a pas pu lire ce flux.</string>
     <string name="filter_genre_all">Tous les genres</string>
+    <string name="settings_fetch_genres">Charger les genres des films</string>
+    <string name="settings_fetch_genres_hint">Le genre d\'un film n\'est que dans ses détails. L\'application les demande un par un en arrière-plan (environ 2 par seconde) et les mémorise, pour que le filtre de genre fonctionne pour les films. Elle s\'arrête si le fournisseur refuse.</string>
+    <string name="genre_loading">Chargement des genres %1$d / %2$d</string>
     <string name="player_columns">Catégories et chaînes côte à côte</string>
     <string name="player_filter_categories">Chercher dans %1$d catégories</string>
     <string name="player_filter_channels">Chercher dans %1$d chaînes</string>

@@ -98,7 +98,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val categories = data.categories(kind).filter { activeAccount == null || it.accountId == activeAccount }
     val all = data.entries(kind).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
     val q = query.trim()
-    val genres = remember(all, kind) { if (kind == Kind.LIVE) emptyList() else com.kutlusoy.proiptv.parse.Genres.count(all.asSequence().map { it.genre }) }
+    val genres = remember(all, kind, state.genreStamp) { if (kind == Kind.LIVE) emptyList() else com.kutlusoy.proiptv.parse.Genres.count(all.asSequence().map { state.genreOf(it) }) }
     if (genre != null && genres.none { it.first.equals(genre, ignoreCase = true) }) genre = null
     val scrollKey = "$kind|$activeAccount|$category|$q|$genre"
     val listState = remember(scrollKey) { state.scrollMemory["$scrollKey|l"].let { m -> androidx.compose.foundation.lazy.LazyListState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
@@ -109,10 +109,10 @@ fun BrowseScreen(state: AppState, kind: Int) {
     androidx.compose.runtime.LaunchedEffect(scrollKey) {
         androidx.compose.runtime.snapshotFlow { intArrayOf(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset) }.collect { state.scrollMemory["$scrollKey|g"] = it }
     }
-    val shown = remember(all, category, q, favOnly, genre, state.favorites, state.guide, state.tick / 60) {
+    val shown = remember(all, category, q, favOnly, genre, state.genreStamp, state.favorites, state.guide, state.tick / 60) {
         all.asSequence()
             .filter { e -> !favOnly || state.isFavorite(e) }
-            .filter { e -> genre == null || com.kutlusoy.proiptv.parse.Genres.has(e.genre, genre!!) }
+            .filter { e -> genre == null || com.kutlusoy.proiptv.parse.Genres.has(state.genreOf(e), genre!!) }
             .filter { e ->
                 when {
                     category == ALL_KEY -> true
@@ -170,6 +170,9 @@ fun BrowseScreen(state: AppState, kind: Int) {
                 placeholder = { Text(t(if (kind == Kind.LIVE) "live_search" else "live_search")) },
                 trailingIcon = { if (query.isNotEmpty()) Tip(t("action_close")) { IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, t("action_close")) } } },
             )
+            state.genreProgress?.takeIf { kind == Kind.MOVIE }?.let { (done, total) ->
+                Text(Strings.get("genre_loading", done, total), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f), maxLines = 1)
+            }
             if (genres.isNotEmpty()) {
                 var genreMenu by remember { mutableStateOf(false) }
                 Box {
@@ -383,6 +386,7 @@ private fun MovieDetail(state: AppState, e: Entry) {
     }
     val download = state.downloadOf(e.accountId, Kind.MOVIE, e.remoteId)
     val vod by produceState<VodInfo?>(null, e.key) { value = state.library.vodInfo(e) }
+    androidx.compose.runtime.LaunchedEffect(vod) { vod?.let { state.rememberGenre(e, it.genre) } }
     Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         DetailHeader(state, e) { state.movie = null }
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {

@@ -26,6 +26,10 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("hide_adult", true)
         set(value) = sp.edit().putBoolean("hide_adult", value).apply()
 
+    var fetchGenres: Boolean
+        get() = sp.getBoolean("fetch_genres", true)
+        set(value) = sp.edit().putBoolean("fetch_genres", value).apply()
+
     var tmdbKey: String
         get() = sp.getString("tmdb_key", "") ?: ""
         set(value) = sp.edit().putString("tmdb_key", value.trim()).apply()

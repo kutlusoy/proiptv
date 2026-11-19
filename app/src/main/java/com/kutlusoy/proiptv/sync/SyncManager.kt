@@ -27,6 +27,7 @@ import java.net.URLEncoder
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
+import androidx.room.withTransaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,6 +46,7 @@ class SyncManager(
     private val secrets: SecretBox,
     private val scope: CoroutineScope,
     private val hideAdult: () -> Boolean = { false },
+    private val fetchGenres: () -> Boolean = { false },
 ) {
     private val _state = MutableStateFlow<Map<Long, SyncState>>(emptyMap())
     val state: StateFlow<Map<Long, SyncState>> = _state
@@ -57,9 +59,63 @@ class SyncManager(
         jobs[accountId] = scope.launch(Dispatchers.IO) {
             try {
                 run(accountId)
+                crawlGenres()
             } finally {
                 _state.value = _state.value - accountId
                 jobs.remove(accountId)
+            }
+        }
+    }
+
+    private val _genreProgress = MutableStateFlow<Pair<Int, Int>?>(null)
+    val genreProgress: StateFlow<Pair<Int, Int>?> = _genreProgress
+    private var genreJob: Job? = null
+
+    /**
+     * The genre of a movie is only in its details. One request after the other, slowly, in the background, for all movies that have none yet; it stops when the
+     * provider refuses and starts again at the next call. Switched off with the setting.
+     */
+    fun crawlGenres() {
+        genreJob?.cancel()
+        _genreProgress.value = null
+        if (!fetchGenres()) return
+        genreJob = scope.launch(Dispatchers.IO) {
+            try {
+                val accounts = db.accounts().list().filter { it.enabled && it.type == AccountType.XTREAM && it.useVod }
+                val todo = accounts.associateWith { db.items().withoutGenre(it.id, Kind.MOVIE) }.filterValues { it.isNotEmpty() }
+                val total = todo.values.sumOf { it.size }
+                var done = 0
+                for ((account, ids) in todo) {
+                    val api = XtreamApi(Http.client, account.url, account.username, secrets.decrypt(account.password), account.userAgent)
+                    // written in groups: every write changes the lists on the screen, so they are not touched with every answer
+                    val buffer = ArrayList<Pair<String, String>>()
+                    suspend fun flush() {
+                        if (buffer.isEmpty()) return
+                        val rows = buffer.toList()
+                        buffer.clear()
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                            db.withTransaction { rows.forEach { (id, g) -> db.items().setGenre(account.id, Kind.MOVIE, id, g) } }
+                        }
+                    }
+                    val n = try {
+                        com.kutlusoy.proiptv.net.GenreCrawl.run(
+                            ids, 450,
+                            fetch = { id -> api.vodInfo(id)?.genre },
+                            store = { id, genre ->
+                                buffer += id to com.kutlusoy.proiptv.parse.Genres.encode(genre).ifEmpty { "|" }
+                                if (buffer.size >= 100) flush()
+                            },
+                            onProgress = { d -> _genreProgress.value = (done + d) to total },
+                        )
+                    } finally {
+                        flush()
+                    }
+                    done += n
+                    // the provider refused: the other accounts are asked at the next start
+                    if (n < ids.size) break
+                }
+            } finally {
+                _genreProgress.value = null
             }
         }
     }
@@ -210,6 +266,8 @@ class SyncManager(
         var ord = 0
         val batch = ArrayList<Item>(BATCH)
         val groupNames = cats.associate { it.remoteId to it.name }
+        // the genres that were found in the details of the movies stay when the list is loaded again
+        val knownGenres = if (kind == Kind.MOVIE) db.items().knownGenres(account.id, kind).associate { it.remoteId to it.genre } else emptyMap()
         api.stream(streamAction).use { s ->
             for (o in s.items) {
                 val remote = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
@@ -226,7 +284,7 @@ class SyncManager(
                     archiveDays = if (o.int("tv_archive") == 1) o.int("tv_archive_duration") ?: 0 else 0,
                     rating = o.str("rating")?.takeIf { it.isNotBlank() },
                     plot = o.str("plot")?.takeIf { it.isNotBlank() }?.decodeEntities(),
-                    genre = if (kind == Kind.LIVE) "" else com.kutlusoy.proiptv.parse.Genres.encode(o.str("genre")?.decodeEntities()),
+                    genre = if (kind == Kind.LIVE) "" else com.kutlusoy.proiptv.parse.Genres.encode(o.str("genre")?.decodeEntities()).ifEmpty { knownGenres[remote].orEmpty() },
                     ord = ord++, gen = gen,
                 )
                 if (batch.size >= BATCH) {

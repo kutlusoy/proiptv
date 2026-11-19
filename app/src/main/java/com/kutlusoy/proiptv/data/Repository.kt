@@ -136,7 +136,10 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
     suspend fun vodInfo(item: Item): VodInfo? = withContext(Dispatchers.IO) {
         val account = db.accounts().get(item.accountId) ?: return@withContext null
         if (account.type != AccountType.XTREAM) return@withContext null
-        api(account).vodInfo(item.remoteId)
+        api(account).vodInfo(item.remoteId).also { info ->
+            // the details were opened: the genre is kept for the filter
+            if (item.kind == Kind.MOVIE) db.items().setGenre(item.accountId, item.kind, item.remoteId, com.kutlusoy.proiptv.parse.Genres.encode(info?.genre).ifEmpty { "|" })
+        }
     }
 
     suspend fun episodeProgress(accountId: Long, episodeIds: List<String>): Map<String, Progress> {

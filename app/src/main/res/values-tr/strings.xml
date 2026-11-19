@@ -107,6 +107,9 @@
     <string name="cast_stop">Durdur ve burada oynat</string>
     <string name="cast_failed">Televizyon bu yayını oynatamadı.</string>
     <string name="filter_genre_all">Tüm türler</string>
+    <string name="settings_fetch_genres">Filmlerin türlerini yükle</string>
+    <string name="settings_fetch_genres_hint">Bir filmin türü yalnızca ayrıntılarında bulunur. Uygulama bunları arka planda tek tek ister (saniyede yaklaşık 2) ve hatırlar; böylece tür filtresi filmlerde de çalışır. Sağlayıcı reddederse durur.</string>
+    <string name="genre_loading">Türler yükleniyor %1$d / %2$d</string>
     <string name="player_columns">Kategoriler ve kanallar yan yana</string>
     <string name="player_filter_categories">%1$d kategoride ara</string>
     <string name="player_filter_channels">%1$d kanalda ara</string>
