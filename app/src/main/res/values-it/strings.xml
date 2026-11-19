@@ -111,9 +111,6 @@
     <string name="cast_stop">Interrompi e riproduci qui</string>
     <string name="cast_failed">Il televisore non ha potuto riprodurre questo flusso.</string>
     <string name="filter_genre_all">Tutti i generi</string>
-    <string name="settings_fetch_genres">Carica i generi dei film</string>
-    <string name="settings_fetch_genres_hint">Il genere di un film è solo nei suoi dettagli. L\'app li richiede uno alla volta in background (circa 2 al secondo) e li memorizza, così il filtro per genere funziona anche per i film. Si ferma se il fornitore rifiuta.</string>
-    <string name="genre_loading">Caricamento dei generi %1$d / %2$d</string>
     <string name="player_columns">Categorie e canali affiancati</string>
     <string name="player_filter_categories">Cerca in %1$d categorie</string>
     <string name="player_filter_channels">Cerca in %1$d canali</string>

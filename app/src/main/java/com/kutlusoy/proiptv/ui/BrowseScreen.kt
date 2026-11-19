@@ -351,10 +351,6 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
                     counts = accountCounts.associate { c -> (c.accountId as Long?) to c.n } + (null to accountCounts.sumOf { it.n }),
                 )
             }
-            val genreProgress by vm.repo.sync.genreProgress.collectAsState()
-            genreProgress?.takeIf { kind == Kind.MOVIE }?.let { (done, total) ->
-                Text(stringResource(R.string.genre_loading, done, total), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), maxLines = 1)
-            }
             GenreButton(genres, genre) { genre = it }
             IconButton(onClick = { if (searching) { query = ""; searching = false } else searching = true }, modifier = Modifier.focusHighlight()) {
                 Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, stringResource(if (searching) R.string.action_close else R.string.live_search))

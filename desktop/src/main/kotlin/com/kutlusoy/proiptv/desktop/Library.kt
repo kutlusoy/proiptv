@@ -184,12 +184,6 @@ class Library(private val store: Store) {
         return if (key.isEmpty()) null else Tmdb(Http.client, key, Strings.language)
     }
 
-    /** The genre of a movie from the provider (no TMDB, no cache): for the slow walk through all movies. Null when it has none. */
-    suspend fun movieGenre(e: Entry): String? = withContext(Dispatchers.IO) {
-        val a = store.config.accounts.firstOrNull { it.id == e.accountId && it.type == "xtream" } ?: return@withContext null
-        api(a).vodInfo(e.remoteId)?.genre
-    }
-
     /** Plot, cast, director and more of a movie: from the provider (Xtream), the rest from TMDB when the user has entered a key. */
     suspend fun vodInfo(e: Entry): VodInfo? = withContext(Dispatchers.IO) {
         val a = store.config.accounts.firstOrNull { it.id == e.accountId }

@@ -69,7 +69,6 @@ data class ConfigDto(
     val intro: Boolean = true,
     val history: List<String> = emptyList(),
     val hideAdult: Boolean = true,
-    val fetchGenres: Boolean = true,
     val reminders: List<ReminderDto> = emptyList(),
     val playerSearchAll: Boolean = false,
     val playerColumns: Boolean = false,

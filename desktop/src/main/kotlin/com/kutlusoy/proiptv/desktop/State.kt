@@ -85,66 +85,6 @@ class AppState(val store: Store, val scope: CoroutineScope) {
             loading = false
             reconcileFavorites(data)
             refreshGuide()
-            startGenreCrawl()
-        }
-    }
-
-    // The genre of a movie is not in the list of the provider, only in its details. What was found is kept in genres.json (key account|id, empty text: the movie has none).
-    private val genreFile = java.io.File(Store.defaultDir(), "genres.json")
-    val movieGenres = java.util.concurrent.ConcurrentHashMap<String, String>().also { m ->
-        runCatching { kotlinx.serialization.json.Json.decodeFromString<Map<String, String>>(genreFile.readText()) }.getOrNull()?.let { m.putAll(it) }
-    }
-    var genreProgress by mutableStateOf<Pair<Int, Int>?>(null)
-
-    /** Changes in steps while genres arrive, so the lists on the screen are not built again with every answer. */
-    var genreStamp by androidx.compose.runtime.mutableIntStateOf(0)
-        private set
-    private var genreJob: kotlinx.coroutines.Job? = null
-
-    fun genreOf(e: Entry): String? = e.genre ?: movieGenres["${e.accountId}|${e.remoteId}"]?.takeIf { it.isNotEmpty() }
-
-    private fun saveGenres() {
-        runCatching {
-            genreFile.parentFile?.mkdirs()
-            genreFile.writeText(kotlinx.serialization.json.Json.encodeToString(kotlinx.serialization.serializer<Map<String, String>>(), HashMap(movieGenres)))
-        }
-    }
-
-    /** Called when the details of a movie were opened: the genre that is shown there is kept for the filter. */
-    fun rememberGenre(e: Entry, genre: String?) {
-        val key = "${e.accountId}|${e.remoteId}"
-        if (e.kind != Kind.MOVIE || e.genre != null || movieGenres[key] == genre.orEmpty() ) return
-        movieGenres[key] = genre.orEmpty()
-        genreStamp++
-        saveGenres()
-    }
-
-    /** One request after the other, slowly, in the background; it stops when the provider refuses and starts again at the next load. */
-    fun startGenreCrawl() {
-        genreJob?.cancel()
-        genreProgress = null
-        if (!store.config.fetchGenres) return
-        val todo = data.entries(Kind.MOVIE).filter { it.genre == null && !movieGenres.containsKey("${it.accountId}|${it.remoteId}") }
-        if (todo.isEmpty()) return
-        val byId = todo.associateBy { "${it.accountId}|${it.remoteId}" }
-        genreJob = scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            var written = 0
-            try {
-                com.kutlusoy.proiptv.net.GenreCrawl.run(
-                    byId.keys.toList(), 450,
-                    fetch = { key -> library.movieGenre(byId.getValue(key)) },
-                    store = { key, genre ->
-                        movieGenres[key] = genre.orEmpty().trim()
-                        if (++written % 25 == 0) saveGenres()
-                        if (written % 100 == 0) genreStamp++
-                    },
-                    onProgress = { done -> genreProgress = done to todo.size },
-                )
-            } finally {
-                saveGenres()
-                genreStamp++
-                genreProgress = null
-            }
         }
     }
 

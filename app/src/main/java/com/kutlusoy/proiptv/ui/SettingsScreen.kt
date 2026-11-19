@@ -129,12 +129,6 @@ fun SettingsScreen(vm: MainViewModel) {
                     Switch(checked = hideAdult, onCheckedChange = { hideAdult = it; prefs.hideAdult = it; vm.refreshAll(restart = true) }, modifier = Modifier.focusHighlight())
                 }
                 Hint(stringResource(R.string.settings_hide_adult_hint))
-                var fetchGenres by remember { mutableStateOf(prefs.fetchGenres) }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.settings_fetch_genres), Modifier.weight(1f))
-                    Switch(checked = fetchGenres, onCheckedChange = { fetchGenres = it; prefs.fetchGenres = it; vm.repo.sync.crawlGenres() }, modifier = Modifier.focusHighlight())
-                }
-                Hint(stringResource(R.string.settings_fetch_genres_hint))
             }
             Group(stringResource(R.string.settings_group_playback)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

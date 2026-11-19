@@ -69,7 +69,6 @@ private const val GUIDE_WORDS =
 data class CategoryCount(val accountId: Long, val categoryRemoteId: String, val n: Int)
 
 /** How many titles an account has, and how many entries a favorites list has (only titles that still exist), for the numbers in the selection menus. */
-data class KnownGenre(val remoteId: String, val genre: String)
 data class GenreCount(val genre: String, val n: Int)
 data class AccountCount(val accountId: Long, val n: Int)
 data class ListCount(val listId: Long, val n: Int)
@@ -83,16 +82,6 @@ private const val QUICK_FILTERS =
 interface ItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(items: List<Item>)
-
-    /** The genres found so far (the marker "|" means: asked, the movie has none), so a new load of the list does not lose them. */
-    @Query("SELECT remoteId, genre FROM items WHERE accountId = :accountId AND kind = :kind AND genre <> ''")
-    suspend fun knownGenres(accountId: Long, kind: Int): List<KnownGenre>
-
-    @Query("SELECT remoteId FROM items WHERE accountId = :accountId AND kind = :kind AND genre = '' ORDER BY ord")
-    suspend fun withoutGenre(accountId: Long, kind: Int): List<String>
-
-    @Query("UPDATE items SET genre = :genre WHERE accountId = :accountId AND kind = :kind AND remoteId = :remoteId")
-    suspend fun setGenre(accountId: Long, kind: Int, remoteId: String, genre: String)
 
     @Query("DELETE FROM items WHERE accountId = :accountId AND kind = :kind AND gen <> :gen")
     suspend fun deleteStale(accountId: Long, kind: Int, gen: Int)

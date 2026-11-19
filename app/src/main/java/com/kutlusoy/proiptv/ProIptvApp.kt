@@ -47,7 +47,7 @@ class ProIptvApp : Application() {
         val db = AppDatabase.create(this)
         val secrets = SecretBox()
         prefs = Prefs(this)
-        repo = Repository(db, secrets, SyncManager(db, secrets, scope, { prefs.hideAdult }, { prefs.fetchGenres }))
+        repo = Repository(db, secrets, SyncManager(db, secrets, scope) { prefs.hideAdult })
         val hubDir = File(cacheDir, "timeshift")
         engine = EngineManager(hubDir, scope, capacity = {
             val wanted = prefs.bufferMb * 1024L * 1024L
@@ -65,7 +65,6 @@ class ProIptvApp : Application() {
         }
         scope.launch {
             repo.sync.syncStale(STALE_MS)
-            repo.sync.crawlGenres()
             while (true) {
                 repo.sync.syncStaleGuides()
                 delay(GUIDE_CHECK_MS)

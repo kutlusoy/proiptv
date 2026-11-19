@@ -111,9 +111,6 @@
     <string name="cast_stop">Beenden und hier abspielen</string>
     <string name="cast_failed">Der Fernseher konnte diesen Stream nicht abspielen.</string>
     <string name="filter_genre_all">Alle Genres</string>
-    <string name="settings_fetch_genres">Genres der Filme laden</string>
-    <string name="settings_fetch_genres_hint">Das Genre eines Films steht nur in dessen Details. Die App fragt sie nach und nach im Hintergrund ab (etwa 2 pro Sekunde) und merkt sie sich, damit der Genre-Filter bei Filmen funktioniert. Sie hört auf, wenn der Anbieter ablehnt.</string>
-    <string name="genre_loading">Genres werden geladen %1$d / %2$d</string>
     <string name="player_columns">Kategorien und Sender nebeneinander</string>
     <string name="player_filter_categories">In %1$d Kategorien suchen</string>
     <string name="player_filter_channels">In %1$d Sendern suchen</string>
