@@ -21,7 +21,7 @@ suspend fun ItemDao.at(kind: Int, ids: List<Long>, cat: String?, q: String, coun
 
 fun ItemDao.paging(kind: Int, ids: List<Long>, cat: String?, q: String, country: String?, year: Int?, flags: Int): PagingSource<Int, Item> {
     val (a, b, c, d) = SearchMatch.four(q)
-    return paging(kind, ids, cat, a, b, c, d, country, year, flags)
+    return paging(kind, ids, cat, a, b, c, d, country, year, flags, null)
 }
 
 fun ProgramDao.guide(ids: List<Long>, cat: String?, from: Long, to: Long, q: String): Flow<List<GuideRow>> {

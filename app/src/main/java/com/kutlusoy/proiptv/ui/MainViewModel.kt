@@ -189,6 +189,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun categoryCounts(ids: List<Long>, kind: Int) = db.items().categoryCounts(ids, kind)
 
+    fun genreCounts(ids: List<Long>, kind: Int) = db.items().genreCounts(ids, kind)
+
     fun accountCounts(ids: List<Long>, kind: Int) = db.items().accountCounts(ids, kind)
 
     fun listCounts(ids: List<Long>, kind: Int) = db.favorites().listCounts(ids, kind)
@@ -210,12 +212,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // the loaded pages of the last list per area are kept, so the list is the same (and at the same place) after the player was closed
     private val pagers = HashMap<Int, Pair<List<Any?>, kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>>>>()
 
-    fun pager(kind: Int, ids: List<Long>, category: String?, query: String, flags: Int = 0): kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>> {
-        val key = listOf(kind, ids, category, query, flags)
+    fun pager(kind: Int, ids: List<Long>, category: String?, query: String, flags: Int = 0, genre: String? = null): kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>> {
+        val key = listOf(kind, ids, category, query, flags, genre)
         pagers[kind]?.takeIf { it.first == key }?.let { return it.second }
         val flow = Pager(PagingConfig(pageSize = 60, enablePlaceholders = false)) {
             val (w1, w2, w3, w4) = com.kutlusoy.proiptv.parse.SearchMatch.four(query)
-            db.items().paging(kind, ids, category, w1, w2, w3, w4, null, null, flags)
+            db.items().paging(kind, ids, category, w1, w2, w3, w4, null, null, flags, genre)
         }.flow.cachedIn(viewModelScope)
         pagers[kind] = key to flow
         return flow

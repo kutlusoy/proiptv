@@ -20,4 +20,21 @@ object Genres {
         }
         return counts.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key }).map { names.getValue(it.key) to it.value }
     }
+
+    /** How a title keeps its genres in the database: the names between bars ("|Horror|Action|"), so a name can be searched as a whole. Empty without genre. */
+    fun encode(text: String?): String = split(text).let { if (it.isEmpty()) "" else it.joinToString("|", prefix = "|", postfix = "|") }
+
+    fun decode(stored: String): List<String> = stored.split('|').filter { it.isNotEmpty() }
+
+    /** The same as [count] for rows of the database: the stored text of a genre column with the number of titles that have exactly this text. */
+    fun countStored(rows: List<Pair<String, Int>>): List<Pair<String, Int>> {
+        val names = HashMap<String, String>()
+        val counts = HashMap<String, Int>()
+        for ((stored, n) in rows) for (g in decode(stored)) {
+            val key = g.lowercase()
+            names.putIfAbsent(key, g)
+            counts[key] = (counts[key] ?: 0) + n
+        }
+        return counts.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key }).map { names.getValue(it.key) to it.value }
+    }
 }

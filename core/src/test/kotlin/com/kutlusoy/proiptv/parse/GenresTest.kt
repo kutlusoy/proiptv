@@ -26,4 +26,13 @@ class GenresTest {
         val counted = Genres.count(sequenceOf("Drama, Action", "drama", null, "Action / Drama", "Comedy"))
         assertEquals(listOf("Drama" to 3, "Action" to 2, "Comedy" to 1), counted)
     }
+
+    @Test
+    fun storedFormKeepsTheNamesBetweenBars() {
+        assertEquals("|Horror|Action|", Genres.encode("Horror / Action"))
+        assertEquals("", Genres.encode(null))
+        assertEquals(listOf("Horror", "Action"), Genres.decode("|Horror|Action|"))
+        val rows = listOf("|Drama|Action|" to 2, "|drama|" to 1, "" to 5, "|Comedy|" to 1)
+        assertEquals(listOf("Drama" to 3, "Action" to 2, "Comedy" to 1), Genres.countStored(rows))
+    }
 }
