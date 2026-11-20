@@ -3,6 +3,10 @@ package com.kutlusoy.proiptv.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,7 +66,8 @@ import kotlinx.coroutines.launch
 
 private class Card(val key: String, val title: String, val logo: String?, val live: Boolean, val progress: Float? = null, val account: Long = -1, val open: () -> Unit)
 
-private class Row(val title: String, val cards: List<Card>)
+/** A row of cards (search) or, with [grid], a band of three rows of small tiles (the start page). */
+private class Row(val title: String, val cards: List<Card>, val grid: Boolean = false)
 
 /** The start page: continue watching, the own lists and the first titles in rows, and one search over everything. */
 @Composable
@@ -124,30 +129,16 @@ fun HomeScreen(vm: MainViewModel) {
     val continueTitle = stringResource(R.string.home_continue)
     val area = labels.mapValues { stringResource(it.value) }
 
-    val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
-    val lastRows by produceState(emptyList<Row>(), enabled, movie, series) {
-        value = listOf(Kind.MOVIE, Kind.SERIES, Kind.LIVE).mapNotNull { kind ->
-            val (account, cat) = prefs.lastCategory(kind) ?: return@mapNotNull null
-            if (enabled.none { it.id == account }) return@mapNotNull null
-            val name = db.items().categories(account, kind).first().firstOrNull { it.remoteId == cat }?.name ?: return@mapNotNull null
-            val items = db.items().first(kind, account, cat, 40)
-            if (items.isEmpty()) null else Row(
-                "$name \u00B7 ${area.getValue(kind)}",
-                items.mapIndexed { i, item ->
-                    if (kind == Kind.LIVE) Card("${item.accountId}|0|${item.remoteId}", item.name, item.logo, true, null, item.accountId) {
-                        vm.player.value = PlayRequest.Zap(Source.Browse(Kind.LIVE, listOf(account), cat, ""), i)
-                    } else itemCard(item)
-                },
-            )
+    // the channels that were watched last (the newest first)
+    val historyRows by db.history().rows().collectAsState(initial = emptyList())
+    val historyCards = remember(historyRows) {
+        historyRows.mapIndexed { i, h ->
+            Card("${h.item.accountId}|0|${h.item.remoteId}", h.item.name, h.item.logo, true, null, h.item.accountId) {
+                vm.player.value = PlayRequest.Zap(Source.History, i)
+            }
         }
     }
 
-    val firstRows by produceState(emptyList<Row>(), enabled) {
-        value = listOf(Kind.MOVIE, Kind.SERIES).mapNotNull { kind ->
-            val top = db.items().top(kind, ids, 30)
-            if (top.isEmpty()) null else Row(area.getValue(kind), top.map { itemCard(it) })
-        }
-    }
     val found by produceState(emptyList<Row>(), q, enabled) {
         if (q.length < 2) { value = emptyList(); return@produceState }
         kotlinx.coroutines.delay(250)
@@ -163,23 +154,25 @@ fun HomeScreen(vm: MainViewModel) {
     }
 
     val rows = if (q.length >= 2) found else buildList {
-        if (continueCards.isNotEmpty()) add(Row(continueTitle, continueCards))
-        addAll(lastRows)
-        for ((list, favs) in listRows) {
-            if (favs.isEmpty()) continue
-            add(
-                Row(
-                    "★ ${list.name} · ${area.getValue(list.kind)}",
-                    favs.mapIndexed { i, f ->
+        // movies and series that were begun, then the channels that were watched last
+        val watching = continueCards + historyCards
+        if (watching.isNotEmpty()) add(Row(continueTitle, watching.take(MAX_TILES), grid = true))
+        // the favorites of every area (all lists of the area together)
+        for ((kind, title) in listOf(Kind.LIVE to R.string.home_fav_live, Kind.MOVIE to R.string.home_fav_movies, Kind.SERIES to R.string.home_fav_series)) {
+            val cards = LinkedHashMap<String, Card>()
+            for ((list, favs) in listRows.filter { it.first.kind == kind }) {
+                favs.forEachIndexed { i, f ->
+                    cards.putIfAbsent(
+                        "${f.accountId}|${f.kind}|${f.remoteId}",
                         Card("${list.id}|${f.accountId}|${f.kind}|${f.remoteId}", TitleParser.parse(f.name).title.ifBlank { f.name }, f.logo, f.kind == Kind.LIVE, null, f.accountId) {
                             if (f.kind == Kind.LIVE) vm.player.value = PlayRequest.Zap(Source.Favs(list.id), i)
                             else f.itemId?.let { id -> scope.launch { db.items().get(id)?.let { openItem(it) } } }
-                        }
-                    },
-                ),
-            )
+                        },
+                    )
+                }
+            }
+            if (cards.isNotEmpty()) add(Row("\u2605 " + stringResource(title), cards.values.take(MAX_TILES), grid = true))
         }
-        addAll(firstRows)
     }
 
     val firstCard = remember { FocusRequester() }
@@ -194,14 +187,57 @@ fun HomeScreen(vm: MainViewModel) {
         )
         val syncing by vm.syncState.collectAsState()
         if (rows.isEmpty() && q.length < 2 && syncing.isNotEmpty()) SkeletonRows()
+        if (q.length < 2 && rows.isEmpty() && syncing.isEmpty()) Text(stringResource(R.string.home_empty), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
         if (q.length >= 2 && rows.isEmpty()) Text(stringResource(R.string.home_no_results), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
             itemsIndexed(rows) { rowIndex, row ->
                 Text(row.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp)) {
-                    itemsIndexed(row.cards, key = { _, c -> c.key }) { i, card -> HomeCard(card, if (rowIndex == 0 && i == 0) firstCard else null) }
+                if (row.grid) {
+                    // up to three rows; right and left move the whole band
+                    val lines = minOf(3, row.cards.size)
+                    androidx.compose.foundation.lazy.grid.LazyHorizontalGrid(
+                        androidx.compose.foundation.lazy.grid.GridCells.Fixed(lines),
+                        Modifier.padding(top = 6.dp).fillMaxWidth().height(TILE_HEIGHT * lines + 8.dp * (lines - 1) + 12.dp),
+                        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        gridItemsIndexed(row.cards, key = { _, c -> c.key }) { i, card -> HomeTile(card, if (rowIndex == 0 && i == 0) firstCard else null) }
+                    }
+                } else {
+                    LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp)) {
+                        itemsIndexed(row.cards, key = { _, c -> c.key }) { i, card -> HomeCard(card, if (rowIndex == 0 && i == 0) firstCard else null) }
+                    }
                 }
             }
+        }
+    }
+}
+
+private val TILE_HEIGHT = 72.dp
+private const val MAX_TILES = 60
+
+/** A small tile for the bands of the start page: the picture on the left, title and account on the right. */
+@Composable
+private fun HomeTile(card: Card, requester: FocusRequester? = null) {
+    var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.04f else 1f, label = "tile")
+    androidx.compose.foundation.layout.Row(
+        Modifier.width(250.dp).height(TILE_HEIGHT).graphicsLayer { scaleX = scale; scaleY = scale }
+            .onFocusChanged { focused = it.hasFocus }
+            .focusHighlight()
+            .then(if (requester != null) Modifier.focusRequester(requester) else Modifier)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .clickable(onClick = card.open),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(if (card.live) 92.dp else 50.dp).fillMaxHeight().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.25f))) {
+            Logo(card.logo, Modifier.fillMaxSize().padding(if (card.live) 6.dp else 0.dp), if (card.live) ContentScale.Fit else ContentScale.Crop, card.title)
+            card.progress?.let { LinearProgressIndicator(progress = { it }, Modifier.align(Alignment.BottomCenter).fillMaxWidth()) }
+        }
+        Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+            Text(card.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            LocalAccountNames.current[card.account]?.let { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)) }
         }
     }
 }
