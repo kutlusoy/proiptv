@@ -54,6 +54,8 @@
     <string name="home_fav_movies">Filme Favoriten</string>
     <string name="home_fav_series">Serien Favoriten</string>
     <string name="home_empty">Noch nichts da. Angefangene Titel und deine Favoriten erscheinen hier.</string>
+    <string name="settings_vod_preview">Filme und Serien mit Vorschau-Player</string>
+    <string name="settings_vod_preview_hint">Filme und Serien öffnen mit der Liste (Folgen oder ähnliche Filme), den Details und einem kleinen Player, wie bei den Live-Sendern. Aus: die Detailseite wie bisher.</string>
     <string name="home_search">Sender, Filme und Serien suchen</string>
     <string name="home_no_results">Nichts gefunden</string>
     <string name="live_no_results">Nichts gefunden.</string>

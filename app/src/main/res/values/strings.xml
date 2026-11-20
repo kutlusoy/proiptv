@@ -55,6 +55,8 @@
     <string name="home_fav_movies">Movie favorites</string>
     <string name="home_fav_series">Series favorites</string>
     <string name="home_empty">Nothing here yet. Titles you begin and your favorites appear on this page.</string>
+    <string name="settings_vod_preview">Movies and series with a preview player</string>
+    <string name="settings_vod_preview_hint">Movies and series open with the list of episodes (or similar movies), the details and a small player, like the live channels. Off: the detail page as before.</string>
     <string name="home_search">Search channels, movies and series</string>
     <string name="home_no_results">Nothing found</string>
     <string name="live_no_results">Nothing found.</string>

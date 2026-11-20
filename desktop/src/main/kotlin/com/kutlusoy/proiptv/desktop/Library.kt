@@ -188,9 +188,13 @@ class Library(private val store: Store) {
 
     suspend fun episodes(e: Entry): List<XtreamEpisode> = seriesDetail(e).episodes
 
+    private val seriesCache = java.util.concurrent.ConcurrentHashMap<String, SeriesDetail>()
+
+    /** The episodes of a series; kept for the session, so the preview layout and the detail page do not ask the provider twice. */
     suspend fun seriesDetail(e: Entry): SeriesDetail = withContext(Dispatchers.IO) {
+        seriesCache[e.key]?.let { return@withContext it }
         val a = store.config.accounts.firstOrNull { it.id == e.accountId } ?: return@withContext SeriesDetail(null, emptyList())
-        api(a).seriesDetail(e.remoteId)
+        api(a).seriesDetail(e.remoteId).also { if (it.episodes.isNotEmpty()) seriesCache[e.key] = it }
     }
 
     private fun tmdb(): Tmdb? {

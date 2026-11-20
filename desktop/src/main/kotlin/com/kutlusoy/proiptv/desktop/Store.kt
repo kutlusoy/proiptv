@@ -72,6 +72,8 @@ data class ConfigDto(
     val history: List<String> = emptyList(),
     val hideAdult: Boolean = true,
     val autoplayNext: Boolean = true,
+    /** Movies and series open in the preview layout (list, details and a small player) like the live channels. */
+    val vodPreview: Boolean = false,
     /** The picture of the player: brightness from -100 to 100 and zoom in percent (100 to 300). Kept for the next start. */
     val videoBrightness: Int = 0,
     val videoZoom: Int = 100,

@@ -286,6 +286,8 @@
     <string name="home_fav_movies">Film favorileri</string>
     <string name="home_fav_series">Dizi favorileri</string>
     <string name="home_empty">Henüz bir şey yok. Başladığınız içerikler ve favorileriniz burada görünür.</string>
+    <string name="settings_vod_preview">Filmler ve diziler önizleme oynatıcıyla</string>
+    <string name="settings_vod_preview_hint">Filmler ve diziler, canlı kanallardaki gibi liste (bölümler veya benzer filmler), ayrıntılar ve küçük bir oynatıcıyla açılır. Kapalı: ayrıntı sayfası eskisi gibi.</string>
     <string name="home_search">Kanal, film ve dizi ara</string>
     <string name="home_no_results">Sonuç bulunamadı</string>
     <string name="dl_pause">Duraklat</string>

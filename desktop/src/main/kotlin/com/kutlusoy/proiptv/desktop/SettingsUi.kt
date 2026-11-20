@@ -123,6 +123,13 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     DropdownField("$mb MB", listOf(128, 256, 512, 1024, 2048).map { it to "$it MB" }, { mb = it; state.store.update { c -> c.copy(bufferMb = it) } }, Modifier.widthIn(max = 320.dp).fillMaxWidth())
                     Hint(t("settings_buffer_hint"))
                 }
+                // movies and series in the layout with a list, details and a small player (like the live channels)
+                var vodPreview by remember { mutableStateOf(state.store.config.vodPreview) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("settings_vod_preview"), Modifier.weight(1f))
+                    Switch(checked = vodPreview, onCheckedChange = { vodPreview = it; state.store.update { c -> c.copy(vodPreview = it) } })
+                }
+                Hint(t("settings_vod_preview_hint"))
             }
             Group(t("settings_about")) {
                 Text("ProIPTV " + t("main_version", AppInfo.label))

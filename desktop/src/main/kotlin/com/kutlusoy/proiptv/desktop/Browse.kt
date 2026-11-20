@@ -379,10 +379,7 @@ private fun DetailHeader(state: AppState, e: Entry, onBack: () -> Unit) {
 private fun MovieDetail(state: AppState, e: Entry) {
     val saved = state.progress.let { it.version; it.get(e.accountId, Kind.MOVIE, e.remoteId) }
     val resume = saved?.takeIf { it.positionMs > 5_000 }
-    fun play(startMs: Long) {
-        val local = state.downloadOf(e.accountId, Kind.MOVIE, e.remoteId)?.let { state.localPlayable(it) }
-        (local ?: state.library.playable(e))?.let { state.player = PlayRequest.Single(it, startMs) }
-    }
+    fun play(startMs: Long) = state.playMovie(e, startMs)
     val download = state.downloadOf(e.accountId, Kind.MOVIE, e.remoteId)
     val vod by produceState<VodInfo?>(null, e.key) { value = state.library.vodInfo(e) }
     Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -418,7 +415,7 @@ private fun MovieDetail(state: AppState, e: Entry) {
 }
 
 @Composable
-private fun Facts(rating: String?, plot: String?, director: String?, cast: String?, released: String?, genre: String?, durationSecs: Int?, trailer: String?) {
+internal fun Facts(rating: String?, plot: String?, director: String?, cast: String?, released: String?, genre: String?, durationSecs: Int?, trailer: String?) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         rating?.toDoubleOrNull()?.takeIf { it > 0 }?.let { r ->
             val filled = Math.round(r / 2).toInt().coerceIn(0, 5)
@@ -469,15 +466,7 @@ private fun SeriesDetail(state: AppState, e: Entry) {
     val version = state.progress.version
     fun progressOf(id: String) = state.progress.get(e.accountId, Kind.EPISODE, id)
     val next = remember(list, version) { SeriesProgress.next(list, ::progressOf) }
-    fun play(ep: XtreamEpisode, startMs: Long = 0) {
-        val local = state.downloadOf(e.accountId, Kind.EPISODE, ep.id)?.let { state.localPlayable(it) }
-        // the rest of the season follows when autoplay is on
-        val season = list.filter { it.season == ep.season }
-        val following = season.drop(season.indexOfFirst { it.id == ep.id } + 1).map { nextEp ->
-            { state.downloadOf(e.accountId, Kind.EPISODE, nextEp.id)?.let { state.localPlayable(it) } ?: state.library.episodePlayable(e, nextEp) }
-        }
-        (local ?: state.library.episodePlayable(e, ep))?.let { state.player = PlayRequest.Single(it, startMs, following) }
-    }
+    fun play(ep: XtreamEpisode, startMs: Long = 0) = state.playEpisode(e, ep, list, startMs)
     var menu by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         DetailHeader(state, e) { state.series = null }

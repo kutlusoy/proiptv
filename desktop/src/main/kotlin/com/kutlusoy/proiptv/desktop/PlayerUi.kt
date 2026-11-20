@@ -98,9 +98,22 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var length by mutableLongStateOf(0)
     var failed by mutableStateOf<String?>(null)
     var reconnecting by mutableStateOf(false)
-    var listOpen by mutableStateOf(false)
+    // movies and series start in the preview layout when the setting is on, channels open it with the menu button
+    var listOpen by mutableStateOf(request is PlayRequest.Single && request.entry != null && state.store.config.vodPreview)
 
     val live: Boolean get() = request is PlayRequest.Live
+
+    /** Full screen from the layout with the list: the same player goes to the big picture, so the playing is not interrupted. */
+    fun fullscreen() {
+        if (state.placement != androidx.compose.ui.window.WindowPlacement.Fullscreen && listOpen && hasBrowser) listOpen = false
+        state.toggleFullscreen()
+    }
+
+    /** The movie or series that is shown in the preview layout (null for channels and for files). */
+    val vodEntry: Entry? get() = (request as? PlayRequest.Single)?.entry
+
+    /** There is a layout with a list next to the small picture: channels, and movies and series with the setting. */
+    val hasBrowser: Boolean get() = live || (vodEntry != null && state.store.config.vodPreview)
     /** The channels that zapping and the next and previous keys walk through. It becomes the list the user clicked a channel in. */
     var playEntries by mutableStateOf((request as? PlayRequest.Live)?.entries.orEmpty())
 
@@ -407,7 +420,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         state.progress.setWatched(item.account, item.kind, listOf(item.remoteId), true)
         if (!state.store.config.autoplayNext) return
         val next = r.following.firstOrNull()?.invoke() ?: return
-        state.player = PlayRequest.Single(next, 0, r.following.drop(1))
+        state.player = PlayRequest.Single(next, 0, r.following.drop(1), r.entry)
     }
 
     fun poll() {
@@ -472,7 +485,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
         } else {
             VideoSurface(engine, modifier, onDoubleClick = {
                 // in the channel browser a double click makes the stream big (like the menu button), in the big picture it makes the window borderless
-                if (controller.listOpen && controller.live && !state.compact) controller.listOpen = false else state.toggleFullscreen()
+                if (controller.listOpen && controller.hasBrowser && !state.compact) controller.listOpen = false else state.toggleFullscreen()
             }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) }, brightness = state.videoBrightness, zoom = state.videoZoom, panX = state.videoPanX, panY = state.videoPanY, fitRequest = state.zoomFitRequest, onFit = { zoom -> state.changeZoom(zoom); state.changePan(0, 0) }, onPan = state::changePan,
                 // movies and series: a click on the picture pauses and continues (a double click stays what it was; the click waits for the time of a double click)
                 onClick = if (!controller.live) ({ controller.togglePause() }) else null)
@@ -484,7 +497,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     // 0 compact, 1 fullscreen, 2 window, 3 channel browser: the change between them fades instead of jumping
     val layoutMode = when {
         state.compact -> 0
-        controller.listOpen && controller.live -> 3
+        controller.listOpen && controller.hasBrowser -> 3
         fullscreen -> 1
         else -> 2
     }
@@ -497,7 +510,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     if (mode == 3) {
         // the channel browser: list on the left, the running channel as a small preview with its info card, the guide below
         Column(Modifier.fillMaxSize().background(Palette.Velvet)) {
-            ChannelBrowser(state, controller, video, Modifier.weight(1f))
+            if (controller.live) ChannelBrowser(state, controller, video, Modifier.weight(1f)) else VodBrowser(state, controller, video, Modifier.weight(1f))
             ControlBar(state, controller, Modifier, floating = false)
         }
     } else if (mode == 0) {
@@ -901,7 +914,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // the same round controls and symbols as in the Android player: pause, stop, record
-        if (controller.live) Tip(t("player_channel_list"), above = true) { RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp) }
+        if (controller.hasBrowser) Tip(t("player_channel_list"), above = true) { RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp) }
         Tip(t(if (controller.paused) "player_play" else "player_pause"), "Space", above = true) { RoundControl(if (controller.paused) PlayerGlyph.PLAY else PlayerGlyph.PAUSE, t(if (controller.paused) "player_play" else "player_pause"), { controller.togglePause() }, diameter = 38.dp) }
         Tip(t("player_stop"), "Esc", above = true) { RoundControl(PlayerGlyph.STOP, t("player_stop"), { controller.stop() }, diameter = 38.dp) }
         if (controller.live) {
@@ -967,7 +980,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             }
         }
         Tip(t("player_compact"), "P", above = true) { IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) } }
-        Tip(t("player_fullscreen"), "F", above = true) { IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) } }
+        Tip(t("player_fullscreen"), "F", above = true) { IconButton(onClick = { controller.fullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) } }
     }
 }
 

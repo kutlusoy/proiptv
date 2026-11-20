@@ -16,7 +16,7 @@ sealed interface PlayRequest {
     /** [query] is the search of the list the player was started from (null when the list has no search), [origin] the list without that search, [allScope] whether that list is all channels of all accounts. */
     class Live(val entries: List<Entry>, val index: Int, val query: String? = null, val origin: List<Entry> = emptyList(), val allScope: Boolean = false) : PlayRequest
     /** [following] are the next episodes of the season (resolved when it is their turn): with autoplay the next one starts when an episode has ended. */
-    class Single(val item: Playable, val startMs: Long = 0, val following: List<() -> Playable?> = emptyList()) : PlayRequest
+    class Single(val item: Playable, val startMs: Long = 0, val following: List<() -> Playable?> = emptyList(), val entry: Entry? = null) : PlayRequest
 }
 
 class AppState(val store: Store, val scope: CoroutineScope) {
@@ -277,6 +277,22 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     fun changeZoom(value: Int) {
         videoZoom = value.coerceIn(100, 300)
         store.update { c -> c.copy(videoZoom = videoZoom) }
+    }
+
+    /** Plays a movie (from the download when there is one). [Entry] is kept in the request so the preview layout knows what it shows. */
+    fun playMovie(e: Entry, startMs: Long = 0) {
+        val local = downloadOf(e.accountId, Kind.MOVIE, e.remoteId)?.let { localPlayable(it) }
+        (local ?: library.playable(e))?.let { player = PlayRequest.Single(it, startMs, entry = e) }
+    }
+
+    /** Plays an episode; with autoplay the rest of its season follows. */
+    fun playEpisode(series: Entry, ep: com.kutlusoy.proiptv.net.XtreamEpisode, all: List<com.kutlusoy.proiptv.net.XtreamEpisode>, startMs: Long = 0) {
+        val local = downloadOf(series.accountId, Kind.EPISODE, ep.id)?.let { localPlayable(it) }
+        val season = all.filter { it.season == ep.season }
+        val following = season.drop(season.indexOfFirst { it.id == ep.id } + 1).map { nextEp ->
+            { downloadOf(series.accountId, Kind.EPISODE, nextEp.id)?.let { localPlayable(it) } ?: library.episodePlayable(series, nextEp) }
+        }
+        (local ?: library.episodePlayable(series, ep))?.let { player = PlayRequest.Single(it, startMs, following, series) }
     }
 
     fun setHiddenLive(id: String, hidden: List<String>) {

@@ -54,6 +54,8 @@
     <string name="home_fav_movies">Favoritos de películas</string>
     <string name="home_fav_series">Favoritos de series</string>
     <string name="home_empty">Todavía no hay nada. Los títulos empezados y tus favoritos aparecen en esta página.</string>
+    <string name="settings_vod_preview">Películas y series con reproductor de vista previa</string>
+    <string name="settings_vod_preview_hint">Las películas y series se abren con la lista (episodios o películas similares), los detalles y un pequeño reproductor, como los canales en directo. Desactivado: la página de detalles como antes.</string>
     <string name="home_search">Buscar canales, películas y series</string>
     <string name="home_no_results">No se encontró nada</string>
     <string name="live_no_results">Sin resultados.</string>

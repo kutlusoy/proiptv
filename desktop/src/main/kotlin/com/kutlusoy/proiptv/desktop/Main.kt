@@ -145,7 +145,7 @@ private fun runApplication() = application {
                 Key.Escape -> { if (state.compact) { state.setCompact(false, state.windowRef?.bounds); true } else if (state.placement == WindowPlacement.Fullscreen) { state.toggleFullscreen(); true } else { c.stop(); true } }
                 Key.P -> { state.setCompact(!state.compact, state.windowRef?.bounds); true }
                 Key.Spacebar -> { c.togglePause(); true }
-                Key.F, Key.F11 -> { state.toggleFullscreen(); true }
+                Key.F, Key.F11 -> { c.fullscreen(); true }
                 Key.DirectionUp -> { c.zap(-1); true }
                 Key.DirectionDown -> { c.zap(1); true }
                 Key.DirectionLeft -> { c.seekBy(-10_000); true }
