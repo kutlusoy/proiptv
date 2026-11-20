@@ -1,6 +1,10 @@
 package com.kutlusoy.proiptv.desktop
 
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -42,12 +46,27 @@ sealed interface UpdateUi {
     data class Error(val code: UpdateException.Code, val detail: String?) : UpdateUi
 }
 
+/** The group that is open: every group is closed at first, a click on its title opens it (and closes the one that was open), so the remote control does not have to walk through all settings. */
+private val openGroup = androidx.compose.runtime.mutableStateOf<String?>(null)
+
 @Composable
 private fun Group(title: String, content: @Composable () -> Unit) {
+    val open = openGroup
+    val expanded = open.value == title
     Card(Modifier.fillMaxWidth().padding(top = 14.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Palette.WineSoft)
-            content()
+        Column {
+            Row(
+                Modifier.fillMaxWidth().clickable { open.value = if (expanded) null else title }.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Palette.WineSoft)
+                Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            }
+            androidx.compose.animation.AnimatedVisibility(expanded) {
+                Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    content()
+                }
+            }
         }
     }
 }
@@ -57,6 +76,8 @@ private fun Hint(text: String) = Text(text, style = MaterialTheme.typography.bod
 
 @Composable
 fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
+    // every visit starts with all groups closed
+    remember { openGroup.value = null }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)) {
         item {
             Text(t("nav_settings"), style = MaterialTheme.typography.headlineMedium)

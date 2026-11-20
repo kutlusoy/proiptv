@@ -3,6 +3,10 @@ package com.kutlusoy.proiptv.ui
 import android.text.format.Formatter
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,12 +46,27 @@ private val languages = listOf(
 
 private val bufferSizesMb = listOf(256, 512, 1024, 2048, 4096)
 
+/** The group that is open: every group is closed at first, a click on its title opens it (and closes the one that was open), so the remote control does not have to walk through all settings. */
+private val openGroup = androidx.compose.runtime.mutableStateOf<String?>(null)
+
 @Composable
 private fun Group(title: String, content: @Composable () -> Unit) {
+    val open = openGroup
+    val expanded = open.value == title
     Card(Modifier.fillMaxWidth().padding(top = 14.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Palette.WineSoft)
-            content()
+        Column {
+            Row(
+                Modifier.fillMaxWidth().focusHighlight().clickable { open.value = if (expanded) null else title }.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Palette.WineSoft)
+                Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            }
+            androidx.compose.animation.AnimatedVisibility(expanded) {
+                Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    content()
+                }
+            }
         }
     }
 }
@@ -75,6 +94,8 @@ fun SettingsScreen(vm: MainViewModel) {
     var hideAdult by remember { mutableStateOf(prefs.hideAdult) }
     val auto = stringResource(R.string.option_auto)
 
+    // every visit starts with all groups closed
+    remember { openGroup.value = null }
     LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 16.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)) {
         item {
             Text(stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
