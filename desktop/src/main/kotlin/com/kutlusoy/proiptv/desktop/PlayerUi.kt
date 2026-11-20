@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -72,6 +73,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -470,7 +472,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             VideoSurface(engine, modifier, onDoubleClick = {
                 // in the channel browser a double click makes the stream big (like the menu button), in the big picture it makes the window borderless
                 if (controller.listOpen && controller.live && !state.compact) controller.listOpen = false else state.toggleFullscreen()
-            }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) }, brightness = state.videoBrightness, zoom = state.videoZoom)
+            }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) }, brightness = state.videoBrightness, zoom = state.videoZoom, panX = state.videoPanX, panY = state.videoPanY, fitRequest = state.zoomFitRequest, onFit = { zoom -> state.changeZoom(zoom); state.changePan(0, 0) }, onPan = state::changePan)
         }
         controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp)) }
         if (controller.reconnecting && controller.failed == null) Text(t("player_retrying"), Modifier.background(Color(0xAA000000)).padding(12.dp), color = Color.White)
@@ -890,7 +892,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
     if (tracksOpen) TracksDialog(state.engine) { tracksOpen = false }
     if (castOpen) CastDialog(state, controller) { castOpen = false }
     if (brightnessOpen) PictureDialog(t("player_brightness"), state.videoBrightness, -100..100, "%+d", 0, state::changeBrightness) { brightnessOpen = false }
-    if (zoomOpen) PictureDialog(t("player_zoom"), state.videoZoom, 100..300, "%d %%", 100, state::changeZoom) { zoomOpen = false }
+    if (zoomOpen) ZoomDialog(state) { zoomOpen = false }
     Row(
         modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -953,6 +955,7 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_tracks")) }, onClick = { moreMenu = false; tracksOpen = true })
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_brightness")) }, onClick = { moreMenu = false; brightnessOpen = true })
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_zoom")) }, onClick = { moreMenu = false; zoomOpen = true })
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_zoom_fit")) }, onClick = { moreMenu = false; state.requestZoomFit() })
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("cast_open")) }, onClick = { moreMenu = false; castOpen = true })
             }
         }
@@ -1090,6 +1093,30 @@ private fun PictureDialog(title: String, value: Int, range: IntRange, format: St
     )
 }
 
+/** Zoom with its slider; a zoomed picture can be shifted here with two more sliders (or with the mouse in the picture). Everything is kept for the next start. */
+@Composable
+private fun ZoomDialog(state: AppState, onClose: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(t("player_zoom")) },
+        text = {
+            Column {
+                Text("%d %%".format(state.videoZoom), style = MaterialTheme.typography.titleMedium)
+                Slider(value = state.videoZoom.toFloat(), onValueChange = { state.changeZoom(it.toInt()) }, valueRange = 100f..300f, modifier = Modifier.width(320.dp))
+                if (state.videoZoom > 100) {
+                    Text(t("player_pan_x"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
+                    Slider(value = state.videoPanX.toFloat(), onValueChange = { state.changePan(it.toInt(), state.videoPanY) }, valueRange = -100f..100f, modifier = Modifier.width(320.dp))
+                    Text(t("player_pan_y"), style = MaterialTheme.typography.labelLarge)
+                    Slider(value = state.videoPanY.toFloat(), onValueChange = { state.changePan(state.videoPanX, it.toInt()) }, valueRange = -100f..100f, modifier = Modifier.width(320.dp))
+                    Text(t("player_pan_hint"), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { state.resetPicture() }, enabled = state.videoZoom != 100 || state.videoPanX != 0 || state.videoPanY != 0) { Text(t("player_video_reset")) } },
+    )
+}
+
 /** The TVs of the network (Google Cast). A tap sends the running stream to that TV. */
 @Composable
 private fun CastDialog(state: AppState, controller: PlayerController, onClose: () -> Unit) {
@@ -1122,7 +1149,7 @@ private fun TrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null, brightness: Int = 0, zoom: Int = 100) {
+private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null, brightness: Int = 0, zoom: Int = 100, panX: Int = 0, panY: Int = 0, fitRequest: Int = 0, onFit: (Int) -> Unit = {}, onPan: (Int, Int) -> Unit = { _, _ -> }) {
     var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(engine) {
         var shown = -1L
@@ -1141,9 +1168,39 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
             }
         }
     }
-    Box(modifier.background(Color.Black)) {
+    // "Zoom Fit": the zoom that makes the picture fill the window (no black bars); the position goes back to the middle
+    var area by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    var handledFit by remember { mutableStateOf(fitRequest) }
+    LaunchedEffect(fitRequest) {
+        if (fitRequest == handledFit) return@LaunchedEffect
+        handledFit = fitRequest
+        val img = image ?: return@LaunchedEffect
+        if (area.width == 0 || area.height == 0) return@LaunchedEffect
+        val fit = minOf(area.width.toFloat() / img.width, area.height.toFloat() / img.height)
+        val fill = maxOf(area.width.toFloat() / img.width, area.height.toFloat() / img.height)
+        onFit((fill / fit * 100).toInt().coerceIn(100, 300))
+    }
+    Box(modifier.background(Color.Black).onSizeChanged { area = it }) {
         androidx.compose.foundation.Canvas(
             Modifier.fillMaxSize()
+                // a zoomed picture is moved with the mouse (the main picture only)
+                .pointerInput(zoom, onTap != null) {
+                    if (onTap == null && zoom > 100) {
+                        var x = panX.toFloat()
+                        var y = panY.toFloat()
+                        detectDragGestures(onDragStart = { x = panX.toFloat(); y = panY.toFloat() }) { change, drag ->
+                            change.consume()
+                            val img = image ?: return@detectDragGestures
+                            val fit = minOf(size.width.toFloat() / img.width, size.height.toFloat() / img.height) * zoom / 100f
+                            val overflowX = (img.width * fit - size.width) / 2
+                            val overflowY = (img.height * fit - size.height) / 2
+                            // dragging to the right shows more of the left side
+                            if (overflowX > 0) x = (x - drag.x / overflowX * 100).coerceIn(-100f, 100f)
+                            if (overflowY > 0) y = (y - drag.y / overflowY * 100).coerceIn(-100f, 100f)
+                            onPan(x.toInt(), y.toInt())
+                        }
+                    }
+                }
                 .pointerInput(onTap != null) {
                     if (onTap != null) detectTapGestures(onTap = { onTap() }) else detectTapGestures(onDoubleTap = { onDoubleClick() })
                 }
@@ -1158,8 +1215,11 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
             val filter = if (brightness == 0) null else androidx.compose.ui.graphics.ColorFilter.colorMatrix(
                 androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(1f, 0f, 0f, 0f, shift, 0f, 1f, 0f, 0f, shift, 0f, 0f, 1f, 0f, shift, 0f, 0f, 0f, 1f, 0f)),
             )
+            // the part that is cut off can be shifted: -100 shows its left (upper) end, 100 its right (lower) end
+            val moveX = if (w > size.width) -panX / 100f * (w - size.width) / 2 else 0f
+            val moveY = if (h > size.height) -panY / 100f * (h - size.height) / 2 else 0f
             clipRect {
-                drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - w) / 2).toInt(), ((size.height - h) / 2).toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h), colorFilter = filter)
+                drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - w) / 2 + moveX).toInt(), ((size.height - h) / 2 + moveY).toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h), colorFilter = filter)
             }
         }
         // until the first picture has arrived a symbol shows what is coming

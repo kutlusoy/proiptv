@@ -246,6 +246,29 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     var videoZoom by androidx.compose.runtime.mutableIntStateOf(store.config.videoZoom)
         private set
 
+    var videoPanX by androidx.compose.runtime.mutableIntStateOf(store.config.videoPanX)
+        private set
+    var videoPanY by androidx.compose.runtime.mutableIntStateOf(store.config.videoPanY)
+        private set
+
+    /** Counts the requests for "Zoom Fit": the picture asks for it when it knows its own size. */
+    var zoomFitRequest by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+
+    fun requestZoomFit() { zoomFitRequest++ }
+
+    fun changePan(x: Int, y: Int) {
+        videoPanX = x.coerceIn(-100, 100)
+        videoPanY = y.coerceIn(-100, 100)
+        store.update { c -> c.copy(videoPanX = videoPanX, videoPanY = videoPanY) }
+    }
+
+    /** Zoom, position and brightness back to the standard. */
+    fun resetPicture() {
+        changeZoom(100)
+        changePan(0, 0)
+    }
+
     fun changeBrightness(value: Int) {
         videoBrightness = value.coerceIn(-100, 100)
         store.update { c -> c.copy(videoBrightness = videoBrightness) }

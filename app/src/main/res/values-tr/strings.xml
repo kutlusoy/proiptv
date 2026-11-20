@@ -179,6 +179,10 @@
     <string name="player_brightness">Parlaklık</string>
     <string name="player_zoom">Yakınlaştırma</string>
     <string name="player_video_reset">Sıfırla</string>
+    <string name="player_zoom_fit">Zoom Fit (ekranı doldur)</string>
+    <string name="player_pan_x">Yatay konum</string>
+    <string name="player_pan_y">Dikey konum</string>
+    <string name="player_pan_hint">Görüntüyü fareyle de kaydırabilirsiniz.</string>
     <string name="detail_cast">Oyuncular</string>
     <string name="detail_director">Yönetmen</string>
     <string name="detail_released">Yayın tarihi</string>

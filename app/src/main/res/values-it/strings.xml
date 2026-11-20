@@ -183,6 +183,10 @@
     <string name="player_brightness">Luminosità</string>
     <string name="player_zoom">Zoom</string>
     <string name="player_video_reset">Ripristina</string>
+    <string name="player_zoom_fit">Zoom Fit (riempi)</string>
+    <string name="player_pan_x">Posizione orizzontale</string>
+    <string name="player_pan_y">Posizione verticale</string>
+    <string name="player_pan_hint">Puoi spostare l\'immagine anche con il mouse.</string>
     <string name="detail_cast">Cast</string>
     <string name="detail_director">Regia</string>
     <string name="detail_released">Uscita</string>
