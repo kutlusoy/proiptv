@@ -29,6 +29,7 @@ class DownloadManager(
     private val scope: CoroutineScope,
     private val client: OkHttpClient,
     private val dirOf: () -> File,
+    private val storage: com.kutlusoy.proiptv.data.Storage? = null,
     private val resolve: suspend (Download) -> Pair<String, String?>?,
 ) {
     /** The folder can be changed in the settings, so it is asked every time. */
@@ -48,13 +49,18 @@ class DownloadManager(
     }
 
     /** A movie is a file in the folder of the downloads, an episode goes into the folder of its series and of its season. */
-    fun fileOf(d: Download): File {
+    private fun relativeOf(d: Download): String {
         val ext = d.ext.ifBlank { "mp4" }
-        val relative = if (d.kind == com.kutlusoy.proiptv.data.Kind.EPISODE) {
+        return if (d.kind == com.kutlusoy.proiptv.data.Kind.EPISODE) {
             com.kutlusoy.proiptv.parse.DownloadNames.episode(d.seriesName, d.season, d.episode, d.title, ext, ::seasonLabel)
         } else {
             com.kutlusoy.proiptv.parse.DownloadNames.movie(d.title, ext)
         }
+    }
+
+    fun fileOf(d: Download): File {
+        val ext = d.ext.ifBlank { "mp4" }
+        val relative = relativeOf(d)
         val named = File(dir, relative)
         val legacy = File(dir, "${d.id}.$ext")
         // downloads of older versions were stored under their number
@@ -63,10 +69,28 @@ class DownloadManager(
 
     /** Removes the finished downloads whose file was deleted outside of the app (only while the folder of the downloads is there). */
     suspend fun removeMissing() = withContext(Dispatchers.IO) {
-        if (!dir.isDirectory) return@withContext
+        val ctx = context
         for (d in dao.all().first()) {
-            if (d.status == DlStatus.DONE && !fileOf(d).exists()) dao.delete(d.id)
+            if (d.status != DlStatus.DONE) continue
+            val place = d.location
+            if (place != null) {
+                // moved to the folder that the user chose: only while that folder can be used, so a card that is not there does not empty the list
+                if (ctx != null && storage?.treeRoot() != null && !com.kutlusoy.proiptv.data.StoredFile.exists(ctx, place)) dao.delete(d.id)
+            } else if (dir.isDirectory && !fileOf(d).exists()) {
+                dao.delete(d.id)
+            }
         }
+    }
+
+    /** The address of the finished file (in the folder of the app or in the chosen folder), null when it is not there. */
+    fun uriOf(d: Download): android.net.Uri? {
+        val place = d.location
+        if (place != null) {
+            val ctx = context ?: return null
+            return if (com.kutlusoy.proiptv.data.StoredFile.exists(ctx, place)) android.net.Uri.parse(place) else null
+        }
+        val file = fileOf(d)
+        return if (file.exists()) android.net.Uri.fromFile(file) else null
     }
 
     private fun removeEmptyFolders(file: File) {
@@ -104,7 +128,16 @@ class DownloadManager(
     fun delete(id: Long) {
         scope.launch {
             if (currentId == id) running?.cancelAndJoin()
-            dao.get(id)?.let { val file = fileOf(it); file.delete(); removeEmptyFolders(file) }
+            dao.get(id)?.let {
+                val place = it.location
+                if (place != null) {
+                    context?.let { ctx -> com.kutlusoy.proiptv.data.StoredFile.delete(ctx, place) }
+                } else {
+                    val file = fileOf(it)
+                    file.delete()
+                    removeEmptyFolders(file)
+                }
+            }
             dao.delete(id)
         }
     }
@@ -144,6 +177,13 @@ class DownloadManager(
             val size = fileOf(d).length()
             dao.setProgress(d.id, size, size)
             dao.setStatus(d.id, DlStatus.DONE, null)
+            // a folder that the user chose: the finished file goes there (it stays in the app when that does not work)
+            val local = fileOf(d)
+            val place = withContext(Dispatchers.IO) { storage?.moveToTree(local, "Downloads/" + relativeOf(d)) }
+            if (place != null) {
+                dao.setLocation(d.id, place)
+                removeEmptyFolders(local)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: NoSpace) {

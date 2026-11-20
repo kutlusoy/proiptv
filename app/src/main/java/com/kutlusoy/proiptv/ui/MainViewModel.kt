@@ -119,10 +119,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun localTarget(d: Download): PlayTarget? {
         if (d.status != DlStatus.DONE) return null
-        val file = downloadManager.fileOf(d)
-        if (!file.exists()) return null
+        val uri = downloadManager.uriOf(d) ?: return null
         val title = if (d.kind == Kind.EPISODE) "${d.seriesName} S${d.season}E${d.episode}" else d.title
-        return PlayTarget(Uri.fromFile(file).toString(), null, title, false, d.accountId, d.kind, d.remoteId, d.seriesRemoteId)
+        return PlayTarget(uri.toString(), null, title, false, d.accountId, d.kind, d.remoteId, d.seriesRemoteId)
     }
 
     fun playDownload(d: Download) {

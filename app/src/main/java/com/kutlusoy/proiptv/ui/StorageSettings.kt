@@ -1,6 +1,9 @@
 package com.kutlusoy.proiptv.ui
 
 import android.text.format.Formatter
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,6 +35,7 @@ import com.kutlusoy.proiptv.data.StorageVolume
  * Where downloads, recordings and backups are kept. The drives that are connected are listed (internal storage, memory card, USB drive); no file chooser app is
  * needed, so it works on a TV too. The standard place stays until another one is chosen, "Restore default" goes back to it.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun StorageSettings() {
     val ctx = LocalContext.current
@@ -42,6 +46,17 @@ fun StorageSettings() {
     val missing = remember(version) { app.storage.chosenMissing() }
     val volumes = remember(version, dialog) { app.storage.volumes() }
     val internal = stringResource(R.string.storage_internal)
+    // a folder chosen with the file manager of the phone (not every TV has one)
+    val canChooseFolder = remember { Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).resolveActivity(ctx.packageManager) != null }
+    val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+            app.prefs.storageTree = uri.toString()
+            version++
+        }
+    }
+    val treeLabel = remember(version) { app.storage.treeLabel() }
+    val treeMissing = remember(version) { app.storage.treeMissing() }
 
     fun describe(v: StorageVolume) = (if (v.primary) internal else v.label) + " - " + ctx.getString(R.string.storage_free, Formatter.formatFileSize(ctx, v.freeBytes))
 
@@ -49,10 +64,14 @@ fun StorageSettings() {
         val current = chosen?.let { dir -> volumes.firstOrNull { dir.path.startsWith(it.dir.path) }?.let { describe(it) + "\n" + dir.path } }
         Text(current ?: stringResource(R.string.storage_default))
         if (missing) Text(stringResource(R.string.storage_missing), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (treeLabel != null) Text(stringResource(R.string.storage_folder_current, treeLabel))
+        if (treeMissing) Text(stringResource(R.string.storage_folder_missing), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (canChooseFolder) OutlinedButton(onClick = { folderPicker.launch(null) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.storage_folder_choose)) }
             OutlinedButton(onClick = { dialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.storage_choose)) }
-            OutlinedButton(onClick = { app.prefs.storageRoot = null; version++ }, enabled = app.prefs.storageRoot != null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.storage_reset)) }
+            OutlinedButton(onClick = { app.prefs.storageRoot = null; app.prefs.storageTree = null; version++ }, enabled = app.prefs.storageRoot != null || app.prefs.storageTree != null, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.storage_reset)) }
         }
+        if (canChooseFolder) Text(stringResource(R.string.storage_folder_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
         Text(stringResource(R.string.storage_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
         Text(stringResource(R.string.storage_uninstall_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
     }

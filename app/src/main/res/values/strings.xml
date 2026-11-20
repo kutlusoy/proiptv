@@ -187,6 +187,10 @@
     <string name="backup_none_found">No backup found in %1$s</string>
     <string name="backup_choose_file">Choose a backup</string>
     <string name="storage_uninstall_note">Note: when the app is uninstalled, Android also deletes the app folder on the drive.</string>
+    <string name="storage_folder_choose">Choose folder (file manager)</string>
+    <string name="storage_folder_current">Folder: %1$s</string>
+    <string name="storage_folder_missing">The chosen folder cannot be used at the moment (card not connected or access removed). Files stay in the app.</string>
+    <string name="storage_folder_hint">Finished downloads and recordings are moved to the folder when they are done, backups are saved there. While a transfer or a recording runs, the file is in the app. An uninstall does not remove what is in the folder.</string>
     <string name="backup_transfer">Via phone or PC</string>
     <string name="backup_transfer_title">Backup via phone or PC</string>
     <string name="backup_transfer_hint">Scan the code with your phone or PC (same Wi-Fi). On the page you can save the backup on that device or restore one from it.</string>
