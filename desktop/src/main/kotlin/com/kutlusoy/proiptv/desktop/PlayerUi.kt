@@ -870,6 +870,8 @@ private fun ColumnsIcon(active: Boolean) {
 @Composable
 private fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
     var tracksOpen by remember { mutableStateOf(false) }
+    var castOpen by remember { mutableStateOf(false) }
+    var moreMenu by remember { mutableStateOf(false) }
     var recordOpen by remember { mutableStateOf(false) }
     var guideOpen by remember { mutableStateOf(false) }
     if (guideOpen) GuideDialog(state, controller) { guideOpen = false }
@@ -882,7 +884,8 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             confirmButton = { androidx.compose.material3.TextButton(onClick = { recordError = null }) { Text(t("action_close")) } },
         )
     }
-    if (tracksOpen) TracksDialog(state, controller) { tracksOpen = false }
+    if (tracksOpen) TracksDialog(state.engine) { tracksOpen = false }
+    if (castOpen) CastDialog(state, controller) { castOpen = false }
     Row(
         modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -938,7 +941,14 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         }
         Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp).alpha(if (silent) 0.4f else 1f))
         if (controller.live) Tip(t("player_guide"), above = true) { RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp) }
-        Tip(t("player_more"), above = true) { RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp) }
+        // the gear opens a menu first: sound and subtitles, or send the stream to a TV
+        Box {
+            Tip(t("player_more"), above = true) { RoundControl(PlayerGlyph.GEAR, t("player_more"), { moreMenu = true }, diameter = 38.dp) }
+            androidx.compose.material3.DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_tracks")) }, onClick = { moreMenu = false; tracksOpen = true })
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("cast_open")) }, onClick = { moreMenu = false; castOpen = true })
+            }
+        }
         Tip(t("player_compact"), "P", above = true) { IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) } }
         Tip(t("player_fullscreen"), "F", above = true) { IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) } }
     }
@@ -1033,10 +1043,7 @@ private fun RecordChoice(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TracksDialog(state: AppState, controller: PlayerController, onClose: () -> Unit) {
-    val engine = state.engine
-    var castOpen by remember { mutableStateOf(false) }
-    if (castOpen) CastDialog(state, controller) { castOpen = false; onClose() }
+private fun TracksDialog(engine: VlcEngine, onClose: () -> Unit) {
     var tracks by remember { mutableStateOf(engine.tracks()) }
     val data = tracks
     androidx.compose.material3.AlertDialog(
@@ -1053,7 +1060,6 @@ private fun TracksDialog(state: AppState, controller: PlayerController, onClose:
                 data.subtitles.forEach { tr ->
                     TrackRow(if (tr.id == -1) t("player_off") else tr.name, tr.id == data.subtitleSelected) { engine.selectSubtitle(tr.id); tracks = engine.tracks() }
                 }
-                Text(t("cast_open"), Modifier.padding(top = 12.dp).fillMaxWidth().clickable { castOpen = true }.padding(vertical = 8.dp), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = Palette.WineSoft)
             }
         },
         confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
