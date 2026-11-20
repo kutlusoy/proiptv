@@ -57,10 +57,19 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
     val seasons = episodes.map { it.season }.distinct()
     val playingId = controller.current?.remoteId
     val playing = episodes.firstOrNull { it.id == playingId }
-    // the list shows the season of the running episode
-    var season by remember(entry.key, playing?.season) { mutableStateOf(playing?.season ?: -1) }
-    val active = if (season in seasons) season else seasons.firstOrNull() ?: 1
     val version = state.progress.version
+    // before anything plays: the episode where the user stopped (or the next one to watch) is ready, with the minute
+    val nextEpisode = remember(episodes, version) { if (isSeries) SeriesProgress.next(episodes) { id -> state.progress.get(entry.accountId, Kind.EPISODE, id) } else null }
+    val readyId = if (controller.current == null) nextEpisode?.episode?.id else null
+    // the list shows the season of the running episode, or of the one that is ready
+    var season by remember(entry.key, playing?.season, nextEpisode?.episode?.season) { mutableStateOf(playing?.season ?: nextEpisode?.episode?.season ?: -1) }
+    val active = if (season in seasons) season else seasons.firstOrNull() ?: 1
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val seasonEpisodes = episodes.filter { it.season == active }
+    androidx.compose.runtime.LaunchedEffect(readyId, active, episodes.size) {
+        val at = seasonEpisodes.indexOfFirst { it.id == readyId }
+        if (at >= 0) listState.scrollToItem((at - 1).coerceAtLeast(0))
+    }
 
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val left = (maxWidth * 0.32f).coerceAtLeast(300.dp).coerceAtMost(460.dp)
@@ -72,12 +81,13 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                     } else if (detail == null) {
                         Text(t("series_loading"), Modifier.padding(12.dp), color = Color.White.copy(alpha = 0.7f))
                     }
-                    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        items(episodes.filter { it.season == active }, key = { it.id }) { ep ->
+                    LazyColumn(Modifier.fillMaxSize(), state = listState, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        items(seasonEpisodes, key = { it.id }) { ep ->
                             val p = state.progress.let { it.version; it.get(entry.accountId, Kind.EPISODE, ep.id) }
                             val now = ep.id == playingId
+                            val ready = ep.id == readyId
                             Row(
-                                Modifier.fillMaxWidth().background(if (now) Palette.Wine else Color.Transparent)
+                                Modifier.fillMaxWidth().background(if (now) Palette.Wine else if (ready) Palette.Wine.copy(alpha = 0.35f) else Color.Transparent)
                                     .clickable { state.playEpisode(entry, ep, episodes, p?.positionMs?.takeIf { it > 5_000 } ?: 0) }.padding(horizontal = 8.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
@@ -91,6 +101,11 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                                     Text("${ep.number}. ${ep.title}", maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
                                     val extra = listOfNotNull(ep.durationSecs?.takeIf { it > 0 }?.let { "${it / 60} min" }, if (p?.watched == true) "✓" else null).joinToString("  ")
                                     if (extra.isNotEmpty()) Text(extra, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                    // the place where the user stopped
+                                    if (ready) {
+                                        val minute = p?.positionMs?.takeIf { it > 5_000 }
+                                        Text(if (minute != null) t("detail_resume", clock(minute)) else t("detail_play"), style = MaterialTheme.typography.labelMedium, color = Palette.WineSoft, fontWeight = FontWeight.SemiBold)
+                                    }
                                 }
                             }
                         }
@@ -120,7 +135,6 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                         Text(TitleParser.parse(entry.name).title.ifBlank { entry.name }, Modifier.padding(top = 8.dp), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 4, overflow = TextOverflow.Ellipsis)
                         if (controller.current == null) {
                             // nothing plays yet: the button starts the movie, or the episode that comes next
-                            val nextEpisode = if (isSeries) remember(episodes, version) { SeriesProgress.next(episodes) { id -> state.progress.get(entry.accountId, Kind.EPISODE, id) } } else null
                             val saved = if (isSeries) null else state.progress.let { it.version; it.get(entry.accountId, Kind.MOVIE, entry.remoteId) }
                             val resume = (if (isSeries) nextEpisode?.episode?.let { state.progress.get(entry.accountId, Kind.EPISODE, it.id) } else saved)?.positionMs?.takeIf { it > 5_000 } ?: 0
                             if (!isSeries || nextEpisode != null) {
@@ -131,7 +145,9 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                                     androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.PlayArrow, null)
                                     Text(
                                         when {
-                                            isSeries && nextEpisode != null -> t(if (nextEpisode.continuing) "detail_continue_episode" else "detail_play_episode", nextEpisode.episode.season, nextEpisode.episode.number)
+                                            isSeries && nextEpisode != null ->
+                                                t(if (nextEpisode.continuing) "detail_continue_episode" else "detail_play_episode", nextEpisode.episode.season, nextEpisode.episode.number) +
+                                                    (if (resume > 0) " \u00B7 " + t("detail_resume", clock(resume)) else "")
                                             resume > 0 -> t("detail_resume", clock(resume))
                                             else -> t("detail_play")
                                         },
