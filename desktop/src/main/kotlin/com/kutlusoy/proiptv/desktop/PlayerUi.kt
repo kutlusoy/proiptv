@@ -472,7 +472,9 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             VideoSurface(engine, modifier, onDoubleClick = {
                 // in the channel browser a double click makes the stream big (like the menu button), in the big picture it makes the window borderless
                 if (controller.listOpen && controller.live && !state.compact) controller.listOpen = false else state.toggleFullscreen()
-            }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) }, brightness = state.videoBrightness, zoom = state.videoZoom, panX = state.videoPanX, panY = state.videoPanY, fitRequest = state.zoomFitRequest, onFit = { zoom -> state.changeZoom(zoom); state.changePan(0, 0) }, onPan = state::changePan)
+            }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) }, brightness = state.videoBrightness, zoom = state.videoZoom, panX = state.videoPanX, panY = state.videoPanY, fitRequest = state.zoomFitRequest, onFit = { zoom -> state.changeZoom(zoom); state.changePan(0, 0) }, onPan = state::changePan,
+                // movies and series: a click on the picture pauses and continues (a double click stays what it was; the click waits for the time of a double click)
+                onClick = if (!controller.live) ({ controller.togglePause() }) else null)
         }
         controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp)) }
         if (controller.reconnecting && controller.failed == null) Text(t("player_retrying"), Modifier.background(Color(0xAA000000)).padding(12.dp), color = Color.White)
@@ -1153,7 +1155,7 @@ private fun TrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null, brightness: Int = 0, zoom: Int = 100, panX: Int = 0, panY: Int = 0, fitRequest: Int = 0, onFit: (Int) -> Unit = {}, onPan: (Int, Int) -> Unit = { _, _ -> }) {
+private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null, brightness: Int = 0, zoom: Int = 100, panX: Int = 0, panY: Int = 0, fitRequest: Int = 0, onFit: (Int) -> Unit = {}, onPan: (Int, Int) -> Unit = { _, _ -> }, onClick: (() -> Unit)? = null) {
     var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(engine) {
         var shown = -1L
@@ -1206,7 +1208,7 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
                     }
                 }
                 .pointerInput(onTap != null) {
-                    if (onTap != null) detectTapGestures(onTap = { onTap() }) else detectTapGestures(onDoubleTap = { onDoubleClick() })
+                    if (onTap != null) detectTapGestures(onTap = { onTap() }) else detectTapGestures(onDoubleTap = { onDoubleClick() }, onTap = { onClick?.invoke() })
                 }
                 .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> onScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
         ) {
