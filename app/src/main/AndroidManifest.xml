@@ -23,6 +23,13 @@
         android:name="android.software.leanback"
         android:required="false" />
 
+    <!-- without this Android hides the file chooser of the system from the app, and the app would think the device has none -->
+    <queries>
+        <intent><action android:name="android.intent.action.CREATE_DOCUMENT" /><data android:mimeType="*/*" /></intent>
+        <intent><action android:name="android.intent.action.OPEN_DOCUMENT" /><data android:mimeType="*/*" /></intent>
+        <intent><action android:name="android.intent.action.OPEN_DOCUMENT_TREE" /></intent>
+    </queries>
+
     <application
         android:name=".ProIptvApp"
         android:allowBackup="false"

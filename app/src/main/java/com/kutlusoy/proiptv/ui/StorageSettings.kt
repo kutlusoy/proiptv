@@ -47,7 +47,8 @@ fun StorageSettings() {
     val volumes = remember(version, dialog) { app.storage.volumes() }
     val internal = stringResource(R.string.storage_internal)
     // a folder chosen with the file manager of the phone (not every TV has one)
-    val canChooseFolder = remember { Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).resolveActivity(ctx.packageManager) != null }
+    val isTv = LocalTv.current
+    val canChooseFolder = remember { !isTv || Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).resolveActivity(ctx.packageManager) != null }
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
