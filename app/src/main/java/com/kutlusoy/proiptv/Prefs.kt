@@ -26,6 +26,33 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("hide_adult", true)
         set(value) = sp.edit().putBoolean("hide_adult", value).apply()
 
+    /** Series: the next episode of the season starts when an episode has ended. */
+    var autoplayNext: Boolean
+        get() = sp.getBoolean("autoplay_next", true)
+        set(value) = sp.edit().putBoolean("autoplay_next", value).apply()
+
+    /** The folder of the app on the volume that was chosen for downloads, recordings and backups; null: the standard places. */
+    var storageRoot: String?
+        get() = sp.getString("storage_root", null)
+        set(value) = sp.edit().apply { if (value == null) remove("storage_root") else putString("storage_root", value) }.apply()
+
+    /** The picture of the player: brightness -100..100, zoom 100..300 percent, position -100..100 of the part that is cut off, size mode of the picture. */
+    var videoBrightness: Int
+        get() = sp.getInt("video_brightness", 0)
+        set(value) = sp.edit().putInt("video_brightness", value).apply()
+    var videoZoom: Int
+        get() = sp.getInt("video_zoom", 100)
+        set(value) = sp.edit().putInt("video_zoom", value).apply()
+    var videoPanX: Int
+        get() = sp.getInt("video_pan_x", 0)
+        set(value) = sp.edit().putInt("video_pan_x", value).apply()
+    var videoPanY: Int
+        get() = sp.getInt("video_pan_y", 0)
+        set(value) = sp.edit().putInt("video_pan_y", value).apply()
+    var videoResize: Int
+        get() = sp.getInt("video_resize", 0)
+        set(value) = sp.edit().putInt("video_resize", value).apply()
+
     var tmdbKey: String
         get() = sp.getString("tmdb_key", "") ?: ""
         set(value) = sp.edit().putString("tmdb_key", value.trim()).apply()

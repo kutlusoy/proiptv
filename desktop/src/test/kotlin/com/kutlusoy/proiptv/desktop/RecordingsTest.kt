@@ -42,7 +42,7 @@ class RecordingsTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val hubs = EngineManager(tempDir(), scope, capacity = { 4L * 1024 * 1024 })
         val store = RecordingStore(tempDir())
-        val manager = RecordingManager(store, hubs, scope, tempDir())
+        val manager = RecordingManager(store, hubs, scope, tempDir().let { d -> { d } })
         try {
             val item = Playable("Test channel", server.url("/live").toString(), null, true, "a", 0, "5", accountNumber = 1, channelId = "5", maxConnections = 1)
             val id = manager.start(item, System.currentTimeMillis() + 1_500)
@@ -68,7 +68,7 @@ class RecordingsTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val hubs = EngineManager(tempDir(), scope, capacity = { 4L * 1024 * 1024 })
         val store = RecordingStore(tempDir())
-        val manager = RecordingManager(store, hubs, scope, tempDir())
+        val manager = RecordingManager(store, hubs, scope, tempDir().let { d -> { d } })
         try {
             val item = Playable("Test channel", server.url("/live").toString(), null, true, "a", 0, "5", accountNumber = 1, channelId = "5", maxConnections = 1)
             val now = System.currentTimeMillis()

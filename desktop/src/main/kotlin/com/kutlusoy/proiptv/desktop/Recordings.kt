@@ -142,8 +142,10 @@ class RecordingManager(
     private val store: RecordingStore,
     private val engine: EngineManager,
     private val scope: CoroutineScope,
-    private val dir: File,
+    private val dirOf: () -> File,
 ) {
+    /** The folder can be changed in the settings, so it is asked every time. */
+    private val dir: File get() = dirOf()
     val directory: File get() = dir
 
     private class Running(val recorder: Recorder, val lease: HubLease)

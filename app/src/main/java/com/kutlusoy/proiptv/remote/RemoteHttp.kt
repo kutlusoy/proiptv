@@ -20,7 +20,7 @@ object RemoteHttp {
     private const val MAX_HEADERS = 64
     const val MAX_BODY = 64 * 1024
 
-    fun readRequest(input: InputStream): HttpRequest? {
+    fun readRequest(input: InputStream, maxBody: Int = MAX_BODY): HttpRequest? {
         val requestLine = readLine(input) ?: return null
         val parts = requestLine.split(' ')
         if (parts.size < 2) return null
@@ -35,7 +35,7 @@ object RemoteHttp {
         }
 
         val length = headers["content-length"]?.toIntOrNull() ?: 0
-        if (length < 0 || length > MAX_BODY) throw IOException("Body too large")
+        if (length < 0 || length > maxBody) throw IOException("Body too large")
         val body = ByteArray(length)
         var read = 0
         while (read < length) {
@@ -65,7 +65,7 @@ object RemoteHttp {
             URLDecoder.decode(it.substringBefore('='), "UTF-8") to URLDecoder.decode(it.substringAfter('=', ""), "UTF-8")
         }
 
-    fun response(status: Int, contentType: String, body: ByteArray): ByteArray {
+    fun response(status: Int, contentType: String, body: ByteArray, extraHeaders: Map<String, String> = emptyMap()): ByteArray {
         val reason = when (status) {
             200 -> "OK"
             400 -> "Bad Request"
@@ -78,6 +78,7 @@ object RemoteHttp {
             "Content-Length: ${body.size}\r\n" +
             "Cache-Control: no-store\r\n" +
             "X-Content-Type-Options: nosniff\r\n" +
+            extraHeaders.entries.joinToString("") { "${it.key}: ${it.value}\r\n" } +
             "Connection: close\r\n\r\n"
         return head.toByteArray(Charsets.UTF_8) + body
     }

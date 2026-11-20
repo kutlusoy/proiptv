@@ -15,7 +15,10 @@ enum class Tab(val label: String) {
 sealed interface PlayRequest {
     /** [query] is the search of the list the player was started from (null when the list has no search), [origin] the list without that search, [allScope] whether that list is all channels of all accounts. */
     class Live(val entries: List<Entry>, val index: Int, val query: String? = null, val origin: List<Entry> = emptyList(), val allScope: Boolean = false) : PlayRequest
-    class Single(val item: Playable, val startMs: Long = 0) : PlayRequest
+    /** [following] are the next episodes of the season (resolved when it is their turn): with autoplay the next one starts when an episode has ended. */
+    /** The preview layout of a movie or series without anything playing yet (setting): the user picks an episode there. */
+    class Browse(val entry: Entry) : PlayRequest
+    class Single(val item: Playable, val startMs: Long = 0, val following: List<() -> Playable?> = emptyList(), val entry: Entry? = null) : PlayRequest
 }
 
 class AppState(val store: Store, val scope: CoroutineScope) {
@@ -75,6 +78,9 @@ class AppState(val store: Store, val scope: CoroutineScope) {
 
     /** What a list showed when the player was opened, so it looks the same after the player was closed: the search text per area and the scroll position per list view. */
     val browseQuery = HashMap<Int, String>()
+
+    /** The genre that was chosen per area (series), so it is still there after a detail page. */
+    val browseGenre = HashMap<Int, String?>()
     val scrollMemory = HashMap<String, IntArray>()
 
     fun reload() {
@@ -114,7 +120,12 @@ class AppState(val store: Store, val scope: CoroutineScope) {
             // only the channels of the same account are considered, a favorite never moves to another account
             val found = matchers["${f.account}|${f.kind}"]?.resolve(f.remoteId, f.name, f.epgId)
             val entry = found?.let { entriesOf["${f.account}|${f.kind}|${it.remoteId}"] }
-            if (entry == null) { favoritesChanged = true; continue }
+            if (entry == null) {
+                // channels of switched off categories are not in the lists, their favorites stay for the day the category is switched on again
+                if (found == null && f.kind == Kind.LIVE && accounts.firstOrNull { it.id == f.account }?.hiddenLive?.isNotEmpty() == true) { kept += f; continue }
+                favoritesChanged = true
+                continue
+            }
             val updated = f.copy(remoteId = entry.remoteId, name = entry.name, epgId = entry.epgId ?: f.epgId)
             if (updated != f) favoritesChanged = true
             if (kept.none { it.listId == updated.listId && it.account == updated.account && it.kind == updated.kind && it.remoteId == updated.remoteId }) kept += updated
@@ -173,6 +184,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
                 com.kutlusoy.proiptv.data.BackupAccount(
                     it.name, it.type, it.url, it.username, if (withPasswords) Secrets.unprotect(it.password) else null,
                     it.epgUrl, it.userAgent, "auto", it.enabled, true, true,
+                    hiddenLive = it.hiddenLive.map { id -> com.kutlusoy.proiptv.data.BackupHidden(id, data.allCategories(Kind.LIVE).firstOrNull { c -> c.accountId == it.id && c.id == id }?.name ?: id) },
                 )
             },
             lists = lists, timeshift = c.timeshift, bufferMb = c.bufferMb,
@@ -190,7 +202,7 @@ class AppState(val store: Store, val scope: CoroutineScope) {
             val key = codec.accountKey(a.type, a.url, a.username)
             if (key in ids) continue
             val id = newAccountId()
-            val dto = AccountDto(id = id, name = a.name, type = a.type, url = a.url, username = a.username, password = Secrets.protect(a.password.orEmpty()), userAgent = a.userAgent, enabled = a.enabled, epgUrl = a.epgUrl)
+            val dto = AccountDto(id = id, name = a.name, type = a.type, url = a.url, username = a.username, password = Secrets.protect(a.password.orEmpty()), userAgent = a.userAgent, enabled = a.enabled, epgUrl = a.epgUrl, hiddenLive = a.hiddenLive.map { it.id })
             store.update { c -> c.copy(accounts = c.accounts + dto) }
             ids[key] = id
             added++
@@ -227,6 +239,80 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         favorites = store.config.favorites
         history = store.config.history
         reminders = store.config.reminders
+        reload()
+    }
+
+    /** The live categories that are switched off for an account; the lists are loaded again without their channels. */
+    var videoBrightness by androidx.compose.runtime.mutableIntStateOf(store.config.videoBrightness)
+        private set
+    var videoZoom by androidx.compose.runtime.mutableIntStateOf(store.config.videoZoom)
+        private set
+
+    var videoPanX by androidx.compose.runtime.mutableIntStateOf(store.config.videoPanX)
+        private set
+    var videoPanY by androidx.compose.runtime.mutableIntStateOf(store.config.videoPanY)
+        private set
+
+    /** Counts the requests for "Zoom Fit": the picture asks for it when it knows its own size. */
+    var zoomFitRequest by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+
+    fun requestZoomFit() { zoomFitRequest++ }
+
+    fun changePan(x: Int, y: Int) {
+        videoPanX = x.coerceIn(-100, 100)
+        videoPanY = y.coerceIn(-100, 100)
+        store.update { c -> c.copy(videoPanX = videoPanX, videoPanY = videoPanY) }
+    }
+
+    /** Zoom, position and brightness back to the standard. */
+    fun resetPicture() {
+        changeZoom(100)
+        changePan(0, 0)
+    }
+
+    fun changeBrightness(value: Int) {
+        videoBrightness = value.coerceIn(-100, 100)
+        store.update { c -> c.copy(videoBrightness = videoBrightness) }
+    }
+
+    fun changeZoom(value: Int) {
+        videoZoom = value.coerceIn(100, 300)
+        store.update { c -> c.copy(videoZoom = videoZoom) }
+    }
+
+    /** Opens a movie or series: the detail page, or with the preview setting the layout with the list, the details and the small player (nothing plays until one is chosen). */
+    fun openVod(e: Entry) {
+        if (store.config.vodPreview) {
+            movie = null
+            series = null
+            player = PlayRequest.Browse(e)
+        } else if (e.kind == Kind.SERIES) {
+            series = e
+        } else {
+            movie = e
+        }
+    }
+
+    /** Plays a movie (from the download when there is one). [Entry] is kept in the request so the preview layout knows what it shows. */
+    fun playMovie(e: Entry, startMs: Long = 0) {
+        val local = downloadOf(e.accountId, Kind.MOVIE, e.remoteId)?.let { localPlayable(it) }
+        (local ?: library.playable(e))?.let { player = PlayRequest.Single(it, startMs, entry = e) }
+    }
+
+    /** Plays an episode; with autoplay the rest of its season follows. */
+    fun playEpisode(series: Entry, ep: com.kutlusoy.proiptv.net.XtreamEpisode, all: List<com.kutlusoy.proiptv.net.XtreamEpisode>, startMs: Long = 0) {
+        val local = downloadOf(series.accountId, Kind.EPISODE, ep.id)?.let { localPlayable(it) }
+        val season = all.filter { it.season == ep.season }
+        val following = season.drop(season.indexOfFirst { it.id == ep.id } + 1).map { nextEp ->
+            { downloadOf(series.accountId, Kind.EPISODE, nextEp.id)?.let { localPlayable(it) } ?: library.episodePlayable(series, nextEp) }
+        }
+        (local ?: library.episodePlayable(series, ep))?.let { player = PlayRequest.Single(it, startMs, following, series) }
+    }
+
+    fun setHiddenLive(id: String, hidden: List<String>) {
+        store.update { c -> c.copy(accounts = c.accounts.map { if (it.id == id) it.copy(hiddenLive = hidden) else it }) }
+        accounts = store.config.accounts
         reload()
     }
 
@@ -339,10 +425,11 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         },
     )
     val recordingStore = RecordingStore(store.dir)
-    val recordingManager = RecordingManager(recordingStore, hubs, scope, DownloadManager.mediaDir("Recordings"))
+    val recordingManager = RecordingManager(recordingStore, hubs, scope, { DownloadManager.mediaDir("Recordings") })
 
     val downloads = DownloadStore(store.dir)
-    val downloadManager = DownloadManager(downloads, scope, com.kutlusoy.proiptv.net.Http.client, DownloadManager.mediaDir("Downloads"), ::downloadSource)
+    init { DownloadManager.chosenRoot = { store.config.storageDir?.let { java.io.File(it) }?.takeIf { it.isDirectory } } }
+    val downloadManager = DownloadManager(downloads, scope, com.kutlusoy.proiptv.net.Http.client, { DownloadManager.mediaDir("Downloads") }, ::downloadSource)
 
     init {
         downloadManager.resume()

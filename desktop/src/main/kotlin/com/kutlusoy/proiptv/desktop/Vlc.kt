@@ -41,6 +41,7 @@ interface LibVlc : Library {
     fun libvlc_media_player_set_pause(player: Pointer, pause: Int)
     fun libvlc_media_player_stop(player: Pointer)
     fun libvlc_media_player_is_playing(player: Pointer): Int
+    fun libvlc_media_player_get_state(player: Pointer): Int
     fun libvlc_media_player_get_time(player: Pointer): Long
     fun libvlc_media_player_set_time(player: Pointer, time: Long)
     fun libvlc_media_player_get_length(player: Pointer): Long
@@ -253,6 +254,8 @@ class VlcEngine(private val logName: String = "vlc.log", heal: Boolean = true) {
         streamReader = null
         frame.set(null)
     }
+    /** The stream came to its end (libvlc state Ended = 6). */
+    fun hasEnded(): Boolean { val l = lib ?: return false; return player?.let { l.libvlc_media_player_get_state(it) == 6 } ?: false }
     fun isPlaying(): Boolean { val l = lib ?: return false; return player?.let { l.libvlc_media_player_is_playing(it) == 1 } ?: false }
     fun time(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_time(it) } ?: 0 }
     fun length(): Long { val l = lib ?: return 0; return player?.let { l.libvlc_media_player_get_length(it) } ?: 0 }

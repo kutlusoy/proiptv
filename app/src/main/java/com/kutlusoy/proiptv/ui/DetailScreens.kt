@@ -308,7 +308,12 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit, onOp
 
     fun play(ep: XtreamEpisode) = vm.run {
         val target = downloadOf(ep)?.let { vm.localTarget(it) } ?: vm.repo.episodeTarget(series, ep) ?: return@run
-        vm.player.value = PlayRequest.Single(target)
+        // the rest of the season follows when autoplay is on
+        val season = episodes.filter { it.season == ep.season }
+        val following = season.drop(season.indexOfFirst { it.id == ep.id } + 1).map { nextEp ->
+            suspend { downloadOf(nextEp)?.let { vm.localTarget(it) } ?: vm.repo.episodeTarget(series, nextEp) }
+        }
+        vm.player.value = PlayRequest.Single(target, false, following)
     }
 
     val page = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -326,7 +331,16 @@ fun SeriesDetailScreen(vm: MainViewModel, series: Item, onBack: () -> Unit, onOp
                 if (next != null) {
                     val ep = next.episode
                     val label = if (next.continuing) stringResource(R.string.detail_continue_episode, ep.season, ep.number) else stringResource(R.string.detail_play_episode, ep.season, ep.number)
-                    PlayButton(label, focus) { play(ep) }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+                        PlayButton(label, focus) { play(ep) }
+                        // the switch stands beside the button: with autoplay the whole season is played, one episode after the other
+                        val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
+                        var autoplay by remember { mutableStateOf(prefs.autoplayNext) }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            androidx.compose.material3.Switch(checked = autoplay, onCheckedChange = { autoplay = it; prefs.autoplayNext = it }, modifier = Modifier.focusHighlight())
+                            Text(stringResource(R.string.detail_autoplay), color = MaterialTheme.colorScheme.onBackground)
+                        }
+                    }
                 }
                 RatingStars(info?.rating ?: series.rating)
                 TrailerButton(info?.trailer)

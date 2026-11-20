@@ -45,7 +45,7 @@ data class Entry(
     val key: String get() = "$accountId|$kind|$remoteId"
 }
 
-data class Category(val accountId: String, val id: String, val name: String)
+data class Category(val accountId: String, val id: String, val name: String, val hidden: Boolean = false)
 
 /** What the player gets. account, kind and remoteId say where to keep the progress (empty for live TV and local files). */
 data class Playable(
@@ -71,7 +71,11 @@ data class LibraryData(
     val status: Map<String, AccountStatus> = emptyMap(),
 ) {
     fun entries(kind: Int): List<Entry> = entries[kind].orEmpty()
-    fun categories(kind: Int): List<Category> = categories[kind].orEmpty()
+    /** The categories that are shown. */
+    fun categories(kind: Int): List<Category> = categories[kind].orEmpty().filter { !it.hidden }
+
+    /** All categories, also the ones that were switched off (for the window where they are switched). */
+    fun allCategories(kind: Int): List<Category> = categories[kind].orEmpty()
 }
 
 /** Loads channels, movies and series of all enabled accounts into memory. */
@@ -101,6 +105,7 @@ class Library(private val store: Store) {
         val api = api(a)
         val info = api.authenticate()
         val hide = store.config.hideAdult
+        val hidden = a.hiddenLive.toHashSet()
         val kinds = listOf(
             Triple(Kind.LIVE, "get_live_categories", "get_live_streams"),
             Triple(Kind.MOVIE, "get_vod_categories", "get_vod_streams"),
@@ -109,14 +114,17 @@ class Library(private val store: Store) {
         for ((kind, catAction, streamAction) in kinds) {
             api.stream(catAction).use { s ->
                 s.items.forEach { o ->
+                    val id = o.str("category_id").orEmpty()
                     categories.getOrPut(kind) { mutableListOf() } +=
-                        Category(a.id, o.str("category_id").orEmpty(), o.str("category_name").orEmpty().decodeEntities())
+                        Category(a.id, id, o.str("category_name").orEmpty().decodeEntities(), hidden = kind == Kind.LIVE && id in hidden)
                 }
             }
+            val categoryNames = categories[kind].orEmpty().filter { it.accountId == a.id }.associate { it.id to it.name }
             api.stream(streamAction).use { s ->
                 for (o in s.items) {
                     val id = (if (kind == Kind.SERIES) o.str("series_id") else o.str("stream_id")) ?: continue
-                    if (hide && o.str("is_adult") == "1") continue
+                    if (hide && (o.str("is_adult") == "1" || com.kutlusoy.proiptv.parse.AdultCategory.matches(categoryNames[o.str("category_id").orEmpty()]) || com.kutlusoy.proiptv.parse.AdultCategory.matches(o.str("name")))) continue
+                    if (kind == Kind.LIVE && o.str("category_id").orEmpty() in hidden) continue
                     entries.getOrPut(kind) { mutableListOf() } += Entry(
                         a.id, kind, id, o.str("name").orEmpty().decodeEntities(), o.str("category_id").orEmpty(),
                         (o.str("stream_icon") ?: o.str("cover"))?.takeIf { it.isNotBlank() },
@@ -130,7 +138,7 @@ class Library(private val store: Store) {
             if (hide) {
                 // categories that only held flagged titles disappear as well
                 val used = entries[kind].orEmpty().filter { it.accountId == a.id }.map { it.categoryId }.toSet()
-                categories[kind]?.removeAll { it.accountId == a.id && it.id !in used }
+                categories[kind]?.removeAll { it.accountId == a.id && it.id !in used && !it.hidden }
             }
         }
         return info
@@ -142,6 +150,8 @@ class Library(private val store: Store) {
             if (!it.isSuccessful) throw java.io.IOException("HTTP ${it.code}")
             val reader = BufferedReader(InputStreamReader(it.body!!.byteStream(), Charsets.UTF_8), 64 * 1024)
             val groups = LinkedHashSet<String>()
+            val hiddenGroups = a.hiddenLive.toHashSet()
+            val hideAdult = store.config.hideAdult
             val seen = HashSet<String>()
             for (e in M3uParser.parse(reader) { header -> header.epgUrl?.split(',')?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { m3uGuide[a.id] = it } }) {
                 val vod = e.url.contains("/movie/") || e.url.contains("/series/") || e.url.substringBefore('?').let { u -> VOD_EXT.any { x -> u.endsWith(x) } }
@@ -150,13 +160,17 @@ class Library(private val store: Store) {
                 // the id comes from the address, not from the position, so favorites stay with their channel when the list changes
                 val id = com.kutlusoy.proiptv.parse.StableId.of(e.url)
                 if (!seen.add("$kind|$id")) continue
+                if (kind == Kind.LIVE && e.group in hiddenGroups) continue
+                if (hideAdult && (com.kutlusoy.proiptv.parse.AdultCategory.matches(e.group) || com.kutlusoy.proiptv.parse.AdultCategory.matches(e.name))) continue
                 entries.getOrPut(kind) { mutableListOf() } += Entry(a.id, kind, id, e.name, e.group, e.logo, "", e.url, null, e.tvgId?.lowercase())
             }
             for (g in groups) {
                 val kind = g.substringBefore('|').toInt()
                 val name = g.substringAfter('|')
-                categories.getOrPut(kind) { mutableListOf() } += Category(a.id, name, name)
+                categories.getOrPut(kind) { mutableListOf() } += Category(a.id, name, name, hidden = kind == Kind.LIVE && name in hiddenGroups)
             }
+            // a group that is switched off has no channel any more, it stays in the list of the window where it is switched on again
+            for (name in hiddenGroups) if (categories[Kind.LIVE].orEmpty().none { it.accountId == a.id && it.id == name }) categories.getOrPut(Kind.LIVE) { mutableListOf() } += Category(a.id, name, name, hidden = true)
         }
     }
 
@@ -174,9 +188,13 @@ class Library(private val store: Store) {
 
     suspend fun episodes(e: Entry): List<XtreamEpisode> = seriesDetail(e).episodes
 
+    private val seriesCache = java.util.concurrent.ConcurrentHashMap<String, SeriesDetail>()
+
+    /** The episodes of a series; kept for the session, so the preview layout and the detail page do not ask the provider twice. */
     suspend fun seriesDetail(e: Entry): SeriesDetail = withContext(Dispatchers.IO) {
+        seriesCache[e.key]?.let { return@withContext it }
         val a = store.config.accounts.firstOrNull { it.id == e.accountId } ?: return@withContext SeriesDetail(null, emptyList())
-        api(a).seriesDetail(e.remoteId)
+        api(a).seriesDetail(e.remoteId).also { if (it.episodes.isNotEmpty()) seriesCache[e.key] = it }
     }
 
     private fun tmdb(): Tmdb? {

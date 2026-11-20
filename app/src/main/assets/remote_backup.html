@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProIPTV</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: #0b0709; color: #f3ebed; }
+  main { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 1.5rem; color: #f2506f; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 28px 0 4px; }
+  p.hint { color: #cdbfc3; margin: 0 0 12px; font-size: .95rem; }
+  label { display: block; margin: 14px 0 6px; font-size: .9rem; color: #cdbfc3; }
+  input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid #4a3a3f; background: #151013; color: #f3ebed; font-size: 1rem; }
+  button { width: 100%; margin-top: 16px; padding: 14px; border: 0; border-radius: 24px; background: #c40035; color: #fff; font-size: 1.05rem; font-weight: 600; }
+  button:disabled { opacity: .5; }
+  #msg { margin-top: 16px; padding: 12px; border-radius: 10px; display: none; }
+  #msg.ok { display: block; background: #12301f; color: #9be7b6; }
+  #msg.err { display: block; background: #3a1119; color: #ff8a80; }
+  #pwrow { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ProIPTV</h1>
+  <p class="hint" id="hint"></p>
+
+  <h2 id="h_down"></h2>
+  <p class="hint" id="p_down"></p>
+  <label for="exppw" id="l_exppw"></label>
+  <input id="exppw" type="password" autocomplete="off">
+  <button id="down" type="button"></button>
+
+  <h2 id="h_up"></h2>
+  <p class="hint" id="p_up"></p>
+  <input id="file" type="file" accept=".json,application/json">
+  <div id="pwrow">
+    <label for="imppw" id="l_imppw"></label>
+    <input id="imppw" type="password" autocomplete="off">
+  </div>
+  <button id="up" type="button"></button>
+
+  <div id="msg"></div>
+</main>
+<script>
+const T = {
+  en: { hint: "Save the backup of your TV on this device or restore it from here.", h_down: "Save backup", p_down: "Downloads the backup file. Keep it on this device, it stays when the app is uninstalled.", exppw: "Password (optional, protects the account passwords)", down: "Download backup", h_up: "Restore backup", p_up: "Choose a backup file from this device.", imppw: "Password of the backup", up: "Send to the TV", ok_down: "The backup was downloaded.", ok_up: "Done. The backup was restored on the TV.", sending: "Sending...", network: "No connection to the TV. Is this device in the same Wi-Fi?", invalid_link: "Invalid link. Scan the QR code on the TV again.", nofile: "Please choose a file.", invalid: "This is not a ProIPTV backup.", wrong_password: "The password is wrong.", password_required: "This backup is protected. Enter its password." },
+  de: { hint: "Speichere die Sicherung deines Fernsehers auf diesem Gerät oder stelle sie von hier wieder her.", h_down: "Sicherung speichern", p_down: "Lädt die Sicherungsdatei herunter. Bewahre sie auf diesem Gerät auf, sie bleibt auch erhalten, wenn die App deinstalliert wird.", exppw: "Passwort (optional, schützt die Konto-Passwörter)", down: "Sicherung herunterladen", h_up: "Sicherung wiederherstellen", p_up: "Wähle eine Sicherungsdatei von diesem Gerät.", imppw: "Passwort der Sicherung", up: "An den Fernseher senden", ok_down: "Die Sicherung wurde heruntergeladen.", ok_up: "Fertig. Die Sicherung wurde am Fernseher wiederhergestellt.", sending: "Sende...", network: "Keine Verbindung zum Fernseher. Ist dieses Gerät im selben WLAN?", invalid_link: "Ungültiger Link. Scanne den QR-Code am Fernseher erneut.", nofile: "Bitte wähle eine Datei.", invalid: "Das ist keine ProIPTV-Sicherung.", wrong_password: "Das Passwort ist falsch.", password_required: "Diese Sicherung ist geschützt. Gib das Passwort ein." },
+  tr: { hint: "Televizyonunuzun yedeğini bu cihaza kaydedin veya buradan geri yükleyin.", h_down: "Yedeği kaydet", p_down: "Yedek dosyasını indirir. Bu cihazda saklayın, uygulama kaldırılsa da kalır.", exppw: "Parola (isteğe bağlı, hesap parolalarını korur)", down: "Yedeği indir", h_up: "Yedeği geri yükle", p_up: "Bu cihazdan bir yedek dosyası seçin.", imppw: "Yedeğin parolası", up: "Televizyona gönder", ok_down: "Yedek indirildi.", ok_up: "Tamam. Yedek televizyonda geri yüklendi.", sending: "Gönderiliyor...", network: "Televizyona bağlanılamadı. Bu cihaz aynı Wi-Fi ağında mı?", invalid_link: "Geçersiz bağlantı. QR kodu televizyonda tekrar okutun.", nofile: "Lütfen bir dosya seçin.", invalid: "Bu bir ProIPTV yedeği değil.", wrong_password: "Parola yanlış.", password_required: "Bu yedek korumalı. Parolasını girin." },
+  fr: { hint: "Enregistrez la sauvegarde de votre télévision sur cet appareil ou restaurez-la d’ici.", h_down: "Enregistrer la sauvegarde", p_down: "Télécharge le fichier de sauvegarde. Gardez-le sur cet appareil, il reste même si l’application est désinstallée.", exppw: "Mot de passe (facultatif, protège les mots de passe des comptes)", down: "Télécharger la sauvegarde", h_up: "Restaurer la sauvegarde", p_up: "Choisissez un fichier de sauvegarde sur cet appareil.", imppw: "Mot de passe de la sauvegarde", up: "Envoyer à la télévision", ok_down: "La sauvegarde a été téléchargée.", ok_up: "Terminé. La sauvegarde a été restaurée sur la télévision.", sending: "Envoi...", network: "Pas de connexion à la télévision. Cet appareil est-il sur le même Wi-Fi ?", invalid_link: "Lien invalide. Scannez de nouveau le code QR sur la télévision.", nofile: "Veuillez choisir un fichier.", invalid: "Ce n’est pas une sauvegarde ProIPTV.", wrong_password: "Le mot de passe est incorrect.", password_required: "Cette sauvegarde est protégée. Saisissez son mot de passe." },
+  it: { hint: "Salva il backup della TV su questo dispositivo o ripristinalo da qui.", h_down: "Salva il backup", p_down: "Scarica il file di backup. Conservalo su questo dispositivo, resta anche se l’app viene disinstallata.", exppw: "Password (facoltativa, protegge le password degli account)", down: "Scarica il backup", h_up: "Ripristina il backup", p_up: "Scegli un file di backup da questo dispositivo.", imppw: "Password del backup", up: "Invia alla TV", ok_down: "Il backup è stato scaricato.", ok_up: "Fatto. Il backup è stato ripristinato sulla TV.", sending: "Invio...", network: "Nessuna connessione alla TV. Il dispositivo è nella stessa rete Wi-Fi?", invalid_link: "Link non valido. Scansiona di nuovo il codice QR sulla TV.", nofile: "Scegli un file.", invalid: "Questo non è un backup di ProIPTV.", wrong_password: "La password è errata.", password_required: "Questo backup è protetto. Inserisci la password." },
+  es: { hint: "Guarda la copia de seguridad de tu televisor en este dispositivo o restáurala desde aquí.", h_down: "Guardar la copia", p_down: "Descarga el archivo de la copia. Guárdalo en este dispositivo, se conserva aunque se desinstale la app.", exppw: "Contraseña (opcional, protege las contraseñas de las cuentas)", down: "Descargar la copia", h_up: "Restaurar la copia", p_up: "Elige un archivo de copia de este dispositivo.", imppw: "Contraseña de la copia", up: "Enviar al televisor", ok_down: "La copia se descargó.", ok_up: "Listo. La copia se restauró en el televisor.", sending: "Enviando...", network: "Sin conexión con el televisor. ¿Este dispositivo está en la misma red Wi-Fi?", invalid_link: "Enlace no válido. Escanea de nuevo el código QR en el televisor.", nofile: "Elige un archivo.", invalid: "Esto no es una copia de ProIPTV.", wrong_password: "La contraseña es incorrecta.", password_required: "Esta copia está protegida. Introduce su contraseña." },
+};
+const lang = (navigator.language || "en").slice(0, 2);
+const t = T[lang] || T.en;
+const $ = (id) => document.getElementById(id);
+const token = new URLSearchParams(location.search).get("t") || "";
+for (const k of ["hint", "h_down", "p_down", "h_up", "p_up"]) $(k).textContent = t[k];
+$("l_exppw").textContent = t.exppw;
+$("l_imppw").textContent = t.imppw;
+$("down").textContent = t.down;
+$("up").textContent = t.up;
+
+function show(kind, text) {
+  const m = $("msg");
+  m.className = kind;
+  m.textContent = text;
+}
+function describe(code) { return t[code] || code; }
+
+async function call(path, body) {
+  let res;
+  try {
+    res = await fetch(path + "?t=" + encodeURIComponent(token), { method: "POST", headers: { "x-token": token }, body: JSON.stringify(body) });
+  } catch (e) {
+    throw new Error(t.network);
+  }
+  if (res.status === 403) throw new Error(t.invalid_link);
+  return res;
+}
+
+$("down").onclick = async () => {
+  $("down").disabled = true;
+  show("ok", t.sending);
+  try {
+    const res = await call("/api/backup/export", { password: $("exppw").value });
+    if (!res.ok) throw new Error(t.network);
+    const blob = await res.blob();
+    const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") || "");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name ? name[1] : "proiptv-backup.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    show("ok", t.ok_down);
+  } catch (e) {
+    show("err", e.message);
+  }
+  $("down").disabled = false;
+};
+
+$("up").onclick = async () => {
+  const file = $("file").files[0];
+  if (!file) { show("err", t.nofile); return; }
+  $("up").disabled = true;
+  show("ok", t.sending);
+  try {
+    const text = await file.text();
+    const res = await call("/api/backup/restore", { text, password: $("imppw").value });
+    const answer = await res.json();
+    if (answer.ok) {
+      show("ok", t.ok_up);
+    } else {
+      if (answer.error === "password_required" || answer.error === "wrong_password") $("pwrow").style.display = "block";
+      show("err", describe(answer.error));
+    }
+  } catch (e) {
+    show("err", e.message);
+  }
+  $("up").disabled = false;
+};
+</script>
+</body>
+</html>

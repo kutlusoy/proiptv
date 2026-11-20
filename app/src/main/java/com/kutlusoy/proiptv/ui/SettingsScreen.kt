@@ -3,6 +3,10 @@ package com.kutlusoy.proiptv.ui
 import android.text.format.Formatter
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,12 +46,26 @@ private val languages = listOf(
 
 private val bufferSizesMb = listOf(256, 512, 1024, 2048, 4096)
 
+/** A group of settings: closed at first (only Update and Special thanks start open), a click on its title opens or closes it, so the remote control does not have to walk through all settings. */
+private val openGroups = androidx.compose.runtime.mutableStateMapOf<String, Boolean>()
+
 @Composable
-private fun Group(title: String, content: @Composable () -> Unit) {
+private fun Group(title: String, startOpen: Boolean = false, content: @Composable () -> Unit) {
+    val expanded = openGroups[title] ?: startOpen
     Card(Modifier.fillMaxWidth().padding(top = 14.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Palette.WineSoft)
-            content()
+        Column {
+            Row(
+                Modifier.fillMaxWidth().focusHighlight().clickable { openGroups[title] = !expanded }.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Palette.WineSoft)
+                Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            }
+            androidx.compose.animation.AnimatedVisibility(expanded) {
+                Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    content()
+                }
+            }
         }
     }
 }
@@ -75,6 +93,8 @@ fun SettingsScreen(vm: MainViewModel) {
     var hideAdult by remember { mutableStateOf(prefs.hideAdult) }
     val auto = stringResource(R.string.option_auto)
 
+    // every visit starts with all groups closed
+    remember { openGroups.clear(); true }
     LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 16.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)) {
         item {
             Text(stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
@@ -153,6 +173,8 @@ fun SettingsScreen(vm: MainViewModel) {
                     Hint(stringResource(R.string.settings_guide_info))
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Labeled(stringResource(R.string.settings_storage)) { StorageSettings() }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Labeled(stringResource(R.string.settings_backup)) { BackupSettings() }
             }
 
@@ -175,22 +197,13 @@ fun SettingsScreen(vm: MainViewModel) {
             }
 
             UpdateGroup(vm)
-            Group(stringResource(R.string.settings_tmdb)) {
-                val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
-                var key by remember { mutableStateOf(prefs.tmdbKey) }
-                androidx.compose.material3.OutlinedTextField(
-                    key, { key = it; prefs.tmdbKey = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.settings_tmdb_key)) },
-                )
-                Hint(stringResource(R.string.settings_tmdb_hint))
-            }
             // the people who helped, from supporters.md in the root folder of the project
             val assets = androidx.compose.ui.platform.LocalContext.current.assets
             val supporters = remember {
                 runCatching { assets.open("supporters.md").use { com.kutlusoy.proiptv.parse.SupportersMd.parse(String(it.readBytes(), Charsets.UTF_8)) } }.getOrDefault(emptyList())
             }
             if (supporters.isNotEmpty()) {
-                Group(stringResource(R.string.settings_thanks)) {
+                Group(stringResource(R.string.settings_thanks), startOpen = true) {
                     supporters.forEach { section ->
                         if (section.title.isNotEmpty()) Text(
                             section.title, color = Palette.WineSoft, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
@@ -200,6 +213,16 @@ fun SettingsScreen(vm: MainViewModel) {
                     }
                 }
             }
+            Group(stringResource(R.string.settings_tmdb)) {
+                val prefs = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.kutlusoy.proiptv.ProIptvApp).prefs
+                var key by remember { mutableStateOf(prefs.tmdbKey) }
+                androidx.compose.material3.OutlinedTextField(
+                    key, { key = it; prefs.tmdbKey = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.settings_tmdb_key)) },
+                )
+                Hint(stringResource(R.string.settings_tmdb_hint))
+            }
+
         }
     }
 }
@@ -214,7 +237,7 @@ private fun UpdateGroup(vm: MainViewModel) {
     val lastCheck = prefs.lastUpdateCheck
     val current = BuildConfig.VERSION_NAME + if (BuildConfig.DEBUG && BuildConfig.TEST_BUILD > 0) " (test ${BuildConfig.TEST_BUILD})" else ""
 
-    Group(stringResource(R.string.update_title)) {
+    Group(stringResource(R.string.update_title), startOpen = true) {
         Text(stringResource(R.string.update_current, current))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

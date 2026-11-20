@@ -24,11 +24,13 @@ class BackupManager(
             )
         }
         val (timeshift, bufferMb) = getSettings()
+        val hidden = accounts.associate { acc -> acc.id to db.items().hiddenFlow(acc.id, Kind.LIVE).first().map { BackupHidden(it.remoteId, it.name) } }
         val data = BackupData(
             accounts = accounts.map {
                 BackupAccount(
                     it.name, it.type, it.url, it.username, if (includePasswords) decryptPassword(it) else null,
                     it.epgUrl, it.userAgent, it.liveFormat, it.enabled, it.useVod, it.useSeries,
+                    hiddenLive = hidden[it.id].orEmpty(),
                 )
             },
             lists = lists, timeshift = timeshift, bufferMb = bufferMb,
@@ -52,6 +54,14 @@ class BackupManager(
                 ),
                 a.password.orEmpty(),
             )
+            if (a.hiddenLive.isNotEmpty()) {
+                // saving the account has started its first load: it is started again so it leaves the switched off categories out
+                db.items().hide(a.hiddenLive.map { HiddenCategory(id, Kind.LIVE, it.id, it.name) })
+                repo.sync.cancel(id)
+                db.items().deleteItemsIn(id, Kind.LIVE, a.hiddenLive.map { it.id })
+                db.items().deleteCategoriesIn(id, Kind.LIVE, a.hiddenLive.map { it.id })
+                repo.sync.sync(id)
+            }
             ids[key] = id
             added++
         }

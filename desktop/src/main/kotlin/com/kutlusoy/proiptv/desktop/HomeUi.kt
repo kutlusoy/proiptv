@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -41,7 +44,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kutlusoy.proiptv.parse.TitleParser
 
-private class HomeRow(val title: String, val kind: Int, val entries: List<Entry>, val progress: Map<String, Float> = emptyMap())
+/** A row of posters (search) or, with [grid], a band of three rows of small tiles (the start page). */
+private class HomeRow(val title: String, val kind: Int, val entries: List<Entry>, val progress: Map<String, Float> = emptyMap(), val grid: Boolean = false)
 
 /** The start page: continue watching, the own lists and the newest titles in rows, and one search over everything. */
 @Composable
@@ -66,17 +70,51 @@ fun HomeScreen(state: AppState) {
         )
         if (rows.isEmpty() && q.isEmpty() && (state.loading || state.guideLoading)) SkeletonRows()
         if (rows.isEmpty() && !(q.isEmpty() && (state.loading || state.guideLoading))) {
-            Text(t(if (q.isNotEmpty()) "home_no_results" else "main_loading"), Modifier.padding(8.dp), color = Color.White.copy(alpha = 0.7f))
+            Text(t(if (q.isNotEmpty()) "home_no_results" else "home_empty"), Modifier.padding(8.dp), color = Color.White.copy(alpha = 0.7f))
         }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
             items(rows) { row ->
                 Text(row.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                ScrollRow(Modifier.padding(top = 6.dp)) {
-                    items(row.entries, key = { it.key }) { e ->
-                        PosterCard(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
+                if (row.grid) {
+                    // up to three rows, the arrows (and the mouse wheel with the shift key) move the whole band
+                    ScrollGrid(rows = minOf(3, row.entries.size), cellHeight = TILE_HEIGHT, modifier = Modifier.padding(top = 6.dp)) {
+                        gridItems(row.entries, key = { it.key }) { e ->
+                            HomeTile(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
+                        }
+                    }
+                } else {
+                    ScrollRow(Modifier.padding(top = 6.dp)) {
+                        items(row.entries, key = { it.key }) { e ->
+                            PosterCard(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+private val TILE_HEIGHT = 76.dp
+
+/** A small tile for the bands of the start page: the picture on the left, title, kind and account on the right. */
+@Composable
+private fun HomeTile(e: Entry, progress: Float?, account: String?, onClick: () -> Unit) {
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
+    val live = e.kind == Kind.LIVE
+    androidx.compose.foundation.layout.Row(
+        Modifier.width(270.dp).height(TILE_HEIGHT).clip(RoundedCornerShape(10.dp)).background(if (hovered) Palette.SurfaceHigh else Palette.Surface)
+            .clickable(interactionSource = hover, indication = null, onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(if (live) 96.dp else 54.dp).fillMaxHeight().background(Color.Black.copy(alpha = 0.25f))) {
+            Logo(e.logo, Modifier.fillMaxSize().padding(if (live) 6.dp else 0.dp), if (live) ContentScale.Fit else ContentScale.Crop, name = e.name)
+            if (progress != null) LinearProgressIndicator(progress = { progress }, Modifier.align(Alignment.BottomCenter).fillMaxWidth())
+        }
+        Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+            Text(TitleParser.parse(e.name).title.ifBlank { e.name }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            val kindLabel = Strings.get(when (e.kind) { Kind.LIVE -> "nav_live"; Kind.MOVIE -> "nav_movies"; else -> "nav_series" })
+            Text(listOfNotNull(kindLabel, account).joinToString(" \u00B7 "), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -87,8 +125,8 @@ private fun open(state: AppState, e: Entry, siblings: List<Entry>) {
             val list = siblings.filter { it.kind == Kind.LIVE }
             state.player = PlayRequest.Live(list, list.indexOf(e).coerceAtLeast(0))
         }
-        Kind.MOVIE -> { state.tab = Tab.MOVIES; state.series = null; state.movie = e }
-        else -> { state.tab = Tab.SERIES; state.movie = null; state.series = e }
+        Kind.MOVIE -> { state.tab = Tab.MOVIES; state.series = null; state.movie = null; state.openVod(e) }
+        else -> { state.tab = Tab.SERIES; state.movie = null; state.series = null; state.openVod(e) }
     }
 }
 
@@ -113,43 +151,33 @@ private fun homeRows(state: AppState): List<HomeRow> {
     val movies = data.entries(Kind.MOVIE).associateBy { it.key }
     val seriesByKey = data.entries(Kind.SERIES).associateBy { it.key }
     val bars = HashMap<String, Float>()
-    val continuing = ArrayList<Entry>()
+    val watching = ArrayList<Entry>()
+    // movies and series that were begun, the newest first, then the channels that were watched last
     state.progress.all().filter { !it.watched && it.positionMs > 5_000 }.sortedByDescending { it.updated }.forEach { p ->
         val entry = if (p.kind == Kind.MOVIE) movies["${p.account}|${Kind.MOVIE}|${p.remoteId}"]
         else seriesByKey["${p.account}|${Kind.SERIES}|${p.seriesId}"]
-        if (entry != null && continuing.none { it.key == entry.key }) {
-            continuing += entry
+        if (entry != null && watching.none { it.key == entry.key }) {
+            watching += entry
             if (p.durationMs > 0) bars[entry.key] = (p.positionMs.toFloat() / p.durationMs).coerceIn(0f, 1f)
         }
     }
-    if (continuing.isNotEmpty()) rows += HomeRow(Strings.get("home_continue"), -1, continuing.take(30), bars)
-    val areas = listOf(Kind.LIVE to "nav_live", Kind.MOVIE to "nav_movies", Kind.SERIES to "nav_series")
-    // the category that was open last in each area, so the place where one stopped is one click away
-    for ((kind, label) in listOf(Kind.MOVIE, Kind.SERIES, Kind.LIVE).map { k -> areas.first { it.first == k } }) {
-        val saved = state.store.config.lastCategory[kind.toString()] ?: continue
-        if (!saved.contains('|') || saved.startsWith("fav:")) continue
-        val account = saved.substringBefore('|')
-        val cat = saved.substringAfter('|')
-        val name = data.categories(kind).firstOrNull { it.accountId == account && it.id == cat }?.name ?: continue
-        val entries = data.entries(kind).filter { it.accountId == account && it.categoryId == cat }
-        if (entries.isNotEmpty()) rows += HomeRow("${name.ifBlank { Strings.get("live_other") }} \u00B7 ${Strings.get(label)}", kind, entries.take(40))
-    }
-    for ((kind, label) in areas) {
-        val all = data.entries(kind).associateBy { it.key }
+    val live = data.entries(Kind.LIVE).associateBy { it.key }
+    state.history.mapNotNull { live[it] }.forEach { if (watching.none { w -> w.key == it.key }) watching += it }
+    if (watching.isNotEmpty()) rows += HomeRow(Strings.get("home_continue"), -1, watching.take(MAX_TILES), bars, grid = true)
+    // the favorites of every area (all lists of the area together)
+    for ((kind, title) in listOf(Kind.LIVE to "home_fav_live", Kind.MOVIE to "home_fav_movies", Kind.SERIES to "home_fav_series")) {
+        val all = data.entries(kind)
+        val shown = LinkedHashMap<String, Entry>()
         for (list in state.listsOf(kind)) {
             val order = state.favoriteOrder(list.id)
-            val entries = all.values.filter { state.inList(it, list.id) }.sortedBy { order[it.key] ?: Int.MAX_VALUE }
-            if (entries.isNotEmpty()) rows += HomeRow("★ ${list.name} · ${Strings.get(label)}", kind, entries.take(40))
+            all.filter { state.inList(it, list.id) }.sortedBy { order[it.key] ?: Int.MAX_VALUE }.forEach { shown.putIfAbsent(it.key, it) }
         }
+        if (shown.isNotEmpty()) rows += HomeRow("\u2605 " + Strings.get(title), kind, shown.values.take(MAX_TILES), grid = true)
     }
-    for ((kind, label) in areas.drop(1)) {
-        val list = data.entries(kind)
-        if (list.isNotEmpty()) rows += HomeRow(Strings.get(label), kind, list.take(30))
-    }
-    val live = data.entries(Kind.LIVE)
-    if (live.isNotEmpty() && rows.none { it.kind == Kind.LIVE }) rows += HomeRow(Strings.get("nav_live"), Kind.LIVE, live.take(30))
     return rows
 }
+
+private const val MAX_TILES = 60
 
 private fun searchRows(state: AppState, q: String): List<HomeRow> {
     val data = state.data

@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Fullscreen
@@ -72,6 +74,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -94,9 +99,22 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var length by mutableLongStateOf(0)
     var failed by mutableStateOf<String?>(null)
     var reconnecting by mutableStateOf(false)
-    var listOpen by mutableStateOf(false)
+    // movies and series start in the preview layout when the setting is on, channels open it with the menu button
+    var listOpen by mutableStateOf((request is PlayRequest.Browse || (request is PlayRequest.Single && request.entry != null)) && state.store.config.vodPreview)
 
     val live: Boolean get() = request is PlayRequest.Live
+
+    /** Full screen from the layout with the list: the same player goes to the big picture, so the playing is not interrupted. */
+    fun fullscreen() {
+        if (state.placement != androidx.compose.ui.window.WindowPlacement.Fullscreen && listOpen && hasBrowser) listOpen = false
+        state.toggleFullscreen()
+    }
+
+    /** The movie or series that is shown in the preview layout (null for channels and for files). */
+    val vodEntry: Entry? get() = (request as? PlayRequest.Single)?.entry ?: (request as? PlayRequest.Browse)?.entry
+
+    /** There is a layout with a list next to the small picture: channels, and movies and series with the setting. */
+    val hasBrowser: Boolean get() = live || (vodEntry != null && state.store.config.vodPreview)
     /** The channels that zapping and the next and previous keys walk through. It becomes the list the user clicked a channel in. */
     var playEntries by mutableStateOf((request as? PlayRequest.Live)?.entries.orEmpty())
 
@@ -198,8 +216,11 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     fun start() {
+        // the preview layout without a title: nothing plays until an episode or the movie is chosen
+        if (request is PlayRequest.Browse) return
         saveProgress()
         val item = when (request) {
+            is PlayRequest.Browse -> null
             is PlayRequest.Single -> request.item
             is PlayRequest.Live -> playEntries.getOrNull(index)?.let { state.library.playable(it) }
         }
@@ -379,6 +400,24 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     fun stop() {
+        // in the preview layout (movies and series) Stop ends the playing and goes back to that layout, it does not leave the title
+        val previewEntry = (request as? PlayRequest.Single)?.entry
+        if (previewEntry != null && state.store.config.vodPreview && current != null) {
+            if (casting != null) { casting = null; state.cast.close() }
+            state.typing = false
+            closePip()
+            saveProgress()
+            engine.stop()
+            releaseHub(now = true)
+            if (state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) state.toggleFullscreen()
+            state.player = PlayRequest.Browse(previewEntry)
+            return
+        }
+        leave()
+    }
+
+    /** Ends the playing and leaves the player: back to the list the title was opened from. */
+    fun leave() {
         if (casting != null) { casting = null; state.cast.close() }
         state.typing = false
         closePip()
@@ -392,7 +431,22 @@ class PlayerController(private val state: AppState, private val request: PlayReq
         if (state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) state.toggleFullscreen()
     }
 
+    private var ended = false
+
+    /** An episode or movie that has ended is marked as watched; with autoplay the next episode of the season follows. */
+    private fun checkEnd() {
+        val r = request as? PlayRequest.Single ?: return
+        val item = current ?: return
+        if (ended || item.live || item.kind < 0 || item.account.isEmpty() || !engine.hasEnded()) return
+        ended = true
+        state.progress.setWatched(item.account, item.kind, listOf(item.remoteId), true)
+        if (!state.store.config.autoplayNext) return
+        val next = r.following.firstOrNull()?.invoke() ?: return
+        state.player = PlayRequest.Single(next, 0, r.following.drop(1), r.entry)
+    }
+
     fun poll() {
+        checkEnd()
         position = engine.time()
         length = engine.length()
         lease?.let { l ->
@@ -453,8 +507,10 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
         } else {
             VideoSurface(engine, modifier, onDoubleClick = {
                 // in the channel browser a double click makes the stream big (like the menu button), in the big picture it makes the window borderless
-                if (controller.listOpen && controller.live && !state.compact) controller.listOpen = false else state.toggleFullscreen()
-            }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
+                if (controller.listOpen && controller.hasBrowser && !state.compact) controller.listOpen = false else state.toggleFullscreen()
+            }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) }, brightness = state.videoBrightness, zoom = state.videoZoom, panX = state.videoPanX, panY = state.videoPanY, fitRequest = state.zoomFitRequest, onFit = { zoom -> state.changeZoom(zoom); state.changePan(0, 0) }, onPan = state::changePan,
+                // movies and series: a click on the picture pauses and continues (a double click stays what it was; the click waits for the time of a double click)
+                onClick = if (!controller.live) ({ controller.togglePause() }) else null)
         }
         controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp)) }
         if (controller.reconnecting && controller.failed == null) Text(t("player_retrying"), Modifier.background(Color(0xAA000000)).padding(12.dp), color = Color.White)
@@ -463,7 +519,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     // 0 compact, 1 fullscreen, 2 window, 3 channel browser: the change between them fades instead of jumping
     val layoutMode = when {
         state.compact -> 0
-        controller.listOpen && controller.live -> 3
+        controller.listOpen && controller.hasBrowser -> 3
         fullscreen -> 1
         else -> 2
     }
@@ -476,8 +532,19 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     if (mode == 3) {
         // the channel browser: list on the left, the running channel as a small preview with its info card, the guide below
         Column(Modifier.fillMaxSize().background(Palette.Velvet)) {
-            ChannelBrowser(state, controller, video, Modifier.weight(1f))
-            ControlBar(state, controller, Modifier, floating = false)
+            if (controller.live) {
+                ChannelBrowser(state, controller, video, Modifier.weight(1f))
+                ControlBar(state, controller, Modifier, floating = false)
+            } else {
+                // movies and series: the controls are under the picture (in the browser), this bar only leads back
+                VodBrowser(state, controller, video, Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.TextButton(onClick = { controller.leave() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                        Text(t("action_back"), Modifier.padding(start = 6.dp), style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+            }
         }
     } else if (mode == 0) {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
@@ -853,8 +920,12 @@ private fun ColumnsIcon(active: Boolean) {
 }
 
 @Composable
-private fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
+internal fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
     var tracksOpen by remember { mutableStateOf(false) }
+    var castOpen by remember { mutableStateOf(false) }
+    var brightnessOpen by remember { mutableStateOf(false) }
+    var zoomOpen by remember { mutableStateOf(false) }
+    var moreMenu by remember { mutableStateOf(false) }
     var recordOpen by remember { mutableStateOf(false) }
     var guideOpen by remember { mutableStateOf(false) }
     if (guideOpen) GuideDialog(state, controller) { guideOpen = false }
@@ -867,13 +938,16 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             confirmButton = { androidx.compose.material3.TextButton(onClick = { recordError = null }) { Text(t("action_close")) } },
         )
     }
-    if (tracksOpen) TracksDialog(state, controller) { tracksOpen = false }
+    if (tracksOpen) TracksDialog(state.engine) { tracksOpen = false }
+    if (castOpen) CastDialog(state, controller) { castOpen = false }
+    if (brightnessOpen) PictureDialog(t("player_brightness"), state.videoBrightness, -100..100, "%+d", 0, state::changeBrightness) { brightnessOpen = false }
+    if (zoomOpen) ZoomDialog(state) { zoomOpen = false }
     Row(
         modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // the same round controls and symbols as in the Android player: pause, stop, record
-        if (controller.live) Tip(t("player_channel_list"), above = true) { RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp) }
+        if (controller.hasBrowser) Tip(t("player_channel_list"), above = true) { RoundControl(PlayerGlyph.MENU, t("player_channel_list"), { controller.listOpen = !controller.listOpen }, diameter = 38.dp) }
         Tip(t(if (controller.paused) "player_play" else "player_pause"), "Space", above = true) { RoundControl(if (controller.paused) PlayerGlyph.PLAY else PlayerGlyph.PAUSE, t(if (controller.paused) "player_play" else "player_pause"), { controller.togglePause() }, diameter = 38.dp) }
         Tip(t("player_stop"), "Esc", above = true) { RoundControl(PlayerGlyph.STOP, t("player_stop"), { controller.stop() }, diameter = 38.dp) }
         if (controller.live) {
@@ -923,9 +997,23 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
         }
         Slider(value = controller.volume / 200f, onValueChange = { controller.changeVolume((it * 200).toInt()) }, modifier = Modifier.width(96.dp).alpha(if (silent) 0.4f else 1f))
         if (controller.live) Tip(t("player_guide"), above = true) { RoundControl(PlayerGlyph.GUIDE, t("player_guide"), { guideOpen = true }, diameter = 38.dp) }
-        Tip(t("player_more"), above = true) { RoundControl(PlayerGlyph.GEAR, t("player_more"), { tracksOpen = true }, diameter = 38.dp) }
+        // the gear opens a menu first: sound and subtitles, or send the stream to a TV
+        Box {
+            Tip(t("player_more"), above = true) { RoundControl(PlayerGlyph.GEAR, t("player_more"), { moreMenu = true }, diameter = 38.dp) }
+            androidx.compose.material3.DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_tracks")) }, onClick = { moreMenu = false; tracksOpen = true })
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_brightness")) }, onClick = { moreMenu = false; brightnessOpen = true })
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_zoom")) }, onClick = { moreMenu = false; zoomOpen = true })
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_zoom_fit")) }, onClick = { moreMenu = false; state.requestZoomFit() })
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(t("player_zoom_fit_reset")) }, enabled = state.videoZoom != 100 || state.videoPanX != 0 || state.videoPanY != 0,
+                    onClick = { moreMenu = false; state.resetPicture() },
+                )
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("cast_open")) }, onClick = { moreMenu = false; castOpen = true })
+            }
+        }
         Tip(t("player_compact"), "P", above = true) { IconButton(onClick = { state.setCompact(true, state.windowRef?.bounds) }) { Icon(Icons.Filled.PictureInPictureAlt, t("player_compact")) } }
-        Tip(t("player_fullscreen"), "F", above = true) { IconButton(onClick = { state.toggleFullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) } }
+        Tip(t("player_fullscreen"), "F", above = true) { IconButton(onClick = { controller.fullscreen() }) { Icon(Icons.Filled.Fullscreen, t("player_fullscreen")) } }
     }
 }
 
@@ -1018,10 +1106,7 @@ private fun RecordChoice(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TracksDialog(state: AppState, controller: PlayerController, onClose: () -> Unit) {
-    val engine = state.engine
-    var castOpen by remember { mutableStateOf(false) }
-    if (castOpen) CastDialog(state, controller) { castOpen = false; onClose() }
+private fun TracksDialog(engine: VlcEngine, onClose: () -> Unit) {
     var tracks by remember { mutableStateOf(engine.tracks()) }
     val data = tracks
     androidx.compose.material3.AlertDialog(
@@ -1038,10 +1123,50 @@ private fun TracksDialog(state: AppState, controller: PlayerController, onClose:
                 data.subtitles.forEach { tr ->
                     TrackRow(if (tr.id == -1) t("player_off") else tr.name, tr.id == data.subtitleSelected) { engine.selectSubtitle(tr.id); tracks = engine.tracks() }
                 }
-                Text(t("cast_open"), Modifier.padding(top = 12.dp).fillMaxWidth().clickable { castOpen = true }.padding(vertical = 8.dp), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = Palette.WineSoft)
             }
         },
         confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
+    )
+}
+
+/** One setting of the picture (brightness or zoom) with a slider; it works at once and is kept for the next start. */
+@Composable
+private fun PictureDialog(title: String, value: Int, range: IntRange, format: String, standard: Int, onChange: (Int) -> Unit, onClose: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(format.format(value), style = MaterialTheme.typography.titleMedium)
+                Slider(value = value.toFloat(), onValueChange = { onChange(it.toInt()) }, valueRange = range.first.toFloat()..range.last.toFloat(), modifier = Modifier.width(320.dp))
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { onChange(standard) }, enabled = value != standard) { Text(t("player_video_reset")) } },
+    )
+}
+
+/** Zoom with its slider; a zoomed picture can be shifted here with two more sliders (or with the mouse in the picture). Everything is kept for the next start. */
+@Composable
+private fun ZoomDialog(state: AppState, onClose: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(t("player_zoom")) },
+        text = {
+            Column {
+                Text("%d %%".format(state.videoZoom), style = MaterialTheme.typography.titleMedium)
+                Slider(value = state.videoZoom.toFloat(), onValueChange = { state.changeZoom(it.toInt()) }, valueRange = 100f..300f, modifier = Modifier.width(320.dp))
+                if (state.videoZoom > 100) {
+                    Text(t("player_pan_x"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
+                    Slider(value = state.videoPanX.toFloat(), onValueChange = { state.changePan(it.toInt(), state.videoPanY) }, valueRange = -100f..100f, modifier = Modifier.width(320.dp))
+                    Text(t("player_pan_y"), style = MaterialTheme.typography.labelLarge)
+                    Slider(value = state.videoPanY.toFloat(), onValueChange = { state.changePan(state.videoPanX, it.toInt()) }, valueRange = -100f..100f, modifier = Modifier.width(320.dp))
+                    Text(t("player_pan_hint"), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { state.resetPicture() }, enabled = state.videoZoom != 100 || state.videoPanX != 0 || state.videoPanY != 0) { Text(t("player_video_reset")) } },
     )
 }
 
@@ -1077,8 +1202,10 @@ private fun TrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null) {
+private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null, brightness: Int = 0, zoom: Int = 100, panX: Int = 0, panY: Int = 0, fitRequest: Int = 0, onFit: (Int) -> Unit = {}, onPan: (Int, Int) -> Unit = { _, _ -> }, onClick: (() -> Unit)? = null) {
     var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    // the same picture for Skia itself, which can draw it through the gamma table of the brightness
+    var skiaImage by remember { mutableStateOf<org.jetbrains.skia.Image?>(null) }
     LaunchedEffect(engine) {
         var shown = -1L
         while (true) {
@@ -1089,26 +1216,93 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
                 shown = -1L
             } else if (f.version != shown) {
                 shown = f.version
-                image = org.jetbrains.skia.Image.makeRaster(
+                val made = org.jetbrains.skia.Image.makeRaster(
                     org.jetbrains.skia.ImageInfo(f.width, f.height, org.jetbrains.skia.ColorType.BGRA_8888, org.jetbrains.skia.ColorAlphaType.OPAQUE),
                     f.pixels, f.width * 4,
-                ).toComposeImageBitmap()
+                )
+                skiaImage = made
+                image = made.toComposeImageBitmap()
             }
         }
     }
-    Box(modifier.background(Color.Black)) {
+    // brightness as a gamma curve: dark parts get lighter (or darker) much more than the bright ones, so nothing burns out; 0 is no change
+    val filter = remember(brightness) {
+        if (brightness == 0) null else {
+            val exponent = Math.pow(2.0, -brightness / 70.0)
+            val table = ByteArray(256) { (255.0 * Math.pow(it / 255.0, exponent)).toInt().coerceIn(0, 255).toByte() }
+            org.jetbrains.skia.ColorFilter.Companion.makeTableARGB(null, table, table, table)
+        }
+    }
+    // the handlers below live as long as the picture: they must always call the newest functions (a new episode has a new controller)
+    val latestClick by androidx.compose.runtime.rememberUpdatedState(onClick)
+    val latestDouble by androidx.compose.runtime.rememberUpdatedState(onDoubleClick)
+    val latestTap by androidx.compose.runtime.rememberUpdatedState(onTap)
+    val latestScroll by androidx.compose.runtime.rememberUpdatedState(onScroll)
+    val latestPan by androidx.compose.runtime.rememberUpdatedState(onPan)
+    val latestPanX by androidx.compose.runtime.rememberUpdatedState(panX)
+    val latestPanY by androidx.compose.runtime.rememberUpdatedState(panY)
+    // "Zoom Fit": the zoom that makes the picture fill the window (no black bars); the position goes back to the middle
+    var area by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    var handledFit by remember { mutableStateOf(fitRequest) }
+    LaunchedEffect(fitRequest) {
+        if (fitRequest == handledFit) return@LaunchedEffect
+        handledFit = fitRequest
+        val img = image ?: return@LaunchedEffect
+        if (area.width == 0 || area.height == 0) return@LaunchedEffect
+        val fit = minOf(area.width.toFloat() / img.width, area.height.toFloat() / img.height)
+        val fill = maxOf(area.width.toFloat() / img.width, area.height.toFloat() / img.height)
+        onFit((fill / fit * 100).toInt().coerceIn(100, 300))
+    }
+    Box(modifier.background(Color.Black).onSizeChanged { area = it }) {
         androidx.compose.foundation.Canvas(
             Modifier.fillMaxSize()
-                .pointerInput(onTap != null) {
-                    if (onTap != null) detectTapGestures(onTap = { onTap() }) else detectTapGestures(onDoubleTap = { onDoubleClick() })
+                // a zoomed picture is moved with the mouse (the main picture only)
+                .pointerInput(zoom, onTap != null) {
+                    if (onTap == null && zoom > 100) {
+                        var x = latestPanX.toFloat()
+                        var y = latestPanY.toFloat()
+                        detectDragGestures(onDragStart = { x = latestPanX.toFloat(); y = latestPanY.toFloat() }) { change, drag ->
+                            change.consume()
+                            val img = image ?: return@detectDragGestures
+                            val fit = minOf(size.width.toFloat() / img.width, size.height.toFloat() / img.height) * zoom / 100f
+                            val overflowX = (img.width * fit - size.width) / 2
+                            val overflowY = (img.height * fit - size.height) / 2
+                            // dragging to the right shows more of the left side
+                            if (overflowX > 0) x = (x - drag.x / overflowX * 100).coerceIn(-100f, 100f)
+                            if (overflowY > 0) y = (y - drag.y / overflowY * 100).coerceIn(-100f, 100f)
+                            latestPan(x.toInt(), y.toInt())
+                        }
+                    }
                 }
-                .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> onScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
+                .pointerInput(onTap != null) {
+                    if (onTap != null) detectTapGestures(onTap = { latestTap?.invoke() }) else detectTapGestures(onDoubleTap = { latestDouble() }, onTap = { latestClick?.invoke() })
+                }
+                .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> latestScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
         ) {
             val img = image ?: return@Canvas
-            val scale = minOf(size.width / img.width, size.height / img.height)
+            // the zoom makes the picture bigger around its middle (what leaves the window is cut off), the brightness is added to the colors
+            val scale = minOf(size.width / img.width, size.height / img.height) * zoom / 100f
             val w = (img.width * scale).toInt()
             val h = (img.height * scale).toInt()
-            drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - w) / 2).toInt(), ((size.height - h) / 2).toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h))
+            // the part that is cut off can be shifted: -100 shows its left (upper) end, 100 its right (lower) end
+            val moveX = if (w > size.width) -panX / 100f * (w - size.width) / 2 else 0f
+            val moveY = if (h > size.height) -panY / 100f * (h - size.height) / 2 else 0f
+            val left = (size.width - w) / 2 + moveX
+            val top = (size.height - h) / 2 + moveY
+            clipRect {
+                val raw = skiaImage
+                if (filter != null && raw != null) {
+                    org.jetbrains.skia.Paint().use { paint ->
+                        paint.colorFilter = filter
+                        drawContext.canvas.nativeCanvas.drawImageRect(
+                            raw, org.jetbrains.skia.Rect.makeWH(raw.width.toFloat(), raw.height.toFloat()), org.jetbrains.skia.Rect.makeXYWH(left, top, w.toFloat(), h.toFloat()),
+                            org.jetbrains.skia.SamplingMode.LINEAR, paint, true,
+                        )
+                    }
+                } else {
+                    drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(left.toInt(), top.toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h))
+                }
+            }
         }
         // until the first picture has arrived a symbol shows what is coming
         if (image == null) placeholder?.invoke()

@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.width
@@ -216,6 +217,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var browseCount by remember { mutableIntStateOf(1) }
     var item by remember { mutableStateOf<Item?>(null) }
     var target by remember { mutableStateOf((request as? PlayRequest.Single)?.target) }
+    // the next episodes of the season (autoplay)
+    var queue by remember { mutableStateOf((request as? PlayRequest.Single)?.following.orEmpty()) }
     var catchup by remember { mutableStateOf<PlayTarget?>(null) }
     var forceHls by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
@@ -232,7 +235,14 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var removeFavDialog by remember { mutableStateOf(false) }
     var touched by remember { mutableIntStateOf(0) }
     var digits by remember { mutableStateOf("") }
-    var resize by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
+    var resize by remember { mutableIntStateOf(app.prefs.videoResize) }
+    // brightness, zoom and position of the picture are kept for the next start
+    var brightness by remember { mutableIntStateOf(app.prefs.videoBrightness) }
+    var zoom by remember { mutableIntStateOf(app.prefs.videoZoom) }
+    var panX by remember { mutableIntStateOf(app.prefs.videoPanX) }
+    var panY by remember { mutableIntStateOf(app.prefs.videoPanY) }
+    var brightnessDialog by remember { mutableStateOf(false) }
+    var zoomDialog by remember { mutableStateOf(false) }
     var tracks by remember { mutableStateOf(exo.currentTracks) }
     var tracksDialog by remember { mutableStateOf(false) }
     var guideDialog by remember { mutableStateOf(false) }
@@ -264,7 +274,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val first = remember { FocusRequester() }
     val active = catchup ?: target
     val zapping = request is PlayRequest.Zap && catchup == null
-    val dialogOpen = tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog || listOpen
+    val dialogOpen = brightnessDialog || zoomDialog || tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog || listOpen
     val activeNow by rememberUpdatedState(active)
     val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
     val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
@@ -329,6 +339,20 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     scope.launch {
                         delay(1000)
                         reload++
+                    }
+                }
+                if (state == Player.STATE_ENDED && activeNow?.live == false && request is PlayRequest.Single && catchup == null) {
+                    val finished = activeNow
+                    val length = exo.duration
+                    scope.launch {
+                        // an episode or movie that has ended counts as watched; with autoplay the next episode of the season follows
+                        finished?.let { app.repo.saveProgress(it, length, length) }
+                        if (!app.prefs.autoplayNext) return@launch
+                        val nextFn = queue.firstOrNull() ?: return@launch
+                        queue = queue.drop(1)
+                        val next = nextFn() ?: return@launch
+                        skipResume = true
+                        target = next
                     }
                 }
             }
@@ -681,6 +705,22 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     onVerticalDrag = { _, dy -> sum += dy },
                 )
             }
+            .pointerInput(zoom) {
+                // a zoomed picture is moved with a finger
+                if (zoom > 100) {
+                    detectDragGestures { change, drag ->
+                        change.consume()
+                        val limit = (zoom - 100) / 200f
+                        // the size of the part that is cut off is about the screen times (zoom - 100) / 2
+                        val w = size.width * limit
+                        val h = size.height * limit
+                        if (w > 0) panX = (panX - drag.x / w * 100).toInt().coerceIn(-100, 100)
+                        if (h > 0) panY = (panY - drag.y / h * 100).toInt().coerceIn(-100, 100)
+                        app.prefs.videoPanX = panX
+                        app.prefs.videoPanY = panY
+                    }
+                }
+            }
             .pointerInput(active?.live) {
                 detectTapGestures(
                     onTap = { overlay = !overlay },
@@ -697,11 +737,35 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 )
             },
     ) {
-        AndroidView(
-            modifier = if (tvBrowse) Modifier.tvPreviewRect() else Modifier.fillMaxSize(),
-            factory = { c -> PlayerView(c).apply { useController = false; player = exo; keepScreenOn = true } },
-            update = { it.resizeMode = resize },
-        )
+        // zoomed (or moved) the picture needs a texture view, it can be scaled; without zoom the standard surface view stays
+        val zoomed = zoom > 100
+        androidx.compose.runtime.key(zoomed) {
+            AndroidView(
+                modifier = if (tvBrowse) Modifier.tvPreviewRect() else Modifier.fillMaxSize(),
+                factory = { c ->
+                    (if (zoomed) android.view.LayoutInflater.from(c).inflate(R.layout.player_view_texture, null) as PlayerView else PlayerView(c))
+                        .apply { useController = false; player = exo; keepScreenOn = true; clipChildren = false }
+                },
+                update = { view ->
+                    view.resizeMode = resize
+                    val surface = view.videoSurfaceView
+                    if (zoomed && surface != null) {
+                        (surface.parent as? android.view.ViewGroup)?.clipChildren = false
+                        val factor = zoom / 100f
+                        surface.scaleX = factor
+                        surface.scaleY = factor
+                        val overflowX = ((surface.width * factor) - view.width) / 2
+                        val overflowY = ((surface.height * factor) - view.height) / 2
+                        surface.translationX = if (overflowX > 0) -panX / 100f * overflowX else 0f
+                        surface.translationY = if (overflowY > 0) -panY / 100f * overflowY else 0f
+                    }
+                },
+            )
+        }
+        // brightness: a video effect of the player changes the colors of the picture itself (only while it is not 0, so a normal picture takes no extra work)
+        androidx.compose.runtime.LaunchedEffect(brightness) {
+            exo.setVideoEffects(if (brightness == 0) emptyList() else listOf(androidx.media3.effect.Brightness(brightness / 100f * 0.4f)))
+        }
         (notice ?: message?.let { stringResource(it) })?.let { Text(it, Modifier.align(Alignment.Center).background(Color(0xAA000000)).padding(12.dp), color = Color.White, textAlign = TextAlign.Center) }
         info?.let { Text(it, Modifier.align(Alignment.TopCenter).padding(24.dp).background(Color(0xAA000000)).padding(10.dp), color = Color.White, textAlign = TextAlign.Center) }
         Row(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -821,6 +885,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     if (!LocalTv.current) {
                         TextButton(onClick = { moreDialog = false; landscape = !landscape }, modifier = Modifier.fillMaxWidth().focusHighlight()) { Text(stringResource(R.string.player_rotate), Modifier.fillMaxWidth()) }
                     }
+                    TextButton(onClick = { moreDialog = false; brightnessDialog = true }, modifier = Modifier.fillMaxWidth().focusHighlight()) { Text(stringResource(R.string.player_brightness), Modifier.fillMaxWidth()) }
+                    TextButton(onClick = { moreDialog = false; zoomDialog = true }, modifier = Modifier.fillMaxWidth().focusHighlight()) { Text(stringResource(R.string.player_zoom), Modifier.fillMaxWidth()) }
                     TextButton(
                         onClick = {
                             moreDialog = false
@@ -829,6 +895,15 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                                 AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_FILL
                                 else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                             }
+                            app.prefs.videoResize = resize
+                            // what the picture size is now: fit, fill the screen (Zoom Fit) or stretch
+                            info = ctx.getString(R.string.player_aspect) + ": " + ctx.getString(
+                                when (resize) {
+                                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> R.string.player_aspect_fill
+                                    AspectRatioFrameLayout.RESIZE_MODE_FILL -> R.string.player_aspect_stretch
+                                    else -> R.string.player_aspect_fit
+                                },
+                            )
                         },
                         modifier = Modifier.fillMaxWidth().focusHighlight(),
                     ) { Text(stringResource(R.string.player_aspect), Modifier.fillMaxWidth()) }
@@ -839,6 +914,23 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         )
     }
     if (tracksDialog) TracksDialog(exo, tracks) { tracksDialog = false }
+    if (brightnessDialog) {
+        PictureDialog(stringResource(R.string.player_brightness), "%+d".format(brightness), brightness.toFloat(), -100f..100f, 0, { brightness = it; app.prefs.videoBrightness = it }) { brightnessDialog = false }
+    }
+    if (zoomDialog) {
+        PictureDialog(
+            stringResource(R.string.player_zoom), "$zoom %", zoom.toFloat(), 100f..300f, 100, { zoom = it; app.prefs.videoZoom = it },
+            onReset = { zoom = 100; panX = 0; panY = 0; app.prefs.videoZoom = 100; app.prefs.videoPanX = 0; app.prefs.videoPanY = 0 },
+            extra = if (zoom > 100) {
+                {
+                    Text(stringResource(R.string.player_pan_x), style = MaterialTheme.typography.labelLarge)
+                    androidx.compose.material3.Slider(value = panX.toFloat(), onValueChange = { panX = it.toInt(); app.prefs.videoPanX = panX }, valueRange = -100f..100f, modifier = Modifier.focusHighlight())
+                    Text(stringResource(R.string.player_pan_y), style = MaterialTheme.typography.labelLarge)
+                    androidx.compose.material3.Slider(value = panY.toFloat(), onValueChange = { panY = it.toInt(); app.prefs.videoPanY = panY }, valueRange = -100f..100f, modifier = Modifier.focusHighlight())
+                }
+            } else null,
+        ) { zoomDialog = false }
+    }
     if (guideDialog) {
         item?.let { i ->
             GuideDialog(vm, i, onPlay = { p ->
@@ -1064,4 +1156,25 @@ private fun ChannelPanel(vm: MainViewModel, source: Source, count: Int, selected
             }
         }
     }
+}
+
+/** One setting of the picture (brightness or zoom) with a slider; it works at once and is kept for the next start. */
+@Composable
+private fun PictureDialog(
+    title: String, valueText: String, value: Float, range: ClosedFloatingPointRange<Float>, standard: Int, onChange: (Int) -> Unit,
+    onReset: () -> Unit = { onChange(standard) }, extra: (@Composable () -> Unit)? = null, onClose: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(valueText, style = MaterialTheme.typography.titleMedium)
+                androidx.compose.material3.Slider(value = value, onValueChange = { onChange(it.toInt()) }, valueRange = range, modifier = Modifier.focusHighlight())
+                extra?.invoke()
+            }
+        },
+        confirmButton = { TextButton(onClick = onClose, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_close)) } },
+        dismissButton = { TextButton(onClick = onReset, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.player_video_reset)) } },
+    )
 }

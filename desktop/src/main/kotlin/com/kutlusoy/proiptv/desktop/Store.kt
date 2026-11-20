@@ -21,6 +21,8 @@ data class AccountDto(
     val userAgent: String? = null,
     val enabled: Boolean = true,
     val epgUrl: String? = null,
+    /** Live categories the user switched off (the id of the category, for a playlist the name of the group). */
+    val hiddenLive: List<String> = emptyList(),
 )
 
 @Serializable
@@ -69,6 +71,17 @@ data class ConfigDto(
     val intro: Boolean = true,
     val history: List<String> = emptyList(),
     val hideAdult: Boolean = true,
+    val autoplayNext: Boolean = true,
+    /** Movies and series open in the preview layout (list, details and a small player) like the live channels. */
+    val vodPreview: Boolean = false,
+    /** The picture of the player: brightness from -100 to 100 and zoom in percent (100 to 300). Kept for the next start. */
+    val videoBrightness: Int = 0,
+    val videoZoom: Int = 100,
+    /** The position of a zoomed picture: -100 (left, top) to 100 (right, bottom) of the part that is cut off. */
+    val videoPanX: Int = 0,
+    val videoPanY: Int = 0,
+    /** The folder for downloads, recordings and backups; null: the standard place. */
+    val storageDir: String? = null,
     val reminders: List<ReminderDto> = emptyList(),
     val playerSearchAll: Boolean = false,
     val playerColumns: Boolean = false,

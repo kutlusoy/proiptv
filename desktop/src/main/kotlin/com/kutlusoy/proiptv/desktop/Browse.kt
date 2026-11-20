@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -88,7 +89,8 @@ fun BrowseScreen(state: AppState, kind: Int) {
     var favOnly by remember(kind) { mutableStateOf(false) }
     var historyOnly by remember(kind) { mutableStateOf(false) }
     // series: one genre of the titles can be chosen (the genre text of the provider, split into its names)
-    var genre by remember(kind) { mutableStateOf<String?>(null) }
+    var genre by remember(kind) { mutableStateOf(state.browseGenre[kind]) }
+    androidx.compose.runtime.LaunchedEffect(genre) { state.browseGenre[kind] = genre }
     var accountFilter by remember(kind) { mutableStateOf<String?>(state.store.config.lastAccount[kind.toString()]) }
     androidx.compose.runtime.LaunchedEffect(accountFilter) {
         // the chosen account is kept, so the list is the same after the player was closed
@@ -99,7 +101,7 @@ fun BrowseScreen(state: AppState, kind: Int) {
     val all = data.entries(kind).let { list -> if (activeAccount == null) list else list.filter { it.accountId == activeAccount } }
     val q = query.trim()
     val genres = remember(all, kind) { if (kind != Kind.SERIES) emptyList() else com.kutlusoy.proiptv.parse.Genres.count(all.asSequence().map { it.genre }) }
-    if (genre != null && genres.none { it.first.equals(genre, ignoreCase = true) }) genre = null
+    if (genre != null && genres.isNotEmpty() && genres.none { it.first.equals(genre, ignoreCase = true) }) genre = null
     val scrollKey = "$kind|$activeAccount|$category|$q|$genre"
     val listState = remember(scrollKey) { state.scrollMemory["$scrollKey|l"].let { m -> androidx.compose.foundation.lazy.LazyListState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
     val gridState = remember(scrollKey) { state.scrollMemory["$scrollKey|g"].let { m -> androidx.compose.foundation.lazy.grid.LazyGridState(m?.get(0) ?: 0, m?.get(1) ?: 0) } }
@@ -245,14 +247,14 @@ fun BrowseScreen(state: AppState, kind: Int) {
                             }
                             state.player = PlayRequest.Live(shown, index, query = q, origin = origin, allScope = category == ALL_KEY && activeAccount == null && !favOnly)
                         }
-                        else if (kind == Kind.SERIES) state.series = e else state.movie = e
+                        else state.openVod(e)
                     }
                 }
             }
         } else {
             LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), state = gridState, contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(shown, key = { it.key }) { e ->
-                    Poster(state, e) { if (kind == Kind.SERIES) state.series = e else state.movie = e }
+                    Poster(state, e) { state.openVod(e) }
                 }
             }
         }
@@ -377,10 +379,7 @@ private fun DetailHeader(state: AppState, e: Entry, onBack: () -> Unit) {
 private fun MovieDetail(state: AppState, e: Entry) {
     val saved = state.progress.let { it.version; it.get(e.accountId, Kind.MOVIE, e.remoteId) }
     val resume = saved?.takeIf { it.positionMs > 5_000 }
-    fun play(startMs: Long) {
-        val local = state.downloadOf(e.accountId, Kind.MOVIE, e.remoteId)?.let { state.localPlayable(it) }
-        (local ?: state.library.playable(e))?.let { state.player = PlayRequest.Single(it, startMs) }
-    }
+    fun play(startMs: Long) = state.playMovie(e, startMs)
     val download = state.downloadOf(e.accountId, Kind.MOVIE, e.remoteId)
     val vod by produceState<VodInfo?>(null, e.key) { value = state.library.vodInfo(e) }
     Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -403,7 +402,7 @@ private fun MovieDetail(state: AppState, e: Entry) {
                         Text(t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"))
                     }
                 }
-                if (saved?.watched == true) Text("\u2713 " + t("detail_watched"), color = Palette.WineSoft)
+                if (saved?.watched == true) Text("\u2713 " + t("detail_watched"), color = Palette.Watched, fontWeight = FontWeight.Bold)
                 if (resume != null && resume.durationMs > 0) {
                     androidx.compose.material3.LinearProgressIndicator(progress = { (resume.positionMs.toFloat() / resume.durationMs).coerceIn(0f, 1f) }, Modifier.width(260.dp))
                 }
@@ -416,7 +415,7 @@ private fun MovieDetail(state: AppState, e: Entry) {
 }
 
 @Composable
-private fun Facts(rating: String?, plot: String?, director: String?, cast: String?, released: String?, genre: String?, durationSecs: Int?, trailer: String?) {
+internal fun Facts(rating: String?, plot: String?, director: String?, cast: String?, released: String?, genre: String?, durationSecs: Int?, trailer: String?) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         rating?.toDoubleOrNull()?.takeIf { it > 0 }?.let { r ->
             val filled = Math.round(r / 2).toInt().coerceIn(0, 5)
@@ -449,7 +448,7 @@ private fun RelatedRow(state: AppState, e: Entry, titleKey: String) {
     ScrollRow {
         items(related, key = { it.key }) { r ->
             Box(Modifier.width(120.dp)) {
-                Poster(state, r) { if (r.kind == Kind.SERIES) { state.series = r; state.movie = null } else { state.movie = r; state.series = null } }
+                Poster(state, r) { state.series = null; state.movie = null; state.openVod(r) }
             }
         }
     }
@@ -467,10 +466,7 @@ private fun SeriesDetail(state: AppState, e: Entry) {
     val version = state.progress.version
     fun progressOf(id: String) = state.progress.get(e.accountId, Kind.EPISODE, id)
     val next = remember(list, version) { SeriesProgress.next(list, ::progressOf) }
-    fun play(ep: XtreamEpisode, startMs: Long = 0) {
-        val local = state.downloadOf(e.accountId, Kind.EPISODE, ep.id)?.let { state.localPlayable(it) }
-        (local ?: state.library.episodePlayable(e, ep))?.let { state.player = PlayRequest.Single(it, startMs) }
-    }
+    fun play(ep: XtreamEpisode, startMs: Long = 0) = state.playEpisode(e, ep, list, startMs)
     var menu by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         DetailHeader(state, e) { state.series = null }
@@ -478,9 +474,17 @@ private fun SeriesDetail(state: AppState, e: Entry) {
         next?.let { n ->
             val ep = n.episode
             val resume = progressOf(ep.id)?.positionMs?.takeIf { it > 5_000 } ?: 0
-            Button(onClick = { play(ep, resume) }) {
-                Icon(Icons.Filled.PlayArrow, null)
-                Text(t(if (n.continuing) "detail_continue_episode" else "detail_play_episode", ep.season, ep.number), Modifier.padding(start = 6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(onClick = { play(ep, resume) }) {
+                    Icon(Icons.Filled.PlayArrow, null)
+                    Text(t(if (n.continuing) "detail_continue_episode" else "detail_play_episode", ep.season, ep.number), Modifier.padding(start = 6.dp))
+                }
+                // the switch stands beside the button: with autoplay the whole season is played, one episode after the other
+                var autoplay by remember { mutableStateOf(state.store.config.autoplayNext) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Switch(checked = autoplay, onCheckedChange = { autoplay = it; state.store.update { c -> c.copy(autoplayNext = it) } })
+                    Text(t("detail_autoplay"), style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
         if (seasons.isNotEmpty()) {
@@ -535,7 +539,7 @@ private fun SeriesDetail(state: AppState, e: Entry) {
                     Tip(t(if (watched) "detail_mark_unwatched" else "detail_mark_watched")) { IconButton(onClick = { state.progress.setWatched(e.accountId, Kind.EPISODE, listOf(ep.id), !watched) }) {
                         Icon(
                             Icons.Filled.CheckCircle, t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"),
-                            tint = if (watched) Palette.WineSoft else Color.White.copy(alpha = 0.3f),
+                            tint = if (watched) Palette.Watched else Color.White.copy(alpha = 0.3f),
                         )
                     } }
                     Icon(Icons.Filled.PlayArrow, null)

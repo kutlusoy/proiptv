@@ -1,6 +1,10 @@
 package com.kutlusoy.proiptv.desktop
 
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -42,12 +46,26 @@ sealed interface UpdateUi {
     data class Error(val code: UpdateException.Code, val detail: String?) : UpdateUi
 }
 
+/** A group of settings: closed at first (only Update and Special thanks start open), a click on its title opens or closes it, so the remote control does not have to walk through all settings. */
+private val openGroups = androidx.compose.runtime.mutableStateMapOf<String, Boolean>()
+
 @Composable
-private fun Group(title: String, content: @Composable () -> Unit) {
+private fun Group(title: String, startOpen: Boolean = false, content: @Composable () -> Unit) {
+    val expanded = openGroups[title] ?: startOpen
     Card(Modifier.fillMaxWidth().padding(top = 14.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Palette.WineSoft)
-            content()
+        Column {
+            Row(
+                Modifier.fillMaxWidth().clickable { openGroups[title] = !expanded }.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Palette.WineSoft)
+                Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            }
+            androidx.compose.animation.AnimatedVisibility(expanded) {
+                Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    content()
+                }
+            }
         }
     }
 }
@@ -57,6 +75,8 @@ private fun Hint(text: String) = Text(text, style = MaterialTheme.typography.bod
 
 @Composable
 fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
+    // every visit starts with all groups closed
+    remember { openGroups.clear(); true }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)) {
         item {
             Text(t("nav_settings"), style = MaterialTheme.typography.headlineMedium)
@@ -103,6 +123,13 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     DropdownField("$mb MB", listOf(128, 256, 512, 1024, 2048).map { it to "$it MB" }, { mb = it; state.store.update { c -> c.copy(bufferMb = it) } }, Modifier.widthIn(max = 320.dp).fillMaxWidth())
                     Hint(t("settings_buffer_hint"))
                 }
+                // movies and series in the layout with a list, details and a small player (like the live channels)
+                var vodPreview by remember { mutableStateOf(state.store.config.vodPreview) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("settings_vod_preview"), Modifier.weight(1f))
+                    Switch(checked = vodPreview, onCheckedChange = { vodPreview = it; state.store.update { c -> c.copy(vodPreview = it) } })
+                }
+                Hint(t("settings_vod_preview_hint"))
             }
             Group(t("settings_about")) {
                 Text("ProIPTV " + t("main_version", AppInfo.label))
@@ -114,20 +141,13 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     modifier = Modifier.clickable { runCatching { java.awt.Desktop.getDesktop().mail(java.net.URI("mailto:kutlusoy.dev@gmail.com")) } },
                 )
             }
+            Group(t("settings_storage")) { StorageGroup(state) }
             Group(t("settings_backup")) { BackupGroup(state) }
             UpdateGroup(state, updater, update)
-            Group(t("settings_tmdb")) {
-                var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
-                TextInput(
-                    key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(t("settings_tmdb_key")) },
-                )
-                Hint(t("settings_tmdb_hint"))
-            }
             // the people who helped, from supporters.md in the root folder of the project
             val supporters = remember { loadSupporters() }
             if (supporters.isNotEmpty()) {
-                Group(t("settings_thanks")) {
+                Group(t("settings_thanks"), startOpen = true) {
                     supporters.forEach { section ->
                         if (section.title.isNotEmpty()) Text(
                             section.title, color = Palette.WineSoft, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
@@ -137,6 +157,15 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     }
                 }
             }
+            Group(t("settings_tmdb")) {
+                var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
+                TextInput(
+                    key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(t("settings_tmdb_key")) },
+                )
+                Hint(t("settings_tmdb_hint"))
+            }
+
 
         }
     }
@@ -221,7 +250,7 @@ class UpdateState(private val updater: Updater, private val scope: kotlinx.corou
 private fun UpdateGroup(state: AppState, updater: Updater, update: UpdateState) {
     var auto by remember { mutableStateOf(state.store.config.autoUpdate) }
     val last = state.store.config.lastUpdateCheck
-    Group(t("update_title")) {
+    Group(t("update_title"), startOpen = true) {
         Text(t("update_current", AppInfo.label))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -267,12 +296,42 @@ private fun errorText(e: UpdateUi.Error): String = when (e.code) {
     UpdateException.Code.INSTALL_FAILED -> Strings.get("update_err_install", e.detail.orEmpty())
 }
 
-private fun chooseFile(title: String, save: Boolean, name: String = ""): java.io.File? {
+private fun chooseFile(title: String, save: Boolean, name: String = "", startIn: java.io.File? = null): java.io.File? {
     val dialog = java.awt.FileDialog(null as java.awt.Frame?, title, if (save) java.awt.FileDialog.SAVE else java.awt.FileDialog.LOAD)
+    startIn?.takeIf { it.isDirectory }?.let { dialog.directory = it.absolutePath }
     if (save) dialog.file = name
     dialog.isVisible = true
     val file = dialog.file ?: return null
     return java.io.File(dialog.directory, file)
+}
+
+/** The folder for backups inside the chosen storage place (the dialogs open there); null at the standard place. */
+private fun backupFolder(state: AppState): java.io.File? =
+    state.store.config.storageDir?.let { java.io.File(it, "Backups") }?.also { runCatching { it.mkdirs() } }
+
+/** Where downloads, recordings and backups are kept: the standard place until a folder (also on an external drive) is chosen. */
+@Composable
+private fun StorageGroup(state: AppState) {
+    var chosen by remember { mutableStateOf(state.store.config.storageDir) }
+    val available = chosen?.let { java.io.File(it).isDirectory } ?: true
+    val shown = chosen ?: DownloadManager.mediaDir("").parentFile?.absolutePath.orEmpty()
+    Text(shown, style = MaterialTheme.typography.bodyMedium)
+    if (chosen == null) Hint(t("storage_default")) else if (!available) Text(t("storage_missing"), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = {
+            val chooser = javax.swing.JFileChooser(chosen?.let { java.io.File(it) }).apply {
+                fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
+                dialogTitle = Strings.get("storage_choose")
+            }
+            if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
+                val dir = chooser.selectedFile
+                chosen = dir.absolutePath
+                state.store.update { c -> c.copy(storageDir = dir.absolutePath) }
+            }
+        }) { Text(t("storage_choose")) }
+        OutlinedButton(onClick = { chosen = null; state.store.update { c -> c.copy(storageDir = null) } }, enabled = chosen != null) { Text(t("storage_reset")) }
+    }
+    Hint(t("storage_hint"))
 }
 
 /** Backup of accounts, favorites and settings, the same file format as in the Android app. */
@@ -302,7 +361,7 @@ private fun BackupGroup(state: AppState) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = { exportDialog = true }) { Text(t("backup_create")) }
         OutlinedButton(onClick = {
-            val file = chooseFile(Strings.get("backup_restore"), save = false) ?: return@OutlinedButton
+            val file = chooseFile(Strings.get("backup_restore"), save = false, startIn = backupFolder(state)) ?: return@OutlinedButton
             val text = runCatching { file.readText(Charsets.UTF_8) }.getOrNull()
             if (text == null) message = Strings.get("backup_invalid")
             else try {
@@ -329,7 +388,7 @@ private fun BackupGroup(state: AppState) {
                 androidx.compose.material3.TextButton(onClick = {
                     exportDialog = false
                     val name = "proiptv-backup-" + java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date()) + ".json"
-                    val file = chooseFile(Strings.get("backup_create"), save = true, name = name)
+                    val file = chooseFile(Strings.get("backup_create"), save = true, name = name, startIn = backupFolder(state))
                     if (file != null) {
                         message = runCatching { file.writeText(state.createBackup(exportPassword.ifEmpty { null }), Charsets.UTF_8) }
                             .fold({ Strings.get("backup_done") }, { it.message ?: "error" })

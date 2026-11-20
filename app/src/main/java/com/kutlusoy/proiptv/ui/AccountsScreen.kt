@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.heightIn
+import com.kutlusoy.proiptv.data.HiddenCategory
+import com.kutlusoy.proiptv.data.Kind
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -151,7 +154,11 @@ private fun AccountCard(
         else -> { summary = typeLabel; summaryColor = dim }
     }
 
-    Card(Modifier.fillMaxWidth()) {
+    var categoriesOpen by remember { mutableStateOf(false) }
+    if (categoriesOpen) CategoriesDialog(vm, account) { categoriesOpen = false }
+    // the switch of the account is beside the card, not in it: with the remote control of a TV a switch inside a card that opens and closes gets in the way
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+    Card(Modifier.weight(1f)) {
         Column {
             Row(
                 Modifier.fillMaxWidth().focusHighlight().clickable(onClick = onToggle).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
@@ -161,7 +168,6 @@ private fun AccountCard(
                     Text(account.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(summary, style = MaterialTheme.typography.bodySmall, color = summaryColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Switch(checked = account.enabled, onCheckedChange = { on -> vm.run { vm.repo.setEnabled(account, on) } }, modifier = Modifier.padding(horizontal = 8.dp).focusHighlight())
                 Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = dim)
             }
             AnimatedVisibility(expanded) {
@@ -197,6 +203,7 @@ private fun AccountCard(
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
                         OutlinedButton(onClick = { if (state == null) vm.repo.sync.sync(account.id) }, modifier = Modifier.alpha(if (state == null) 1f else 0.45f).focusHighlight()) { Text(stringResource(R.string.account_sync)) }
                         OutlinedButton(onClick = { if (state == null) vm.repo.sync.refreshGuide(account.id) }, modifier = Modifier.alpha(if (state == null) 1f else 0.45f).focusHighlight()) { Text(stringResource(R.string.account_sync_guide)) }
+                        if (counts.first > 0) OutlinedButton(onClick = { categoriesOpen = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.account_categories)) }
                         OutlinedButton(onClick = onEdit, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_edit)) }
                         OutlinedButton(onClick = onDelete, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_delete)) }
                     }
@@ -204,6 +211,54 @@ private fun AccountCard(
             }
         }
     }
+    Switch(checked = account.enabled, onCheckedChange = { on -> vm.run { vm.repo.setEnabled(account, on) } }, modifier = Modifier.padding(start = 12.dp, top = 12.dp).focusHighlight())
+    }
+}
+
+/**
+ * The live categories of an account with a switch each (on: shown). The switches stand beside the names, not inside a clickable row, so they are
+ * reached one by one with the remote control. The change is made with OK.
+ */
+@Composable
+private fun CategoriesDialog(vm: MainViewModel, account: Account, onClose: () -> Unit) {
+    val visible by vm.categories(account.id, Kind.LIVE).collectAsState(initial = emptyList())
+    val hidden by vm.hiddenCategories(account.id, Kind.LIVE).collectAsState(initial = emptyList())
+    val counts by vm.categoryCounts(listOf(account.id), Kind.LIVE).collectAsState(initial = emptyList())
+    val initial = hidden.map { it.remoteId }.toSet()
+    var off by remember(initial) { mutableStateOf(initial) }
+    val other = stringResource(R.string.live_other)
+    val rows = remember(visible, hidden) { visible.map { it.remoteId to it.name.ifBlank { other } } + hidden.map { it.remoteId to it.name.ifBlank { other } } }
+    val countOf = remember(counts) { counts.associate { it.categoryRemoteId to it.n } }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(stringResource(R.string.account_categories)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.account_categories_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { off = emptySet() }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.categories_all_on)) }
+                    TextButton(onClick = { off = rows.map { it.first }.toSet() }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.categories_all_off)) }
+                }
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 380.dp)) {
+                    items(rows, key = { it.first }) { (id, name) ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(name, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (id in off) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface)
+                            countOf[id]?.let { Text(it.toString(), Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) }
+                            Switch(checked = id !in off, onCheckedChange = { on -> off = if (on) off - id else off + id }, modifier = Modifier.focusHighlight())
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val chosen = rows.filter { it.first in off }.map { HiddenCategory(account.id, Kind.LIVE, it.first, it.second) }
+                vm.run { vm.repo.setHiddenCategories(account, chosen) }
+                onClose()
+            }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_save)) }
+        },
+        dismissButton = { TextButton(onClick = onClose, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }
 
 @Composable

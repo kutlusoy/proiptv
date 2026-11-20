@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,6 +47,8 @@ object Palette {
     val Surface = Color(0xFF151013)
     val SurfaceHigh = Color(0xFF211619)
     val Wine = Color(0xFFC40035)
+    /** The mark of everything that was watched: bright green, it stands out on the red background of the running episode too. */
+    val Watched = Color(0xFF00E676)
     val WineDeep = Color(0xFF7D0F25)
     val WineSoft = Color(0xFFF2506F)
     val Text = Color(0xFFF3EBED)
@@ -211,12 +214,36 @@ fun ScrollRow(modifier: Modifier = Modifier, content: androidx.compose.foundatio
     }
 }
 
+/**
+ * A band with several rows that moves as a whole: the items fill [rows] rows, the next ones continue to the right. The arrows at the edges (mouse) move the whole band.
+ */
+@Composable
+fun ScrollGrid(rows: Int, cellHeight: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, content: androidx.compose.foundation.lazy.grid.LazyGridScope.() -> Unit) {
+    val state = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val previous = t("player_list_previous")
+    val next = t("player_list_next")
+    val gap = 8.dp
+    fun move(direction: Int) {
+        scope.launch { state.animateScrollBy(direction * state.layoutInfo.viewportSize.width * 0.8f) }
+    }
+    Box(modifier) {
+        androidx.compose.foundation.lazy.grid.LazyHorizontalGrid(
+            androidx.compose.foundation.lazy.grid.GridCells.Fixed(rows), Modifier.fillMaxWidth().height(cellHeight * rows + gap * (rows - 1)), state = state,
+            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(gap), content = content,
+        )
+        if (state.canScrollBackward) RowArrow(Alignment.CenterStart, previous, Icons.Filled.KeyboardArrowLeft) { move(-1) }
+        if (state.canScrollForward) RowArrow(Alignment.CenterEnd, next, Icons.Filled.KeyboardArrowRight) { move(1) }
+    }
+}
+
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.RowArrow(align: Alignment, description: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    // white inside with a red arrow: it can be seen on every picture and on the dark background
     androidx.compose.material3.IconButton(
         onClick = onClick,
-        modifier = Modifier.align(align).padding(horizontal = 4.dp).size(40.dp).background(Color(0xCC000000), androidx.compose.foundation.shape.CircleShape),
-    ) { Icon(icon, description, tint = Color.White) }
+        modifier = Modifier.align(align).padding(horizontal = 6.dp).size(44.dp).shadow(6.dp, androidx.compose.foundation.shape.CircleShape).background(Color.White, androidx.compose.foundation.shape.CircleShape),
+    ) { Icon(icon, description, Modifier.size(30.dp), tint = Palette.Wine) }
 }
 
 /** A small label with the name of a control and, when there is one, its key, after the mouse rests on it. With [above] the label opens above the mouse (the player controls sit at the bottom edge). */

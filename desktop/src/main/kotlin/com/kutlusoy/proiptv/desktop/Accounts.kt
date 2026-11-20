@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -93,14 +95,17 @@ private fun AccountCard(state: AppState, a: AccountDto, expanded: Boolean, onTog
         days != null && date != null -> t("account_expired", date)
         else -> if (a.type == "xtream") "Xtream Codes" else t("account_type_m3u")
     }
-    Card(Modifier.fillMaxWidth()) {
+    var categoriesOpen by remember { mutableStateOf(false) }
+    if (categoriesOpen) CategoriesDialog(state, a) { categoriesOpen = false }
+    // the switch of the account is beside the card, not in it (the same as in the app for the TV)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+    Card(Modifier.weight(1f)) {
         Column {
             Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(a.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(summary, style = MaterialTheme.typography.bodySmall, color = if (error != null || (days != null && days <= 7)) MaterialTheme.colorScheme.error else dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Switch(checked = a.enabled, onCheckedChange = { state.setEnabled(a.id, it) }, modifier = Modifier.padding(horizontal = 8.dp))
                 Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = dim)
             }
             AnimatedVisibility(expanded) {
@@ -126,6 +131,7 @@ private fun AccountCard(state: AppState, a: AccountDto, expanded: Boolean, onTog
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 8.dp)) {
                         OutlinedButton(onClick = { state.reload() }, enabled = !state.loading) { Text(t("account_sync")) }
                         OutlinedButton(onClick = { state.refreshGuide() }, enabled = !state.guideLoading) { Text(t("account_sync_guide")) }
+                        if (state.data.allCategories(Kind.LIVE).any { it.accountId == a.id }) OutlinedButton(onClick = { categoriesOpen = true }) { Text(t("account_categories")) }
                         OutlinedButton(onClick = onEdit) { Text(t("action_edit")) }
                         OutlinedButton(onClick = onDelete) { Text(t("action_delete")) }
                     }
@@ -133,6 +139,46 @@ private fun AccountCard(state: AppState, a: AccountDto, expanded: Boolean, onTog
             }
         }
     }
+    Switch(checked = a.enabled, onCheckedChange = { state.setEnabled(a.id, it) }, modifier = Modifier.padding(start = 12.dp, top = 12.dp))
+    }
+}
+
+/** The live categories of an account with a switch each (on: shown), the switches beside the names. The change is made with Save. */
+@Composable
+private fun CategoriesDialog(state: AppState, a: AccountDto, onClose: () -> Unit) {
+    val all = remember { state.data.allCategories(Kind.LIVE).filter { it.accountId == a.id } }
+    val counts = remember { state.data.entries(Kind.LIVE).filter { it.accountId == a.id }.groupingBy { it.categoryId }.eachCount() }
+    var off by remember { mutableStateOf(all.filter { it.hidden }.map { it.id }.toSet()) }
+    val other = t("live_other")
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(t("account_categories")) },
+        text = {
+            Column {
+                Text(t("account_categories_hint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.TextButton(onClick = { off = emptySet() }) { Text(t("categories_all_on")) }
+                    androidx.compose.material3.TextButton(onClick = { off = all.map { it.id }.toSet() }) { Text(t("categories_all_off")) }
+                }
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 420.dp).widthIn(min = 420.dp)) {
+                    items(all, key = { it.id }) { c ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(c.name.ifBlank { other }, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (c.id in off) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface)
+                            counts[c.id]?.let { Text(it.toString(), Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) }
+                            Switch(checked = c.id !in off, onCheckedChange = { on -> off = if (on) off - c.id else off + c.id })
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                if (off.toSet() != a.hiddenLive.toSet()) state.setHiddenLive(a.id, off.toList())
+                onClose()
+            }) { Text(t("action_save")) }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_cancel")) } },
+    )
 }
 
 @Composable

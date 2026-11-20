@@ -26,7 +26,12 @@ data class BackupAccount(
     val enabled: Boolean = true,
     val useVod: Boolean = true,
     val useSeries: Boolean = true,
+    /** The live categories that were switched off for the account. */
+    val hiddenLive: List<BackupHidden> = emptyList(),
 )
+
+@Serializable
+data class BackupHidden(val id: String, val name: String = id)
 
 @Serializable
 data class BackupFavorite(val account: String, val kind: Int, val remoteId: String, val name: String)

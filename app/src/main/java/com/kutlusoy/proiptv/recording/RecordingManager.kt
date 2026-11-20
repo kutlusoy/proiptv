@@ -51,6 +51,7 @@ class RecordingManager(
     private val scope: CoroutineScope,
     private val resolve: suspend (Item) -> PlayTarget?,
     private val maxConnections: suspend (Long) -> Int?,
+    private val directoryOf: () -> File = { app.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: File(app.filesDir, "recordings") },
 ) {
     private class Running(val recorder: Recorder, val lease: HubLease, val info: ActiveRecording)
 
@@ -58,7 +59,7 @@ class RecordingManager(
     private val _active = MutableStateFlow<List<ActiveRecording>>(emptyList())
     val active: StateFlow<List<ActiveRecording>> = _active
 
-    fun directory(): File = app.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: File(app.filesDir, "recordings")
+    fun directory(): File = directoryOf()
 
     suspend fun start(target: PlayTarget, maxConnections: Int?, stopAtMs: Long?): Long = begin(null, target, maxConnections, stopAtMs)
 

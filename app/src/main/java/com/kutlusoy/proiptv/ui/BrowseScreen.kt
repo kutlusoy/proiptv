@@ -146,7 +146,8 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
     // quick filters of the channel list (bit 1 HD, 2 catch-up, 4 favorites), not combined with the favorites view
     var quick by rememberSaveable(kind) { mutableIntStateOf(0) }
     // series: one genre of the titles can be chosen
-    var genre by rememberSaveable(kind) { mutableStateOf<String?>(null) }
+    var genre by remember(kind) { mutableStateOf(vm.browseGenre[kind]) }
+    LaunchedEffect(genre) { vm.browseGenre[kind] = genre }
     var favMode by rememberSaveable(kind) { mutableStateOf(prefs.browseFav(kind)) }
     var contMode by rememberSaveable(kind) { mutableStateOf(false) }
     val tvNow = LocalTv.current

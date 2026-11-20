@@ -39,7 +39,8 @@ sealed interface UpdateUi {
 
 sealed interface PlayRequest {
     data class Zap(val source: Source, val index: Int, val direct: Boolean = false) : PlayRequest
-    data class Single(val target: PlayTarget, val fromStart: Boolean = false) : PlayRequest
+    /** [following] are the next episodes of the season (resolved when it is their turn): with autoplay the next one starts when an episode has ended. */
+    data class Single(val target: PlayTarget, val fromStart: Boolean = false, val following: List<suspend () -> PlayTarget?> = emptyList()) : PlayRequest
 }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -138,7 +139,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             repo.ensureDefaultLists(app.getString(R.string.fav_title))
-            // the lists stored by an older version were loaded without the filter for adult content: once load them again
+            // the lists stored by an older version were loaded without the filter for adult content (and categories named XXX): once load them again
             if (prefs.filterSync < FILTER_SYNC) {
                 prefs.filterSync = FILTER_SYNC
                 repo.db.accounts().list().filter { it.enabled }.forEach { repo.sync.sync(it.id) }
@@ -187,6 +188,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun categories(accountId: Long, kind: Int) = db.items().categories(accountId, kind)
 
+    fun hiddenCategories(accountId: Long, kind: Int) = db.items().hiddenFlow(accountId, kind)
+
     fun categoryCounts(ids: List<Long>, kind: Int) = db.items().categoryCounts(ids, kind)
 
     fun genreCounts(ids: List<Long>, kind: Int) = db.items().genreCounts(ids, kind)
@@ -210,6 +213,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     ) { a, b, c -> Triple(a, b, c) }
 
     // the loaded pages of the last list per area are kept, so the list is the same (and at the same place) after the player was closed
+    /** The genre that was chosen per area, so it is still there after a detail page. */
+    val browseGenre = HashMap<Int, String?>()
+
     private val pagers = HashMap<Int, Pair<List<Any?>, kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>>>>()
 
     fun pager(kind: Int, ids: List<Long>, category: String?, query: String, flags: Int = 0, genre: String? = null): kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<Item>> {
@@ -269,4 +275,4 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-private const val FILTER_SYNC = 1
+private const val FILTER_SYNC = 2

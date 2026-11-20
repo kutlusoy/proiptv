@@ -28,9 +28,11 @@ class DownloadManager(
     private val db: AppDatabase,
     private val scope: CoroutineScope,
     private val client: OkHttpClient,
-    private val dir: File,
+    private val dirOf: () -> File,
     private val resolve: suspend (Download) -> Pair<String, String?>?,
 ) {
+    /** The folder can be changed in the settings, so it is asked every time. */
+    private val dir: File get() = dirOf()
     private var worker: Job? = null
     private var running: Job? = null
     private var currentId = -1L
