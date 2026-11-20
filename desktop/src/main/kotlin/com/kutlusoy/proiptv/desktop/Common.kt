@@ -47,6 +47,8 @@ object Palette {
     val Surface = Color(0xFF151013)
     val SurfaceHigh = Color(0xFF211619)
     val Wine = Color(0xFFC40035)
+    /** The mark of everything that was watched: bright green, it stands out on the red background of the running episode too. */
+    val Watched = Color(0xFF00E676)
     val WineDeep = Color(0xFF7D0F25)
     val WineSoft = Color(0xFFF2506F)
     val Text = Color(0xFFF3EBED)

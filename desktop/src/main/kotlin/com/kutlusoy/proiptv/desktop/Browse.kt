@@ -402,7 +402,7 @@ private fun MovieDetail(state: AppState, e: Entry) {
                         Text(t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"))
                     }
                 }
-                if (saved?.watched == true) Text("\u2713 " + t("detail_watched"), color = Palette.WineSoft)
+                if (saved?.watched == true) Text("\u2713 " + t("detail_watched"), color = Palette.Watched, fontWeight = FontWeight.Bold)
                 if (resume != null && resume.durationMs > 0) {
                     androidx.compose.material3.LinearProgressIndicator(progress = { (resume.positionMs.toFloat() / resume.durationMs).coerceIn(0f, 1f) }, Modifier.width(260.dp))
                 }
@@ -539,7 +539,7 @@ private fun SeriesDetail(state: AppState, e: Entry) {
                     Tip(t(if (watched) "detail_mark_unwatched" else "detail_mark_watched")) { IconButton(onClick = { state.progress.setWatched(e.accountId, Kind.EPISODE, listOf(ep.id), !watched) }) {
                         Icon(
                             Icons.Filled.CheckCircle, t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"),
-                            tint = if (watched) Palette.WineSoft else Color.White.copy(alpha = 0.3f),
+                            tint = if (watched) Palette.Watched else Color.White.copy(alpha = 0.3f),
                         )
                     } }
                     Icon(Icons.Filled.PlayArrow, null)

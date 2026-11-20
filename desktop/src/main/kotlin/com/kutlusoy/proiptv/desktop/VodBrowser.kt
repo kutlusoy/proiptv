@@ -206,8 +206,13 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                                 }
                                 Column(Modifier.weight(1f)) {
                                     Text("${ep.number}. ${ep.title}", maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                                    val extra = listOfNotNull(ep.durationSecs?.takeIf { it > 0 }?.let { "${it / 60} min" }, if (p?.watched == true) "✓" else null).joinToString("  ")
-                                    if (extra.isNotEmpty()) Text(extra, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                    val extra = ep.durationSecs?.takeIf { it > 0 }?.let { "${it / 60} min" }.orEmpty()
+                                    if (extra.isNotEmpty() || p?.watched == true) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            if (extra.isNotEmpty()) Text(extra, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                            if (p?.watched == true) Text("\u2713", style = MaterialTheme.typography.labelMedium, color = Palette.Watched, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
                                     // the place where the user stopped
                                     if (ready) {
                                         val minute = p?.positionMs?.takeIf { it > 5_000 }
@@ -224,7 +229,7 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                                 }
                                 Tip(t(if (watched) "detail_mark_unwatched" else "detail_mark_watched")) {
                                     IconButton(onClick = { state.progress.setWatched(shown.accountId, Kind.EPISODE, listOf(ep.id), !watched) }, modifier = Modifier.width(36.dp)) {
-                                        Icon(Icons.Filled.CheckCircle, t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"), tint = if (watched) Palette.WineSoft else Color.White.copy(alpha = 0.3f))
+                                        Icon(Icons.Filled.CheckCircle, t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"), tint = if (watched) Palette.Watched else Color.White.copy(alpha = 0.3f))
                                     }
                                 }
                             }
@@ -275,7 +280,7 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                                 }
                                 Tip(t(if (seen) "detail_mark_unwatched" else "detail_mark_watched")) {
                                     IconButton(onClick = { state.progress.setWatched(shown.accountId, Kind.MOVIE, listOf(shown.remoteId), !seen) }) {
-                                        Icon(Icons.Filled.CheckCircle, t(if (seen) "detail_mark_unwatched" else "detail_mark_watched"), tint = if (seen) Palette.WineSoft else Color.White.copy(alpha = 0.5f))
+                                        Icon(Icons.Filled.CheckCircle, t(if (seen) "detail_mark_unwatched" else "detail_mark_watched"), tint = if (seen) Palette.Watched else Color.White.copy(alpha = 0.5f))
                                     }
                                 }
                             }
