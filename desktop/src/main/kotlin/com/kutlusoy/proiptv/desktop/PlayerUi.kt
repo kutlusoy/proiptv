@@ -399,6 +399,19 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     fun stop() {
+        // in the preview layout (movies and series) Stop ends the playing and goes back to that layout, it does not leave the title
+        val previewEntry = (request as? PlayRequest.Single)?.entry
+        if (previewEntry != null && state.store.config.vodPreview && current != null) {
+            if (casting != null) { casting = null; state.cast.close() }
+            state.typing = false
+            closePip()
+            saveProgress()
+            engine.stop()
+            releaseHub(now = true)
+            if (state.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) state.toggleFullscreen()
+            state.player = PlayRequest.Browse(previewEntry)
+            return
+        }
         if (casting != null) { casting = null; state.cast.close() }
         state.typing = false
         closePip()
@@ -1203,6 +1216,14 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
             org.jetbrains.skia.ColorFilter.Companion.makeTableARGB(null, table, table, table)
         }
     }
+    // the handlers below live as long as the picture: they must always call the newest functions (a new episode has a new controller)
+    val latestClick by androidx.compose.runtime.rememberUpdatedState(onClick)
+    val latestDouble by androidx.compose.runtime.rememberUpdatedState(onDoubleClick)
+    val latestTap by androidx.compose.runtime.rememberUpdatedState(onTap)
+    val latestScroll by androidx.compose.runtime.rememberUpdatedState(onScroll)
+    val latestPan by androidx.compose.runtime.rememberUpdatedState(onPan)
+    val latestPanX by androidx.compose.runtime.rememberUpdatedState(panX)
+    val latestPanY by androidx.compose.runtime.rememberUpdatedState(panY)
     // "Zoom Fit": the zoom that makes the picture fill the window (no black bars); the position goes back to the middle
     var area by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     var handledFit by remember { mutableStateOf(fitRequest) }
@@ -1221,9 +1242,9 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
                 // a zoomed picture is moved with the mouse (the main picture only)
                 .pointerInput(zoom, onTap != null) {
                     if (onTap == null && zoom > 100) {
-                        var x = panX.toFloat()
-                        var y = panY.toFloat()
-                        detectDragGestures(onDragStart = { x = panX.toFloat(); y = panY.toFloat() }) { change, drag ->
+                        var x = latestPanX.toFloat()
+                        var y = latestPanY.toFloat()
+                        detectDragGestures(onDragStart = { x = latestPanX.toFloat(); y = latestPanY.toFloat() }) { change, drag ->
                             change.consume()
                             val img = image ?: return@detectDragGestures
                             val fit = minOf(size.width.toFloat() / img.width, size.height.toFloat() / img.height) * zoom / 100f
@@ -1232,14 +1253,14 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
                             // dragging to the right shows more of the left side
                             if (overflowX > 0) x = (x - drag.x / overflowX * 100).coerceIn(-100f, 100f)
                             if (overflowY > 0) y = (y - drag.y / overflowY * 100).coerceIn(-100f, 100f)
-                            onPan(x.toInt(), y.toInt())
+                            latestPan(x.toInt(), y.toInt())
                         }
                     }
                 }
                 .pointerInput(onTap != null) {
-                    if (onTap != null) detectTapGestures(onTap = { onTap() }) else detectTapGestures(onDoubleTap = { onDoubleClick() }, onTap = { onClick?.invoke() })
+                    if (onTap != null) detectTapGestures(onTap = { latestTap?.invoke() }) else detectTapGestures(onDoubleTap = { latestDouble() }, onTap = { latestClick?.invoke() })
                 }
-                .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> onScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
+                .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> latestScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
         ) {
             val img = image ?: return@Canvas
             // the zoom makes the picture bigger around its middle (what leaves the window is cut off), the brightness is added to the colors
