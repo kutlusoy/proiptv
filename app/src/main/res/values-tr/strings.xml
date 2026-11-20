@@ -179,7 +179,7 @@
     <string name="storage_folder_choose">Klasör seç (dosya yöneticisi)</string>
     <string name="storage_folder_current">Klasör: %1$s</string>
     <string name="storage_folder_missing">Seçilen klasör şu anda kullanılamıyor (kart bağlı değil veya erişim kaldırıldı). Dosyalar uygulamada kalır.</string>
-    <string name="storage_folder_hint">Biten indirmeler ve kayıtlar tamamlandığında klasöre taşınır, yedekler oraya kaydedilir. Bir indirme veya kayıt sürerken dosya uygulamadadır. Kaldırma, klasördekileri silmez.</string>
+    <string name="storage_folder_hint">Biten indirmeler ve kayıtlar tamamlandığında klasöre taşınır. Bir indirme veya kayıt sürerken dosya uygulamadadır. Kaldırma, klasördekileri silmez. Yedekler her zaman nereye kaydedileceğini sorar.</string>
     <string name="backup_transfer">Telefon veya bilgisayarla</string>
     <string name="backup_transfer_title">Telefon veya bilgisayarla yedek</string>
     <string name="backup_transfer_hint">Kodu telefonunuzla veya bilgisayarınızla okutun (aynı Wi-Fi). Sayfada yedeği o cihaza kaydedebilir veya oradan geri yükleyebilirsiniz.</string>

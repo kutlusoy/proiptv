@@ -5,7 +5,7 @@
 IPTV player for **Android** (phones, tablets, Android TV) and **Windows**. It plays the streams of your own provider: Xtream Codes accounts, M3U playlists and XMLTV guides, with several accounts side by side, many source types (more are planned) (Xtream Codes, M3U, Stalker portal, HDHomeRun, Enigma2, TVHeadend and more), live TV, guide, movies, series, catch-up, favorites with manual sorting, recording and time shift. No content is included, no account with us, no ads, no analytics.
 
 - **Application ID:** `com.kutlusoy.proiptv`
-- **Version:** 0.0.17 (the version is in `app/version.txt`, see below)
+- **Version:** 0.0.18 (the version is in `app/version.txt`, see below)
 - **Platforms:** Android 7.0 or newer (min SDK 24), Windows 10 or 11 (64 bit, first version, see below)
 - **License:** MIT
 

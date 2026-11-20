@@ -189,7 +189,7 @@
     <string name="storage_folder_choose">Choisir le dossier (gestionnaire de fichiers)</string>
     <string name="storage_folder_current">Dossier : %1$s</string>
     <string name="storage_folder_missing">Le dossier choisi n\'est pas utilisable pour le moment (carte non connectée ou accès retiré). Les fichiers restent dans l\'application.</string>
-    <string name="storage_folder_hint">Les téléchargements et enregistrements terminés sont déplacés dans le dossier, les sauvegardes y sont enregistrées. Pendant un transfert ou un enregistrement, le fichier est dans l\'application. Une désinstallation ne supprime pas ce qui est dans le dossier.</string>
+    <string name="storage_folder_hint">Les téléchargements et enregistrements terminés sont déplacés dans le dossier. Pendant un transfert ou un enregistrement, le fichier est dans l\'application. Une désinstallation ne supprime pas ce qui est dans le dossier. Les sauvegardes demandent toujours où les enregistrer.</string>
     <string name="backup_transfer">Par téléphone ou PC</string>
     <string name="backup_transfer_title">Sauvegarde par téléphone ou PC</string>
     <string name="backup_transfer_hint">Scannez le code avec votre téléphone ou PC (même Wi-Fi). Sur la page, vous enregistrez la sauvegarde sur cet appareil ou en restaurez une.</string>

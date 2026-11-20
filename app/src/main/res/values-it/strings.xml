@@ -189,7 +189,7 @@
     <string name="storage_folder_choose">Scegli la cartella (gestore file)</string>
     <string name="storage_folder_current">Cartella: %1$s</string>
     <string name="storage_folder_missing">La cartella scelta non è utilizzabile al momento (scheda non collegata o accesso revocato). I file restano nell\'app.</string>
-    <string name="storage_folder_hint">I download e le registrazioni terminati vengono spostati nella cartella, i backup vengono salvati lì. Durante un download o una registrazione il file è nell\'app. Una disinstallazione non elimina ciò che è nella cartella.</string>
+    <string name="storage_folder_hint">I download e le registrazioni terminati vengono spostati nella cartella. Durante un download o una registrazione il file è nell\'app. Una disinstallazione non elimina ciò che è nella cartella. I backup chiedono sempre dove salvare.</string>
     <string name="backup_transfer">Tramite telefono o PC</string>
     <string name="backup_transfer_title">Backup tramite telefono o PC</string>
     <string name="backup_transfer_hint">Scansiona il codice con il telefono o il PC (stessa rete Wi-Fi). Nella pagina salvi il backup su quel dispositivo o ne ripristini uno.</string>
