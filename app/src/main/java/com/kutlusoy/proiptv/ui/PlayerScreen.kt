@@ -298,14 +298,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 com.kutlusoy.proiptv.DebugLog.write("player error ${error.errorCodeName}: ${error.message} hub=${holder.lease?.hub?.lastError}")
-                // the picture effect (brightness) does not work on this device: it is switched off and the stream is tried again without it
-                if (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED && brightness != 0) {
-                    brightness = 0
-                    app.prefs.videoBrightness = 0
-                    runCatching { exo.setVideoEffects(emptyList()) }
-                    scope.launch { reload++ }
-                    return
-                }
                 if (error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED && !forceHls) {
                     forceHls = true
                     return
@@ -745,18 +737,30 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 )
             },
     ) {
-        // zoomed (or moved) the picture needs a texture view, it can be scaled; without zoom the standard surface view stays
+        // zoomed, moved or changed in brightness the picture needs a texture view (it can be scaled and its colors can be changed); otherwise the standard surface view stays
         val zoomed = zoom > 100
-        androidx.compose.runtime.key(zoomed) {
+        val textured = zoomed || brightness != 0
+        androidx.compose.runtime.key(textured) {
             AndroidView(
                 modifier = if (tvBrowse) Modifier.tvPreviewRect() else Modifier.fillMaxSize(),
                 factory = { c ->
-                    (if (zoomed) android.view.LayoutInflater.from(c).inflate(R.layout.player_view_texture, null) as PlayerView else PlayerView(c))
+                    (if (textured) android.view.LayoutInflater.from(c).inflate(R.layout.player_view_texture, null) as PlayerView else PlayerView(c))
                         .apply { useController = false; player = exo; keepScreenOn = true; clipChildren = false }
                 },
                 update = { view ->
                     view.resizeMode = resize
                     val surface = view.videoSurfaceView
+                    // brightness: the colors of the picture are changed on its texture (a light or dark shift of every color)
+                    (surface as? android.view.TextureView)?.let { texture ->
+                        if (brightness == 0) {
+                            texture.setLayerPaint(null)
+                        } else {
+                            val gain = 1f + brightness / 100f * 0.5f
+                            val shift = brightness / 100f * 60f
+                            val matrix = android.graphics.ColorMatrix(floatArrayOf(gain, 0f, 0f, 0f, shift, 0f, gain, 0f, 0f, shift, 0f, 0f, gain, 0f, shift, 0f, 0f, 0f, 1f, 0f))
+                            texture.setLayerPaint(android.graphics.Paint().apply { colorFilter = android.graphics.ColorMatrixColorFilter(matrix) })
+                        }
+                    }
                     if (zoomed && surface != null) {
                         (surface.parent as? android.view.ViewGroup)?.clipChildren = false
                         val factor = zoom / 100f
@@ -769,16 +773,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     }
                 },
             )
-        }
-        // brightness: a video effect of the player changes the colors of the picture itself (only while it is not 0, so a normal picture takes no extra work)
-        val effectsOn = remember { booleanArrayOf(false) }
-        androidx.compose.runtime.LaunchedEffect(brightness) {
-            // the player is not touched while the brightness was never changed (the effect pipeline is only used when it is needed)
-            if (brightness != 0 || effectsOn[0]) {
-                runCatching { exo.setVideoEffects(if (brightness == 0) emptyList() else listOf(androidx.media3.effect.Brightness(brightness / 100f * 0.4f))) }
-                    .onFailure { com.kutlusoy.proiptv.DebugLog.write("video effect failed: ${it.message}") }
-                effectsOn[0] = brightness != 0
-            }
         }
         (notice ?: message?.let { stringResource(it) })?.let { Text(it, Modifier.align(Alignment.Center).background(Color(0xAA000000)).padding(12.dp), color = Color.White, textAlign = TextAlign.Center) }
         info?.let { Text(it, Modifier.align(Alignment.TopCenter).padding(24.dp).background(Color(0xAA000000)).padding(10.dp), color = Color.White, textAlign = TextAlign.Center) }
