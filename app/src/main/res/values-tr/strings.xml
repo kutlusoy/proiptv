@@ -180,7 +180,7 @@
     <string name="player_zoom">Yakınlaştırma</string>
     <string name="player_video_reset">Sıfırla</string>
     <string name="player_zoom_fit">Zoom Fit (ekranı doldur)</string>
-    <string name="player_zoom_fit_reset">Zoom Fit\'i sıfırla</string>
+    <string name="player_zoom_fit_reset">Zoom Fit reset</string>
     <string name="player_pan_x">Yatay konum</string>
     <string name="player_pan_y">Dikey konum</string>
     <string name="player_pan_hint">Görüntüyü fareyle de kaydırabilirsiniz.</string>
