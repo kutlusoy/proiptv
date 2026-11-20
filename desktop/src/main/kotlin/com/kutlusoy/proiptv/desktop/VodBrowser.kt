@@ -122,8 +122,13 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
     val version = state.progress.version
     // before anything plays: the episode where the user stopped (or the next one to watch) is ready, with the minute
     val nextEpisode = remember(episodes, version) { if (shownSeries) SeriesProgress.next(episodes) { id -> state.progress.get(shown.accountId, Kind.EPISODE, id) } else null }
-    val readyId = if (controller.current == null || playingEntry?.key != shown.key) nextEpisode?.episode?.id else null
+    // a click on an episode only chooses it (nothing plays until Play is pressed)
+    var chosenId by remember(shown.key) { mutableStateOf<String?>(null) }
+    val chosen = episodes.firstOrNull { it.id == chosenId }
+    val readyId = if (controller.current == null || playingEntry?.key != shown.key || (chosen != null && chosen.id != playingId)) (chosen ?: nextEpisode?.episode)?.id else null
     var season by remember(shown.key, playing?.season, nextEpisode?.episode?.season) { mutableStateOf(playing?.season ?: nextEpisode?.episode?.season ?: -1) }
+    // the episode the details belong to: the running one, the chosen one, or the one that is ready
+    val focusEpisode = playing ?: chosen ?: nextEpisode?.episode
     val active = if (season in seasons) season else seasons.firstOrNull() ?: 1
     val episodeList = rememberLazyListState()
     val seasonEpisodes = episodes.filter { it.season == active }
@@ -190,7 +195,7 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                             val ready = ep.id == readyId
                             Row(
                                 Modifier.fillMaxWidth().background(if (now) Palette.Wine else if (ready) Palette.Wine.copy(alpha = 0.35f) else Color.Transparent)
-                                    .combinedClickable { state.playEpisode(shown, ep, episodes, p?.positionMs?.takeIf { it > 5_000 } ?: 0) }.padding(horizontal = 8.dp, vertical = 6.dp),
+                                    .combinedClickable { chosenId = ep.id }.padding(horizontal = 8.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Box(Modifier.width(80.dp).height(46.dp).clip(RoundedCornerShape(6.dp)).background(Palette.Surface)) {
@@ -236,10 +241,7 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                             val chosen = e.key == shown.key
                             Row(
                                 Modifier.fillMaxWidth().background(if (chosen) Palette.WineDeep else Color.Transparent)
-                                    .combinedClickable(
-                                        onDoubleClick = { if (!isSeries) state.playMovie(e) },
-                                        onClick = { shown = e; if (isSeries) drilled = true },
-                                    ).padding(horizontal = 8.dp, vertical = 6.dp),
+                                    .combinedClickable { shown = e; if (isSeries) drilled = true }.padding(horizontal = 8.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
                                 Box(Modifier.width(44.dp).height(64.dp).clip(RoundedCornerShape(6.dp)).background(Palette.Surface)) { Logo(e.logo, Modifier.fillMaxSize(), ContentScale.Crop, name = e.name) }
@@ -278,27 +280,31 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                                 }
                             }
                         }
-                        if (controller.current == null || playingEntry?.key != shown.key) {
-                            // nothing plays yet: the button starts the movie, or the episode that comes next
-                            val saved = if (shownSeries) null else state.progress.let { it.version; it.get(shown.accountId, Kind.MOVIE, shown.remoteId) }
-                            val resume = (if (shownSeries) nextEpisode?.episode?.let { state.progress.get(shown.accountId, Kind.EPISODE, it.id) } else saved)?.positionMs?.takeIf { it > 5_000 } ?: 0
-                            if (!shownSeries || nextEpisode != null) {
-                                androidx.compose.material3.Button(
-                                    onClick = { if (shownSeries) nextEpisode?.let { state.playEpisode(shown, it.episode, episodes, resume) } else state.playMovie(shown, resume) },
-                                    modifier = Modifier.padding(top = 10.dp),
-                                ) {
-                                    Icon(Icons.Filled.PlayArrow, null)
-                                    Text(
-                                        when {
-                                            shownSeries && nextEpisode != null ->
-                                                t(if (nextEpisode.continuing) "detail_continue_episode" else "detail_play_episode", nextEpisode.episode.season, nextEpisode.episode.number) +
-                                                    (if (resume > 0) " · " + t("detail_resume", clock(resume)) else "")
-                                            resume > 0 -> t("detail_resume", clock(resume))
-                                            else -> t("detail_play")
-                                        },
-                                        Modifier.padding(start = 6.dp),
-                                    )
-                                }
+                        // Play starts the movie, or the episode that is chosen (else the one that comes next)
+                        val target = if (shownSeries) (chosen ?: nextEpisode?.episode) else null
+                        val canPlay = controller.current == null || playingEntry?.key != shown.key || (chosen != null && chosen.id != playingId)
+                        if (canPlay && (!shownSeries || target != null)) {
+                            val saved = if (shownSeries) target?.let { state.progress.get(shown.accountId, Kind.EPISODE, it.id) } else state.progress.let { it.version; it.get(shown.accountId, Kind.MOVIE, shown.remoteId) }
+                            val resume = saved?.positionMs?.takeIf { it > 5_000 } ?: 0
+                            androidx.compose.material3.Button(
+                                onClick = { if (shownSeries) target?.let { state.playEpisode(shown, it, episodes, resume) } else state.playMovie(shown, resume) },
+                                modifier = Modifier.padding(top = 10.dp),
+                            ) {
+                                Icon(Icons.Filled.PlayArrow, null)
+                                Text(
+                                    if (shownSeries && target != null) {
+                                        t(if (resume > 0) "detail_continue_episode" else "detail_play_episode", target.season, target.number) + (if (resume > 0) " \u00B7 " + t("detail_resume", clock(resume)) else "")
+                                    } else if (resume > 0) t("detail_resume", clock(resume)) else t("detail_play"),
+                                    Modifier.padding(start = 6.dp),
+                                )
+                            }
+                        }
+                        if (shownSeries) {
+                            // with autoplay the next episode of the season starts when one has ended
+                            var autoplay by remember { mutableStateOf(state.store.config.autoplayNext) }
+                            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                androidx.compose.material3.Switch(checked = autoplay, onCheckedChange = { autoplay = it; state.store.update { c -> c.copy(autoplayNext = it) } })
+                                Text(t("detail_autoplay"), style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     }
@@ -308,7 +314,7 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                 Column(Modifier.weight(0.5f).fillMaxWidth().background(Palette.Surface).verticalScroll(rememberScrollState()).padding(16.dp)) {
                     if (shownSeries) {
                         val i = seriesInfo
-                        Facts(i?.rating ?: shown.rating, playing?.plot ?: i?.plot, i?.director, i?.cast, i?.releaseDate, i?.genre, playing?.durationSecs, i?.trailer)
+                        Facts(i?.rating ?: shown.rating, focusEpisode?.plot ?: i?.plot, i?.director, i?.cast, i?.releaseDate, i?.genre, focusEpisode?.durationSecs, i?.trailer)
                     } else {
                         val v = vod
                         Facts(v?.rating ?: shown.rating, v?.plot, v?.director, v?.cast, v?.releaseDate, v?.genre, v?.durationSecs, v?.trailer)
