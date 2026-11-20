@@ -762,9 +762,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 },
             )
         }
-        // brightness: a light or dark veil over the picture (it does not touch the controls)
-        if (brightness != 0) {
-            Box((if (tvBrowse) Modifier.tvPreviewRect() else Modifier.fillMaxSize()).background(if (brightness > 0) Color.White.copy(alpha = brightness / 100f * 0.5f) else Color.Black.copy(alpha = -brightness / 100f * 0.6f)))
+        // brightness: a video effect of the player changes the colors of the picture itself (only while it is not 0, so a normal picture takes no extra work)
+        androidx.compose.runtime.LaunchedEffect(brightness) {
+            exo.setVideoEffects(if (brightness == 0) emptyList() else listOf(androidx.media3.effect.Brightness(brightness / 100f * 0.4f)))
         }
         (notice ?: message?.let { stringResource(it) })?.let { Text(it, Modifier.align(Alignment.Center).background(Color(0xAA000000)).padding(12.dp), color = Color.White, textAlign = TextAlign.Center) }
         info?.let { Text(it, Modifier.align(Alignment.TopCenter).padding(24.dp).background(Color(0xAA000000)).padding(10.dp), color = Color.White, textAlign = TextAlign.Center) }
