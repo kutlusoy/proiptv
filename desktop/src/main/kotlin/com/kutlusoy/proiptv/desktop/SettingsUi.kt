@@ -76,7 +76,7 @@ private fun Hint(text: String) = Text(text, style = MaterialTheme.typography.bod
 @Composable
 fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
     // every visit starts with all groups closed
-    remember { openGroups.clear() }
+    remember { openGroups.clear(); true }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)) {
         item {
             Text(t("nav_settings"), style = MaterialTheme.typography.headlineMedium)

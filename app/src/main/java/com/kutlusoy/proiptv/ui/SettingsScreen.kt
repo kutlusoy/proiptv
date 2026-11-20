@@ -94,7 +94,7 @@ fun SettingsScreen(vm: MainViewModel) {
     val auto = stringResource(R.string.option_auto)
 
     // every visit starts with all groups closed
-    remember { openGroups.clear() }
+    remember { openGroups.clear(); true }
     LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 16.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)) {
         item {
             Text(stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
