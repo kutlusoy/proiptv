@@ -46,17 +46,16 @@ sealed interface UpdateUi {
     data class Error(val code: UpdateException.Code, val detail: String?) : UpdateUi
 }
 
-/** The group that is open: every group is closed at first, a click on its title opens it (and closes the one that was open), so the remote control does not have to walk through all settings. */
-private val openGroup = androidx.compose.runtime.mutableStateOf<String?>(null)
+/** A group of settings: closed at first (only Update and Special thanks start open), a click on its title opens or closes it, so the remote control does not have to walk through all settings. */
+private val openGroups = androidx.compose.runtime.mutableStateMapOf<String, Boolean>()
 
 @Composable
-private fun Group(title: String, content: @Composable () -> Unit) {
-    val open = openGroup
-    val expanded = open.value == title
+private fun Group(title: String, startOpen: Boolean = false, content: @Composable () -> Unit) {
+    val expanded = openGroups[title] ?: startOpen
     Card(Modifier.fillMaxWidth().padding(top = 14.dp)) {
         Column {
             Row(
-                Modifier.fillMaxWidth().clickable { open.value = if (expanded) null else title }.padding(horizontal = 16.dp, vertical = 14.dp),
+                Modifier.fillMaxWidth().clickable { openGroups[title] = !expanded }.padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Palette.WineSoft)
@@ -77,7 +76,7 @@ private fun Hint(text: String) = Text(text, style = MaterialTheme.typography.bod
 @Composable
 fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
     // every visit starts with all groups closed
-    remember { openGroup.value = null }
+    remember { openGroups.clear() }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)) {
         item {
             Text(t("nav_settings"), style = MaterialTheme.typography.headlineMedium)
@@ -138,18 +137,10 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
             Group(t("settings_storage")) { StorageGroup(state) }
             Group(t("settings_backup")) { BackupGroup(state) }
             UpdateGroup(state, updater, update)
-            Group(t("settings_tmdb")) {
-                var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
-                TextInput(
-                    key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(t("settings_tmdb_key")) },
-                )
-                Hint(t("settings_tmdb_hint"))
-            }
             // the people who helped, from supporters.md in the root folder of the project
             val supporters = remember { loadSupporters() }
             if (supporters.isNotEmpty()) {
-                Group(t("settings_thanks")) {
+                Group(t("settings_thanks"), startOpen = true) {
                     supporters.forEach { section ->
                         if (section.title.isNotEmpty()) Text(
                             section.title, color = Palette.WineSoft, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
@@ -159,6 +150,15 @@ fun SettingsScreen(state: AppState, updater: Updater, update: UpdateState) {
                     }
                 }
             }
+            Group(t("settings_tmdb")) {
+                var key by remember { mutableStateOf(Secrets.unprotect(state.store.config.tmdbKey)) }
+                TextInput(
+                    key, { key = it; state.store.update { c -> c.copy(tmdbKey = Secrets.protect(it.trim())) } }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(t("settings_tmdb_key")) },
+                )
+                Hint(t("settings_tmdb_hint"))
+            }
+
 
         }
     }
@@ -243,7 +243,7 @@ class UpdateState(private val updater: Updater, private val scope: kotlinx.corou
 private fun UpdateGroup(state: AppState, updater: Updater, update: UpdateState) {
     var auto by remember { mutableStateOf(state.store.config.autoUpdate) }
     val last = state.store.config.lastUpdateCheck
-    Group(t("update_title")) {
+    Group(t("update_title"), startOpen = true) {
         Text(t("update_current", AppInfo.label))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
