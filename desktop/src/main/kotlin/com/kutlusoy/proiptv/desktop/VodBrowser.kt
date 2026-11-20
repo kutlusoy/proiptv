@@ -19,6 +19,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,7 +83,22 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
             Column(Modifier.width(left).fillMaxHeight().background(Palette.Velvet)) {
                 if (isSeries) {
                     if (seasons.isNotEmpty()) {
-                        DropdownField(t("series_season", active), seasons.map { it to t("series_season", it) }, { season = it }, Modifier.fillMaxWidth().padding(8.dp))
+                        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            DropdownField(t("series_season", active), seasons.map { it to t("series_season", it) }, { season = it }, Modifier.weight(1f))
+                            // the whole season: download or mark as watched
+                            var menu by remember { mutableStateOf(false) }
+                            val allWatched = seasonEpisodes.isNotEmpty() && seasonEpisodes.all { state.progress.get(entry.accountId, Kind.EPISODE, it.id)?.watched == true }
+                            Box {
+                                Tip(t("action_more")) { IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, t("action_more")) } }
+                                androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                    androidx.compose.material3.DropdownMenuItem(text = { Text(t("dl_season")) }, onClick = { menu = false; state.downloadEpisodes(entry, seasonEpisodes) })
+                                    androidx.compose.material3.DropdownMenuItem(
+                                        text = { Text(t(if (allWatched) "detail_season_unwatched" else "detail_season_watched")) },
+                                        onClick = { menu = false; state.progress.setWatched(entry.accountId, Kind.EPISODE, seasonEpisodes.map { it.id }, !allWatched) },
+                                    )
+                                }
+                            }
+                        }
                     } else if (detail == null) {
                         Text(t("series_loading"), Modifier.padding(12.dp), color = Color.White.copy(alpha = 0.7f))
                     }
@@ -107,6 +128,19 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                                         Text(if (minute != null) t("detail_resume", clock(minute)) else t("detail_play"), style = MaterialTheme.typography.labelMedium, color = Palette.WineSoft, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
+                                // download and watched stand at the right of each episode (the same as on the detail page)
+                                val dl = state.downloadOf(entry.accountId, Kind.EPISODE, ep.id)
+                                val watched = p?.watched == true
+                                Tip(t("dl_download")) {
+                                    IconButton(enabled = dl == null, onClick = { state.downloadEpisodes(entry, listOf(ep)) }) {
+                                        Icon(Icons.Filled.Download, t("dl_download"), tint = if (dl?.status == DlStatus.DONE) Palette.WineSoft else Color.White.copy(alpha = if (dl == null) 0.8f else 0.4f))
+                                    }
+                                }
+                                Tip(t(if (watched) "detail_mark_unwatched" else "detail_mark_watched")) {
+                                    IconButton(onClick = { state.progress.setWatched(entry.accountId, Kind.EPISODE, listOf(ep.id), !watched) }) {
+                                        Icon(Icons.Filled.CheckCircle, t(if (watched) "detail_mark_unwatched" else "detail_mark_watched"), tint = if (watched) Palette.WineSoft else Color.White.copy(alpha = 0.3f))
+                                    }
+                                }
                             }
                         }
                     }
@@ -133,6 +167,23 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
                         val badge = if (isSeries && playing != null) "S${playing.season} · E${playing.number}" else t(if (isSeries) "nav_series" else "nav_movies")
                         Text(badge, Modifier.background(Palette.Wine, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp), color = Color.White, style = MaterialTheme.typography.labelLarge)
                         Text(TitleParser.parse(entry.name).title.ifBlank { entry.name }, Modifier.padding(top = 8.dp), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                        if (!isSeries) {
+                            val dl = state.downloadOf(entry.accountId, Kind.MOVIE, entry.remoteId)
+                            val seen = state.progress.let { it.version; it.get(entry.accountId, Kind.MOVIE, entry.remoteId) }?.watched == true
+                            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Tip(t("dl_download")) {
+                                    androidx.compose.material3.OutlinedButton(enabled = dl == null, onClick = { state.downloadMovie(entry) }) {
+                                        Icon(Icons.Filled.Download, null)
+                                        Text(t(if (dl?.status == DlStatus.DONE) "dl_downloaded" else if (dl != null) "dl_running" else "dl_download"), Modifier.padding(start = 6.dp))
+                                    }
+                                }
+                                Tip(t(if (seen) "detail_mark_unwatched" else "detail_mark_watched")) {
+                                    IconButton(onClick = { state.progress.setWatched(entry.accountId, Kind.MOVIE, listOf(entry.remoteId), !seen) }) {
+                                        Icon(Icons.Filled.CheckCircle, t(if (seen) "detail_mark_unwatched" else "detail_mark_watched"), tint = if (seen) Palette.WineSoft else Color.White.copy(alpha = 0.5f))
+                                    }
+                                }
+                            }
+                        }
                         if (controller.current == null) {
                             // nothing plays yet: the button starts the movie, or the episode that comes next
                             val saved = if (isSeries) null else state.progress.let { it.version; it.get(entry.accountId, Kind.MOVIE, entry.remoteId) }
