@@ -125,8 +125,8 @@ private fun open(state: AppState, e: Entry, siblings: List<Entry>) {
             val list = siblings.filter { it.kind == Kind.LIVE }
             state.player = PlayRequest.Live(list, list.indexOf(e).coerceAtLeast(0))
         }
-        Kind.MOVIE -> { state.tab = Tab.MOVIES; state.series = null; state.movie = e }
-        else -> { state.tab = Tab.SERIES; state.movie = null; state.series = e }
+        Kind.MOVIE -> { state.tab = Tab.MOVIES; state.series = null; state.movie = null; state.openVod(e) }
+        else -> { state.tab = Tab.SERIES; state.movie = null; state.series = null; state.openVod(e) }
     }
 }
 

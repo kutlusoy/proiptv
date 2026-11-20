@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -109,11 +110,36 @@ fun VodBrowser(state: AppState, controller: PlayerController, video: @Composable
             }
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 Row(Modifier.weight(0.5f).fillMaxWidth()) {
-                    Box(Modifier.weight(0.62f).fillMaxHeight().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
+                    Box(Modifier.weight(0.62f).fillMaxHeight().background(Color.Black), contentAlignment = Alignment.Center) {
+                        // until something plays the poster is shown
+                        if (controller.current == null) Logo(entry.logo, Modifier.fillMaxSize().padding(8.dp), ContentScale.Fit, name = entry.name) else video(Modifier.fillMaxSize())
+                    }
                     Column(Modifier.weight(0.38f).fillMaxHeight().background(Palette.Surface).padding(16.dp), verticalArrangement = Arrangement.Center) {
                         val badge = if (isSeries && playing != null) "S${playing.season} · E${playing.number}" else t(if (isSeries) "nav_series" else "nav_movies")
                         Text(badge, Modifier.background(Palette.Wine, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp), color = Color.White, style = MaterialTheme.typography.labelLarge)
                         Text(TitleParser.parse(entry.name).title.ifBlank { entry.name }, Modifier.padding(top = 8.dp), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                        if (controller.current == null) {
+                            // nothing plays yet: the button starts the movie, or the episode that comes next
+                            val nextEpisode = if (isSeries) remember(episodes, version) { SeriesProgress.next(episodes) { id -> state.progress.get(entry.accountId, Kind.EPISODE, id) } } else null
+                            val saved = if (isSeries) null else state.progress.let { it.version; it.get(entry.accountId, Kind.MOVIE, entry.remoteId) }
+                            val resume = (if (isSeries) nextEpisode?.episode?.let { state.progress.get(entry.accountId, Kind.EPISODE, it.id) } else saved)?.positionMs?.takeIf { it > 5_000 } ?: 0
+                            if (!isSeries || nextEpisode != null) {
+                                androidx.compose.material3.Button(
+                                    onClick = { if (isSeries) nextEpisode?.let { state.playEpisode(entry, it.episode, episodes, resume) } else state.playMovie(entry, resume) },
+                                    modifier = Modifier.padding(top = 10.dp),
+                                ) {
+                                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.PlayArrow, null)
+                                    Text(
+                                        when {
+                                            isSeries && nextEpisode != null -> t(if (nextEpisode.continuing) "detail_continue_episode" else "detail_play_episode", nextEpisode.episode.season, nextEpisode.episode.number)
+                                            resume > 0 -> t("detail_resume", clock(resume))
+                                            else -> t("detail_play")
+                                        },
+                                        Modifier.padding(start = 6.dp),
+                                    )
+                                }
+                            }
+                        }
                         if (isSeries && playing != null) Text(playing.title, Modifier.padding(top = 6.dp), color = Palette.WineSoft, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
                 }

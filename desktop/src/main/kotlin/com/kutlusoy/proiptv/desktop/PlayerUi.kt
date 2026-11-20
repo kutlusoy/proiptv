@@ -99,7 +99,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     var failed by mutableStateOf<String?>(null)
     var reconnecting by mutableStateOf(false)
     // movies and series start in the preview layout when the setting is on, channels open it with the menu button
-    var listOpen by mutableStateOf(request is PlayRequest.Single && request.entry != null && state.store.config.vodPreview)
+    var listOpen by mutableStateOf((request is PlayRequest.Browse || (request is PlayRequest.Single && request.entry != null)) && state.store.config.vodPreview)
 
     val live: Boolean get() = request is PlayRequest.Live
 
@@ -110,7 +110,7 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     /** The movie or series that is shown in the preview layout (null for channels and for files). */
-    val vodEntry: Entry? get() = (request as? PlayRequest.Single)?.entry
+    val vodEntry: Entry? get() = (request as? PlayRequest.Single)?.entry ?: (request as? PlayRequest.Browse)?.entry
 
     /** There is a layout with a list next to the small picture: channels, and movies and series with the setting. */
     val hasBrowser: Boolean get() = live || (vodEntry != null && state.store.config.vodPreview)
@@ -215,8 +215,11 @@ class PlayerController(private val state: AppState, private val request: PlayReq
     }
 
     fun start() {
+        // the preview layout without a title: nothing plays until an episode or the movie is chosen
+        if (request is PlayRequest.Browse) return
         saveProgress()
         val item = when (request) {
+            is PlayRequest.Browse -> null
             is PlayRequest.Single -> request.item
             is PlayRequest.Live -> playEntries.getOrNull(index)?.let { state.library.playable(it) }
         }

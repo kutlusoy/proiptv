@@ -16,6 +16,8 @@ sealed interface PlayRequest {
     /** [query] is the search of the list the player was started from (null when the list has no search), [origin] the list without that search, [allScope] whether that list is all channels of all accounts. */
     class Live(val entries: List<Entry>, val index: Int, val query: String? = null, val origin: List<Entry> = emptyList(), val allScope: Boolean = false) : PlayRequest
     /** [following] are the next episodes of the season (resolved when it is their turn): with autoplay the next one starts when an episode has ended. */
+    /** The preview layout of a movie or series without anything playing yet (setting): the user picks an episode there. */
+    class Browse(val entry: Entry) : PlayRequest
     class Single(val item: Playable, val startMs: Long = 0, val following: List<() -> Playable?> = emptyList(), val entry: Entry? = null) : PlayRequest
 }
 
@@ -277,6 +279,19 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     fun changeZoom(value: Int) {
         videoZoom = value.coerceIn(100, 300)
         store.update { c -> c.copy(videoZoom = videoZoom) }
+    }
+
+    /** Opens a movie or series: the detail page, or with the preview setting the layout with the list, the details and the small player (nothing plays until one is chosen). */
+    fun openVod(e: Entry) {
+        if (store.config.vodPreview) {
+            movie = null
+            series = null
+            player = PlayRequest.Browse(e)
+        } else if (e.kind == Kind.SERIES) {
+            series = e
+        } else {
+            movie = e
+        }
     }
 
     /** Plays a movie (from the download when there is one). [Entry] is kept in the request so the preview layout knows what it shows. */

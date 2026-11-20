@@ -247,14 +247,14 @@ fun BrowseScreen(state: AppState, kind: Int) {
                             }
                             state.player = PlayRequest.Live(shown, index, query = q, origin = origin, allScope = category == ALL_KEY && activeAccount == null && !favOnly)
                         }
-                        else if (kind == Kind.SERIES) state.series = e else state.movie = e
+                        else state.openVod(e)
                     }
                 }
             }
         } else {
             LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), state = gridState, contentPadding = PaddingValues(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(shown, key = { it.key }) { e ->
-                    Poster(state, e) { if (kind == Kind.SERIES) state.series = e else state.movie = e }
+                    Poster(state, e) { state.openVod(e) }
                 }
             }
         }
@@ -448,7 +448,7 @@ private fun RelatedRow(state: AppState, e: Entry, titleKey: String) {
     ScrollRow {
         items(related, key = { it.key }) { r ->
             Box(Modifier.width(120.dp)) {
-                Poster(state, r) { if (r.kind == Kind.SERIES) { state.series = r; state.movie = null } else { state.movie = r; state.series = null } }
+                Poster(state, r) { state.series = null; state.movie = null; state.openVod(r) }
             }
         }
     }
