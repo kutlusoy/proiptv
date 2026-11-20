@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -236,10 +237,11 @@ fun ScrollGrid(rows: Int, cellHeight: androidx.compose.ui.unit.Dp, modifier: Mod
 
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.RowArrow(align: Alignment, description: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    // white inside with a red arrow: it can be seen on every picture and on the dark background
     androidx.compose.material3.IconButton(
         onClick = onClick,
-        modifier = Modifier.align(align).padding(horizontal = 4.dp).size(40.dp).background(Color(0xCC000000), androidx.compose.foundation.shape.CircleShape),
-    ) { Icon(icon, description, tint = Color.White) }
+        modifier = Modifier.align(align).padding(horizontal = 6.dp).size(44.dp).shadow(6.dp, androidx.compose.foundation.shape.CircleShape).background(Color.White, androidx.compose.foundation.shape.CircleShape),
+    ) { Icon(icon, description, Modifier.size(30.dp), tint = Palette.Wine) }
 }
 
 /** A small label with the name of a control and, when there is one, its key, after the mouse rests on it. With [above] the label opens above the mouse (the player controls sit at the bottom edge). */

@@ -73,6 +73,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
@@ -1157,6 +1158,8 @@ private fun TrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null, brightness: Int = 0, zoom: Int = 100, panX: Int = 0, panY: Int = 0, fitRequest: Int = 0, onFit: (Int) -> Unit = {}, onPan: (Int, Int) -> Unit = { _, _ -> }, onClick: (() -> Unit)? = null) {
     var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    // the same picture for Skia itself, which can draw it through the gamma table of the brightness
+    var skiaImage by remember { mutableStateOf<org.jetbrains.skia.Image?>(null) }
     LaunchedEffect(engine) {
         var shown = -1L
         while (true) {
@@ -1167,11 +1170,21 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
                 shown = -1L
             } else if (f.version != shown) {
                 shown = f.version
-                image = org.jetbrains.skia.Image.makeRaster(
+                val made = org.jetbrains.skia.Image.makeRaster(
                     org.jetbrains.skia.ImageInfo(f.width, f.height, org.jetbrains.skia.ColorType.BGRA_8888, org.jetbrains.skia.ColorAlphaType.OPAQUE),
                     f.pixels, f.width * 4,
-                ).toComposeImageBitmap()
+                )
+                skiaImage = made
+                image = made.toComposeImageBitmap()
             }
+        }
+    }
+    // brightness as a gamma curve: dark parts get lighter (or darker) much more than the bright ones, so nothing burns out; 0 is no change
+    val filter = remember(brightness) {
+        if (brightness == 0) null else {
+            val exponent = Math.pow(2.0, -brightness / 70.0)
+            val table = ByteArray(256) { (255.0 * Math.pow(it / 255.0, exponent)).toInt().coerceIn(0, 255).toByte() }
+            org.jetbrains.skia.ColorFilter.Companion.makeTableARGB(null, table, table, table)
         }
     }
     // "Zoom Fit": the zoom that makes the picture fill the window (no black bars); the position goes back to the middle
@@ -1217,15 +1230,24 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
             val scale = minOf(size.width / img.width, size.height / img.height) * zoom / 100f
             val w = (img.width * scale).toInt()
             val h = (img.height * scale).toInt()
-            val shift = brightness * 1.2f
-            val filter = if (brightness == 0) null else androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-                androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(1f, 0f, 0f, 0f, shift, 0f, 1f, 0f, 0f, shift, 0f, 0f, 1f, 0f, shift, 0f, 0f, 0f, 1f, 0f)),
-            )
             // the part that is cut off can be shifted: -100 shows its left (upper) end, 100 its right (lower) end
             val moveX = if (w > size.width) -panX / 100f * (w - size.width) / 2 else 0f
             val moveY = if (h > size.height) -panY / 100f * (h - size.height) / 2 else 0f
+            val left = (size.width - w) / 2 + moveX
+            val top = (size.height - h) / 2 + moveY
             clipRect {
-                drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - w) / 2 + moveX).toInt(), ((size.height - h) / 2 + moveY).toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h), colorFilter = filter)
+                val raw = skiaImage
+                if (filter != null && raw != null) {
+                    org.jetbrains.skia.Paint().use { paint ->
+                        paint.colorFilter = filter
+                        drawContext.canvas.nativeCanvas.drawImageRect(
+                            raw, org.jetbrains.skia.Rect.makeWH(raw.width.toFloat(), raw.height.toFloat()), org.jetbrains.skia.Rect.makeXYWH(left, top, w.toFloat(), h.toFloat()),
+                            org.jetbrains.skia.SamplingMode.LINEAR, paint, true,
+                        )
+                    }
+                } else {
+                    drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(left.toInt(), top.toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h))
+                }
             }
         }
         // until the first picture has arrived a symbol shows what is coming
