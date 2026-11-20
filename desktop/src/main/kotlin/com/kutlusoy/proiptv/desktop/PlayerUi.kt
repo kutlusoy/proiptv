@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Fullscreen
@@ -412,6 +413,11 @@ class PlayerController(private val state: AppState, private val request: PlayReq
             state.player = PlayRequest.Browse(previewEntry)
             return
         }
+        leave()
+    }
+
+    /** Ends the playing and leaves the player: back to the list the title was opened from. */
+    fun leave() {
         if (casting != null) { casting = null; state.cast.close() }
         state.typing = false
         closePip()
@@ -526,8 +532,19 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
     if (mode == 3) {
         // the channel browser: list on the left, the running channel as a small preview with its info card, the guide below
         Column(Modifier.fillMaxSize().background(Palette.Velvet)) {
-            if (controller.live) ChannelBrowser(state, controller, video, Modifier.weight(1f)) else VodBrowser(state, controller, video, Modifier.weight(1f))
-            ControlBar(state, controller, Modifier, floating = false)
+            if (controller.live) {
+                ChannelBrowser(state, controller, video, Modifier.weight(1f))
+                ControlBar(state, controller, Modifier, floating = false)
+            } else {
+                // movies and series: the controls are under the picture (in the browser), this bar only leads back
+                VodBrowser(state, controller, video, Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth().background(Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.TextButton(onClick = { controller.leave() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                        Text(t("action_back"), Modifier.padding(start = 6.dp), style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+            }
         }
     } else if (mode == 0) {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) { video(Modifier.fillMaxSize()) }
@@ -903,7 +920,7 @@ private fun ColumnsIcon(active: Boolean) {
 }
 
 @Composable
-private fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
+internal fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
     var tracksOpen by remember { mutableStateOf(false) }
     var castOpen by remember { mutableStateOf(false) }
     var brightnessOpen by remember { mutableStateOf(false) }

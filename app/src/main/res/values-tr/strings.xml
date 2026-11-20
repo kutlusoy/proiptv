@@ -117,6 +117,8 @@
     <string name="player_columns">Kategoriler ve kanallar yan yana</string>
     <string name="player_filter_categories">%1$d kategoride ara</string>
     <string name="player_filter_channels">%1$d kanalda ara</string>
+    <string name="vod_filter_series">%1$d dizide ara</string>
+    <string name="vod_filter_movies">%1$d filmde ara</string>
     <string name="player_search">Kanal ara</string>
     <string name="player_search_all">Tüm kanallar</string>
     <string name="player_list_previous">Önceki liste</string>

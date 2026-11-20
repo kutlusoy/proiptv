@@ -127,6 +127,8 @@
     <string name="player_columns">Categorías y canales en columnas</string>
     <string name="player_filter_categories">Buscar en %1$d categorías</string>
     <string name="player_filter_channels">Buscar en %1$d canales</string>
+    <string name="vod_filter_series">Buscar en %1$d series</string>
+    <string name="vod_filter_movies">Buscar en %1$d películas</string>
     <string name="player_search">Buscar canales</string>
     <string name="player_search_all">Todos los canales</string>
     <string name="player_list_previous">Lista anterior</string>

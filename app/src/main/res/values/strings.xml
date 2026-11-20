@@ -128,6 +128,8 @@
     <string name="player_columns">Categories and channels side by side</string>
     <string name="player_filter_categories">Search %1$d categories</string>
     <string name="player_filter_channels">Search %1$d channels</string>
+    <string name="vod_filter_series">Search in %1$d series</string>
+    <string name="vod_filter_movies">Search in %1$d movies</string>
     <string name="player_search">Search channels</string>
     <string name="player_search_all">All channels</string>
     <string name="player_list_previous">Previous list</string>
