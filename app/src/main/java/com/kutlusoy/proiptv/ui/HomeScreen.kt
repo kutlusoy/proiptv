@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -189,23 +190,29 @@ fun HomeScreen(vm: MainViewModel) {
         if (rows.isEmpty() && q.length < 2 && syncing.isNotEmpty()) SkeletonRows()
         if (q.length < 2 && rows.isEmpty() && syncing.isEmpty()) Text(stringResource(R.string.home_empty), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
         if (q.length >= 2 && rows.isEmpty()) Text(stringResource(R.string.home_no_results), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp), contentPadding = PaddingValues(bottom = 28.dp)) {
             itemsIndexed(rows) { rowIndex, row ->
-                Text(row.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                if (row.grid) {
-                    // up to three rows; right and left move the whole band
-                    val lines = minOf(3, row.cards.size)
-                    androidx.compose.foundation.lazy.grid.LazyHorizontalGrid(
-                        androidx.compose.foundation.lazy.grid.GridCells.Fixed(lines),
-                        Modifier.padding(top = 6.dp).fillMaxWidth().height(TILE_HEIGHT * lines + 8.dp * (lines - 1) + 12.dp),
-                        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        gridItemsIndexed(row.cards, key = { _, c -> c.key }) { i, card -> HomeTile(card, if (rowIndex == 0 && i == 0) firstCard else null) }
-                    }
-                } else {
-                    LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp)) {
-                        itemsIndexed(row.cards, key = { _, c -> c.key }) { i, card -> HomeCard(card, if (rowIndex == 0 && i == 0) firstCard else null) }
+                // every area has its own frame, a bigger heading and room around it
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.04f))
+                        .border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.14f), RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 14.dp),
+                ) {
+                    Text(row.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    if (row.grid) {
+                        // up to three rows; right and left move the whole band
+                        val lines = minOf(3, row.cards.size)
+                        androidx.compose.foundation.lazy.grid.LazyHorizontalGrid(
+                            androidx.compose.foundation.lazy.grid.GridCells.Fixed(lines),
+                            Modifier.padding(top = 10.dp).fillMaxWidth().height(TILE_HEIGHT * lines + 8.dp * (lines - 1) + 12.dp),
+                            contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            gridItemsIndexed(row.cards, key = { _, c -> c.key }) { i, card -> HomeTile(card, if (rowIndex == 0 && i == 0) firstCard else null) }
+                        }
+                    } else {
+                        LazyRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp)) {
+                            itemsIndexed(row.cards, key = { _, c -> c.key }) { i, card -> HomeCard(card, if (rowIndex == 0 && i == 0) firstCard else null) }
+                        }
                     }
                 }
             }
