@@ -176,6 +176,11 @@
     <string name="backup_none_found">No backup found in %1$s</string>
     <string name="backup_choose_file">Choose a backup</string>
     <string name="storage_uninstall_note">Note: when the app is uninstalled, Android also deletes the app folder on the drive.</string>
+    <string name="backup_transfer">Via phone or PC</string>
+    <string name="backup_transfer_title">Backup via phone or PC</string>
+    <string name="backup_transfer_hint">Scan the code with your phone or PC (same Wi-Fi). On the page you can save the backup on that device or restore one from it.</string>
+    <string name="backup_not_public">The device does not allow a folder outside the app. The backup is in the app folder, an uninstall deletes it. Use the transfer by phone or PC.</string>
+    <string name="backup_latest">Latest backup: %1$s</string>
     <string name="detail_cast">Cast</string>
     <string name="detail_director">Director</string>
     <string name="detail_released">Released</string>

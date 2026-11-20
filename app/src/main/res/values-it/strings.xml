@@ -175,6 +175,11 @@
     <string name="backup_none_found">Nessun backup trovato in %1$s</string>
     <string name="backup_choose_file">Scegli un backup</string>
     <string name="storage_uninstall_note">Nota: se l\'app viene disinstallata, Android elimina anche la cartella dell\'app sull\'unità.</string>
+    <string name="backup_transfer">Tramite telefono o PC</string>
+    <string name="backup_transfer_title">Backup tramite telefono o PC</string>
+    <string name="backup_transfer_hint">Scansiona il codice con il telefono o il PC (stessa rete Wi-Fi). Nella pagina salvi il backup su quel dispositivo o ne ripristini uno.</string>
+    <string name="backup_not_public">Questo dispositivo non consente una cartella fuori dall\'app. Il backup è nella cartella dell\'app, una disinstallazione lo elimina. Usa il trasferimento tramite telefono o PC.</string>
+    <string name="backup_latest">Ultimo backup: %1$s</string>
     <string name="detail_cast">Cast</string>
     <string name="detail_director">Regia</string>
     <string name="detail_released">Uscita</string>

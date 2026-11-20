@@ -175,6 +175,11 @@
     <string name="backup_none_found">Aucune sauvegarde trouvée dans %1$s</string>
     <string name="backup_choose_file">Choisir une sauvegarde</string>
     <string name="storage_uninstall_note">Remarque : si l\'application est désinstallée, Android supprime aussi son dossier sur le lecteur.</string>
+    <string name="backup_transfer">Par téléphone ou PC</string>
+    <string name="backup_transfer_title">Sauvegarde par téléphone ou PC</string>
+    <string name="backup_transfer_hint">Scannez le code avec votre téléphone ou PC (même Wi-Fi). Sur la page, vous enregistrez la sauvegarde sur cet appareil ou en restaurez une.</string>
+    <string name="backup_not_public">Cet appareil n\'autorise pas de dossier hors de l\'application. La sauvegarde est dans le dossier de l\'application, une désinstallation la supprime. Utilisez le transfert par téléphone ou PC.</string>
+    <string name="backup_latest">Dernière sauvegarde : %1$s</string>
     <string name="detail_cast">Distribution</string>
     <string name="detail_director">Réalisation</string>
     <string name="detail_released">Sortie</string>

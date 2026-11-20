@@ -175,6 +175,11 @@
     <string name="backup_none_found">No se encontró ninguna copia en %1$s</string>
     <string name="backup_choose_file">Elegir una copia</string>
     <string name="storage_uninstall_note">Nota: si se desinstala la app, Android también borra su carpeta en la unidad.</string>
+    <string name="backup_transfer">Por teléfono o PC</string>
+    <string name="backup_transfer_title">Copia por teléfono o PC</string>
+    <string name="backup_transfer_hint">Escanea el código con tu teléfono o PC (misma red Wi-Fi). En la página guardas la copia en ese dispositivo o restauras una desde él.</string>
+    <string name="backup_not_public">Este dispositivo no permite una carpeta fuera de la app. La copia está en la carpeta de la app y una desinstalación la borra. Usa la transferencia por teléfono o PC.</string>
+    <string name="backup_latest">Última copia: %1$s</string>
     <string name="detail_cast">Reparto</string>
     <string name="detail_director">Dirección</string>
     <string name="detail_released">Estreno</string>

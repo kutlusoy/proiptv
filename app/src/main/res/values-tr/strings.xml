@@ -171,6 +171,11 @@
     <string name="backup_none_found">%1$s içinde yedek bulunamadı</string>
     <string name="backup_choose_file">Yedek seç</string>
     <string name="storage_uninstall_note">Not: Uygulama kaldırılırsa Android, sürücüdeki uygulama klasörünü de siler.</string>
+    <string name="backup_transfer">Telefon veya bilgisayarla</string>
+    <string name="backup_transfer_title">Telefon veya bilgisayarla yedek</string>
+    <string name="backup_transfer_hint">Kodu telefonunuzla veya bilgisayarınızla okutun (aynı Wi-Fi). Sayfada yedeği o cihaza kaydedebilir veya oradan geri yükleyebilirsiniz.</string>
+    <string name="backup_not_public">Bu cihaz uygulama dışında bir klasöre izin vermiyor. Yedek uygulama klasöründe, kaldırma onu siler. Telefon veya bilgisayarla aktarımı kullanın.</string>
+    <string name="backup_latest">En yeni yedek: %1$s</string>
     <string name="detail_cast">Oyuncular</string>
     <string name="detail_director">Yönetmen</string>
     <string name="detail_released">Yayın tarihi</string>

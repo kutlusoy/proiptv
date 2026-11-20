@@ -175,6 +175,11 @@
     <string name="backup_none_found">Keine Sicherung gefunden in %1$s</string>
     <string name="backup_choose_file">Sicherung wählen</string>
     <string name="storage_uninstall_note">Hinweis: Wird die App deinstalliert, löscht Android auch den App-Ordner auf dem Laufwerk.</string>
+    <string name="backup_transfer">Per Handy oder PC</string>
+    <string name="backup_transfer_title">Sicherung per Handy oder PC</string>
+    <string name="backup_transfer_hint">Scanne den Code mit deinem Handy oder PC (gleiches WLAN). Auf der Seite speicherst du die Sicherung auf diesem Gerät oder stellst eine davon wieder her.</string>
+    <string name="backup_not_public">Dieses Gerät erlaubt keinen Ordner außerhalb der App. Die Sicherung liegt im App-Ordner, eine Deinstallation löscht sie. Nutze die Übertragung per Handy oder PC.</string>
+    <string name="backup_latest">Neueste Sicherung: %1$s</string>
     <string name="detail_cast">Besetzung</string>
     <string name="detail_director">Regie</string>
     <string name="detail_released">Erschienen</string>

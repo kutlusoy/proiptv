@@ -39,6 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun BackupSettings() {
     val ctx = LocalContext.current
@@ -57,7 +58,21 @@ fun BackupSettings() {
         val open = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).addCategory(android.content.Intent.CATEGORY_OPENABLE).setType("*/*")
         ctx.packageManager.resolveActivity(create, 0) == null || ctx.packageManager.resolveActivity(open, 0) == null
     }
-    var pickFile by remember { mutableStateOf<List<java.io.File>?>(null) }
+    var latest by remember { mutableStateOf<java.io.File?>(null) }
+    var transfer by remember { mutableStateOf(false) }
+    // Android 10 and older: the storage permission lets the backup go to a folder of the drive that stays when the app is uninstalled
+    var afterPermission by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { afterPermission?.invoke(); afterPermission = null }
+    fun withStorageAccess(action: () -> Unit) {
+        val needed = android.os.Build.VERSION.SDK_INT <= 29 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (needed) {
+            afterPermission = action
+            permission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            action()
+        }
+    }
 
     suspend fun restore(text: String, password: String?) {
         try {
@@ -97,46 +112,48 @@ fun BackupSettings() {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { exportDialog = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.backup_create)) }
-            OutlinedButton(onClick = { if (noFileApp) pickFile = app.storage.backupFiles() else opener.launch(arrayOf("*/*")) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.backup_restore)) }
+            OutlinedButton(onClick = { if (noFileApp) withStorageAccess { latest = app.storage.newestBackup().also { if (it == null) toast(ctx.getString(R.string.backup_none_found, app.storage.openFolderPath() ?: app.storage.backups().path)) } } else opener.launch(arrayOf("*/*")) }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.backup_restore)) }
+            OutlinedButton(onClick = { transfer = true }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.backup_transfer)) }
         }
         Text(stringResource(R.string.backup_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
     }
 
-    pickFile?.let { files ->
+    latest?.let { file ->
         AlertDialog(
-            onDismissRequest = { pickFile = null },
-            title = { Text(stringResource(R.string.backup_choose_file)) },
+            onDismissRequest = { latest = null },
+            title = { Text(stringResource(R.string.backup_restore)) },
             text = {
-                if (files.isEmpty()) {
-                    Text(stringResource(R.string.backup_none_found, app.storage.backups().path))
-                } else {
-                    androidx.compose.foundation.lazy.LazyColumn {
-                        items(files, key = { it.path }) { f ->
-                            Column(
-                                Modifier.fillMaxWidth().focusHighlight().clickable {
-                                    pickFile = null
-                                    scope.launch {
-                                        val text = withContext(Dispatchers.IO) { f.readText(Charsets.UTF_8) }
-                                        try {
-                                            if (BackupCodec.isEncrypted(text)) importText = text else restore(text, null)
-                                        } catch (e: InvalidBackup) {
-                                            toast(ctx.getString(R.string.backup_invalid))
-                                        }
-                                    }
-                                }.padding(vertical = 8.dp),
-                            ) {
-                                Text(f.name)
-                                Text(f.parent.orEmpty() + "  " + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(f.lastModified())), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                Column {
+                    Text(stringResource(R.string.backup_latest, file.name))
+                    Text(
+                        file.parent.orEmpty() + "\n" + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(file.lastModified())),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    latest = null
+                    scope.launch {
+                        val text = withContext(Dispatchers.IO) { runCatching { file.readText(Charsets.UTF_8) }.getOrNull() }
+                        if (text == null) {
+                            toast(ctx.getString(R.string.backup_invalid))
+                        } else {
+                            try {
+                                if (BackupCodec.isEncrypted(text)) importText = text else restore(text, null)
+                            } catch (e: InvalidBackup) {
+                                toast(ctx.getString(R.string.backup_invalid))
                             }
                         }
                     }
-                }
+                }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.backup_restore)) }
             },
-            confirmButton = { TextButton(onClick = { pickFile = null }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_close)) } },
+            dismissButton = { TextButton(onClick = { latest = null }, modifier = Modifier.focusHighlight()) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
+    if (transfer) BackupTransferDialog { transfer = false }
 
     if (exportDialog) {
         AlertDialog(
@@ -153,11 +170,19 @@ fun BackupSettings() {
                     exportDialog = false
                     val name = "proiptv-backup-" + SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) + ".json"
                     if (noFileApp) {
-                        scope.launch {
-                            val text = app.backup.export(exportPassword.ifEmpty { null })
-                            val file = withContext(Dispatchers.IO) { java.io.File(app.storage.backups().apply { mkdirs() }, name).also { it.writeText(text, Charsets.UTF_8) } }
-                            exportPassword = ""
-                            toast(ctx.getString(R.string.backup_saved_file, file.path))
+                        withStorageAccess {
+                            scope.launch {
+                                val text = app.backup.export(exportPassword.ifEmpty { null })
+                                exportPassword = ""
+                                val open = withContext(Dispatchers.IO) { app.storage.writeOpenBackup(name, text) }
+                                if (open != null) {
+                                    toast(ctx.getString(R.string.backup_saved_file, open.path))
+                                } else {
+                                    // this device does not allow a folder outside the app: the file goes into the folder of the app, which an uninstall deletes
+                                    val file = withContext(Dispatchers.IO) { java.io.File(app.storage.backups().apply { mkdirs() }, name).also { it.writeText(text, Charsets.UTF_8) } }
+                                    toast(ctx.getString(R.string.backup_saved_file, file.path) + "\n" + ctx.getString(R.string.backup_not_public))
+                                }
+                            }
                         }
                     } else {
                         saver.launch(name)
