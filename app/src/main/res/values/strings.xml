@@ -76,6 +76,9 @@
     <string name="player_subtitles">Subtitles</string>
     <string name="player_off">Off</string>
     <string name="player_aspect">Picture size</string>
+    <string name="player_aspect_fit">Fit</string>
+    <string name="player_aspect_fill">Fill the screen (Zoom Fit)</string>
+    <string name="player_aspect_stretch">Stretch</string>
     <string name="player_guide">Guide</string>
     <string name="player_catchup_hint">Select a past program to watch it from the start.</string>
     <string name="epg_none">No guide data for this channel.</string>

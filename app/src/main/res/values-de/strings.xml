@@ -75,6 +75,9 @@
     <string name="player_subtitles">Untertitel</string>
     <string name="player_off">Aus</string>
     <string name="player_aspect">Bildgröße</string>
+    <string name="player_aspect_fit">Einpassen</string>
+    <string name="player_aspect_fill">Ausfüllen (Zoom Fit)</string>
+    <string name="player_aspect_stretch">Strecken</string>
     <string name="player_guide">Programm</string>
     <string name="player_catchup_hint">Wähle eine vergangene Sendung, um sie von Anfang an zu sehen.</string>
     <string name="epg_none">Keine Programmdaten für diesen Sender.</string>

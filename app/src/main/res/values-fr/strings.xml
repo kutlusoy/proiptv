@@ -75,6 +75,9 @@
     <string name="player_subtitles">Sous-titres</string>
     <string name="player_off">Désactivé</string>
     <string name="player_aspect">Taille de l\'image</string>
+    <string name="player_aspect_fit">Ajuster</string>
+    <string name="player_aspect_fill">Remplir l\'écran (Zoom Fit)</string>
+    <string name="player_aspect_stretch">Étirer</string>
     <string name="player_guide">Guide</string>
     <string name="player_catchup_hint">Choisissez une émission passée pour la voir depuis le début.</string>
     <string name="epg_none">Aucune donnée de guide pour cette chaîne.</string>

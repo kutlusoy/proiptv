@@ -71,6 +71,9 @@
     <string name="player_subtitles">Altyazı</string>
     <string name="player_off">Kapalı</string>
     <string name="player_aspect">Görüntü boyutu</string>
+    <string name="player_aspect_fit">Sığdır</string>
+    <string name="player_aspect_fill">Ekranı doldur (Zoom Fit)</string>
+    <string name="player_aspect_stretch">Uzat</string>
     <string name="player_guide">Rehber</string>
     <string name="player_catchup_hint">Baştan izlemek için geçmiş bir program seç.</string>
     <string name="epg_none">Bu kanal için yayın akışı verisi yok.</string>

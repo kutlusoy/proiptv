@@ -75,6 +75,9 @@
     <string name="player_subtitles">Subtítulos</string>
     <string name="player_off">Desactivado</string>
     <string name="player_aspect">Tamaño de imagen</string>
+    <string name="player_aspect_fit">Ajustar</string>
+    <string name="player_aspect_fill">Llenar la pantalla (Zoom Fit)</string>
+    <string name="player_aspect_stretch">Estirar</string>
     <string name="player_guide">Guía</string>
     <string name="player_catchup_hint">Elige un programa pasado para verlo desde el principio.</string>
     <string name="epg_none">No hay datos de guía para este canal.</string>
