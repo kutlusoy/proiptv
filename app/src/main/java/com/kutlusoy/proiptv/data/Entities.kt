@@ -200,6 +200,8 @@ data class Download(
     val status: Int = DlStatus.QUEUED,
     val error: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
+    /** Where the finished file is when it was moved to the folder that the user chose (a content address); null: in the folder of the app. */
+    val location: String? = null,
 )
 
 data class GuideRow(

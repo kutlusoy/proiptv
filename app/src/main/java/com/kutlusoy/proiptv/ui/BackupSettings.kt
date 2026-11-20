@@ -169,7 +169,15 @@ fun BackupSettings() {
                 TextButton(onClick = {
                     exportDialog = false
                     val name = "proiptv-backup-" + SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) + ".json"
-                    if (noFileApp) {
+                    if (app.storage.treeRoot() != null) {
+                        // a folder was chosen in the settings: the backup goes straight there
+                        scope.launch {
+                            val text = app.backup.export(exportPassword.ifEmpty { null })
+                            exportPassword = ""
+                            val place = withContext(Dispatchers.IO) { app.storage.writeTextToTree("Backups/$name", text) }
+                            if (place != null) toast(ctx.getString(R.string.backup_saved_file, place)) else toast(ctx.getString(R.string.storage_folder_missing))
+                        }
+                    } else if (noFileApp) {
                         withStorageAccess {
                             scope.launch {
                                 val text = app.backup.export(exportPassword.ifEmpty { null })

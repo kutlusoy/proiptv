@@ -52,6 +52,7 @@ class RecordingManager(
     private val resolve: suspend (Item) -> PlayTarget?,
     private val maxConnections: suspend (Long) -> Int?,
     private val directoryOf: () -> File = { app.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: File(app.filesDir, "recordings") },
+    private val storage: com.kutlusoy.proiptv.data.Storage? = null,
 ) {
     private class Running(val recorder: Recorder, val lease: HubLease, val info: ActiveRecording)
 
@@ -109,7 +110,12 @@ class RecordingManager(
                 val target = File(old.parentFile, com.kutlusoy.proiptv.parse.RecordingNames.withStop(old.name, ended) { name -> File(old.parentFile, name).exists() })
                 if (old.renameTo(target)) path = target.absolutePath
             }
-            db.recordings().update(it.copy(endedAt = ended, path = path, bytes = r?.recorder?.bytes ?: File(path).length(), status = status))
+            val bytes = r?.recorder?.bytes ?: File(path).length()
+            // a folder that the user chose: the finished recording goes there (it stays in the app when that does not work)
+            if (path.isNotEmpty() && File(path).isFile) {
+                withContext(Dispatchers.IO) { storage?.moveToTree(File(path), "Recordings/" + File(path).name) }?.let { place -> path = place }
+            }
+            db.recordings().update(it.copy(endedAt = ended, path = path, bytes = bytes, status = status))
         }
         publish()
     }
@@ -121,7 +127,7 @@ class RecordingManager(
     suspend fun delete(id: Long) {
         stop(id)
         cancelAlarm(id)
-        db.recordings().get(id)?.let { if (it.path.isNotEmpty()) runCatching { File(it.path).delete() } }
+        db.recordings().get(id)?.let { if (it.path.isNotEmpty()) com.kutlusoy.proiptv.data.StoredFile.delete(app, it.path) }
         db.recordings().delete(id)
     }
 
@@ -131,8 +137,13 @@ class RecordingManager(
     suspend fun removeMissing() = withContext(Dispatchers.IO) {
         for (r in db.recordings().all().first()) {
             if ((r.status == RecStatus.DONE || r.status == RecStatus.INTERRUPTED) && r.path.isNotEmpty()) {
-                val file = File(r.path)
-                if (!file.exists() && file.parentFile?.isDirectory == true) db.recordings().delete(r.id)
+                if (com.kutlusoy.proiptv.data.StoredFile.isContent(r.path)) {
+                    // in the chosen folder: only while that folder can be used
+                    if (storage?.treeRoot() != null && !com.kutlusoy.proiptv.data.StoredFile.exists(app, r.path)) db.recordings().delete(r.id)
+                } else {
+                    val file = File(r.path)
+                    if (!file.exists() && file.parentFile?.isDirectory == true) db.recordings().delete(r.id)
+                }
             }
         }
     }

@@ -98,7 +98,7 @@ fun RecordingsScreen(vm: MainViewModel) {
                             OutlinedButton(
                                 onClick = {
                                     vm.player.value = PlayRequest.Single(
-                                        PlayTarget(Uri.fromFile(File(r.path)).toString(), null, r.title, false, r.accountId, Kind.EPISODE, "rec-${r.id}"),
+                                        PlayTarget(com.kutlusoy.proiptv.data.StoredFile.uri(r.path).toString(), null, r.title, false, r.accountId, Kind.EPISODE, "rec-${r.id}"),
                                     )
                                 },
                                 modifier = Modifier.focusHighlight(),

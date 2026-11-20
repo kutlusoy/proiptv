@@ -53,6 +53,11 @@ class Prefs(context: Context) {
         get() = sp.getInt("video_resize", 0)
         set(value) = sp.edit().putInt("video_resize", value).apply()
 
+    /** A folder that was chosen with the file manager (content address): finished downloads and recordings are moved there, backups are saved there. */
+    var storageTree: String?
+        get() = sp.getString("storage_tree", null)
+        set(value) = sp.edit().apply { if (value == null) remove("storage_tree") else putString("storage_tree", value) }.apply()
+
     var tmdbKey: String
         get() = sp.getString("tmdb_key", "") ?: ""
         set(value) = sp.edit().putString("tmdb_key", value.trim()).apply()

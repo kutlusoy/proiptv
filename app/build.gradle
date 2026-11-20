@@ -148,8 +148,8 @@ dependencies {
     implementation 'androidx.media3:media3-exoplayer:1.8.0'
     implementation 'androidx.media3:media3-exoplayer-hls:1.8.0'
     implementation 'androidx.media3:media3-ui:1.8.0'
-    // video effects: the brightness of the picture is changed in the picture itself
-    implementation 'androidx.media3:media3-effect:1.8.0'
+    // a folder that the user chose with the file manager (Storage Access Framework)
+    implementation 'androidx.documentfile:documentfile:1.0.1'
     implementation 'androidx.media3:media3-datasource-okhttp:1.8.0'
 
     implementation 'io.coil-kt.coil3:coil-compose:3.3.0'

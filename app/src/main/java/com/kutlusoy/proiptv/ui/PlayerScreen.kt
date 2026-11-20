@@ -737,18 +737,30 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 )
             },
     ) {
-        // zoomed (or moved) the picture needs a texture view, it can be scaled; without zoom the standard surface view stays
+        // zoomed, moved or changed in brightness the picture needs a texture view (it can be scaled and its colors can be changed); otherwise the standard surface view stays
         val zoomed = zoom > 100
-        androidx.compose.runtime.key(zoomed) {
+        val textured = zoomed || brightness != 0
+        androidx.compose.runtime.key(textured) {
             AndroidView(
                 modifier = if (tvBrowse) Modifier.tvPreviewRect() else Modifier.fillMaxSize(),
                 factory = { c ->
-                    (if (zoomed) android.view.LayoutInflater.from(c).inflate(R.layout.player_view_texture, null) as PlayerView else PlayerView(c))
+                    (if (textured) android.view.LayoutInflater.from(c).inflate(R.layout.player_view_texture, null) as PlayerView else PlayerView(c))
                         .apply { useController = false; player = exo; keepScreenOn = true; clipChildren = false }
                 },
                 update = { view ->
                     view.resizeMode = resize
                     val surface = view.videoSurfaceView
+                    // brightness: the colors of the picture are changed on its texture (a light or dark shift of every color)
+                    (surface as? android.view.TextureView)?.let { texture ->
+                        if (brightness == 0) {
+                            texture.setLayerPaint(null)
+                        } else {
+                            val gain = 1f + brightness / 100f * 0.5f
+                            val shift = brightness / 100f * 60f
+                            val matrix = android.graphics.ColorMatrix(floatArrayOf(gain, 0f, 0f, 0f, shift, 0f, gain, 0f, 0f, shift, 0f, 0f, gain, 0f, shift, 0f, 0f, 0f, 1f, 0f))
+                            texture.setLayerPaint(android.graphics.Paint().apply { colorFilter = android.graphics.ColorMatrixColorFilter(matrix) })
+                        }
+                    }
                     if (zoomed && surface != null) {
                         (surface.parent as? android.view.ViewGroup)?.clipChildren = false
                         val factor = zoom / 100f
@@ -761,10 +773,6 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                     }
                 },
             )
-        }
-        // brightness: a video effect of the player changes the colors of the picture itself (only while it is not 0, so a normal picture takes no extra work)
-        androidx.compose.runtime.LaunchedEffect(brightness) {
-            exo.setVideoEffects(if (brightness == 0) emptyList() else listOf(androidx.media3.effect.Brightness(brightness / 100f * 0.4f)))
         }
         (notice ?: message?.let { stringResource(it) })?.let { Text(it, Modifier.align(Alignment.Center).background(Color(0xAA000000)).padding(12.dp), color = Color.White, textAlign = TextAlign.Center) }
         info?.let { Text(it, Modifier.align(Alignment.TopCenter).padding(24.dp).background(Color(0xAA000000)).padding(10.dp), color = Color.White, textAlign = TextAlign.Center) }

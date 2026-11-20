@@ -56,9 +56,9 @@ class ProIptvApp : Application() {
             val wanted = prefs.bufferMb * 1024L * 1024L
             minOf(wanted, hubDir.usableSpace / 3).coerceAtLeast(64L * 1024 * 1024)
         })
-        recordings = RecordingManager(this, db, engine, scope, resolve = { repo.target(it) }, maxConnections = { repo.maxConnections(it) }, directoryOf = { storage.recordings() })
+        recordings = RecordingManager(this, db, engine, scope, resolve = { repo.target(it) }, maxConnections = { repo.maxConnections(it) }, directoryOf = { storage.recordings() }, storage = storage)
         reminders = com.kutlusoy.proiptv.reminder.ReminderManager(this, db)
-        downloads = DownloadManager(this, db, scope, Http.client, { storage.downloads() }, resolve = { repo.downloadSource(it) })
+        downloads = DownloadManager(this, db, scope, Http.client, { storage.downloads() }, storage = storage, resolve = { repo.downloadSource(it) })
         backup = BackupManager(repo, { prefs.timeshift to prefs.bufferMb }, { on, mb -> prefs.timeshift = on; prefs.bufferMb = mb }, { secrets.decrypt(it.password) })
         scope.launch {
             recordings.recoverInterrupted()

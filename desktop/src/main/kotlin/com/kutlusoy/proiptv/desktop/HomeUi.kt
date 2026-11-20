@@ -1,6 +1,7 @@
 package com.kutlusoy.proiptv.desktop
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -72,20 +73,26 @@ fun HomeScreen(state: AppState) {
         if (rows.isEmpty() && !(q.isEmpty() && (state.loading || state.guideLoading))) {
             Text(t(if (q.isNotEmpty()) "home_no_results" else "home_empty"), Modifier.padding(8.dp), color = Color.White.copy(alpha = 0.7f))
         }
-        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(22.dp), contentPadding = PaddingValues(bottom = 28.dp)) {
             items(rows) { row ->
-                Text(row.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                if (row.grid) {
-                    // up to three rows, the arrows (and the mouse wheel with the shift key) move the whole band
-                    ScrollGrid(rows = minOf(3, row.entries.size), cellHeight = TILE_HEIGHT, modifier = Modifier.padding(top = 6.dp)) {
-                        gridItems(row.entries, key = { it.key }) { e ->
-                            HomeTile(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
+                // every area has its own frame, a bigger heading and room around it
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.04f))
+                        .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(16.dp)).padding(horizontal = 18.dp, vertical = 16.dp),
+                ) {
+                    Text(row.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    if (row.grid) {
+                        // up to three rows, the arrows (and the mouse wheel with the shift key) move the whole band
+                        ScrollGrid(rows = minOf(3, row.entries.size), cellHeight = TILE_HEIGHT, modifier = Modifier.padding(top = 12.dp)) {
+                            gridItems(row.entries, key = { it.key }) { e ->
+                                HomeTile(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
+                            }
                         }
-                    }
-                } else {
-                    ScrollRow(Modifier.padding(top = 6.dp)) {
-                        items(row.entries, key = { it.key }) { e ->
-                            PosterCard(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
+                    } else {
+                        ScrollRow(Modifier.padding(top = 12.dp)) {
+                            items(row.entries, key = { it.key }) { e ->
+                                PosterCard(e, row.progress[e.key], state.accountLabel(e.accountId)) { open(state, e, row.entries) }
+                            }
                         }
                     }
                 }

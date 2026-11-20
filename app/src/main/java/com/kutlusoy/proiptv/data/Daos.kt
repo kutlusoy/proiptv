@@ -429,6 +429,9 @@ interface DownloadDao {
     @Query("UPDATE downloads SET status = :status, error = :error WHERE id = :id")
     suspend fun setStatus(id: Long, status: Int, error: String?)
 
+    @Query("UPDATE downloads SET location = :location WHERE id = :id")
+    suspend fun setLocation(id: Long, location: String?)
+
     @Query("UPDATE downloads SET bytes = :bytes, total = :total WHERE id = :id")
     suspend fun setProgress(id: Long, bytes: Long, total: Long)
 

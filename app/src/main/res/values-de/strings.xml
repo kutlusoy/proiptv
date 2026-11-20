@@ -186,6 +186,10 @@
     <string name="backup_none_found">Keine Sicherung gefunden in %1$s</string>
     <string name="backup_choose_file">Sicherung wählen</string>
     <string name="storage_uninstall_note">Hinweis: Wird die App deinstalliert, löscht Android auch den App-Ordner auf dem Laufwerk.</string>
+    <string name="storage_folder_choose">Ordner wählen (Dateimanager)</string>
+    <string name="storage_folder_current">Ordner: %1$s</string>
+    <string name="storage_folder_missing">Der gewählte Ordner ist im Moment nicht nutzbar (Karte nicht verbunden oder Zugriff entzogen). Die Dateien bleiben in der App.</string>
+    <string name="storage_folder_hint">Fertige Downloads und Aufnahmen werden nach dem Abschluss in den Ordner verschoben, Sicherungen werden dort gespeichert. Während ein Download oder eine Aufnahme läuft, liegt die Datei in der App. Eine Deinstallation löscht nicht, was im Ordner liegt.</string>
     <string name="backup_transfer">Per Handy oder PC</string>
     <string name="backup_transfer_title">Sicherung per Handy oder PC</string>
     <string name="backup_transfer_hint">Scanne den Code mit deinem Handy oder PC (gleiches WLAN). Auf der Seite speicherst du die Sicherung auf diesem Gerät oder stellst eine davon wieder her.</string>
