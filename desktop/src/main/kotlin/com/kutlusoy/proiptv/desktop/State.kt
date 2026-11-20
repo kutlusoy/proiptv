@@ -241,6 +241,21 @@ class AppState(val store: Store, val scope: CoroutineScope) {
     }
 
     /** The live categories that are switched off for an account; the lists are loaded again without their channels. */
+    var videoBrightness by androidx.compose.runtime.mutableIntStateOf(store.config.videoBrightness)
+        private set
+    var videoZoom by androidx.compose.runtime.mutableIntStateOf(store.config.videoZoom)
+        private set
+
+    fun changeBrightness(value: Int) {
+        videoBrightness = value.coerceIn(-100, 100)
+        store.update { c -> c.copy(videoBrightness = videoBrightness) }
+    }
+
+    fun changeZoom(value: Int) {
+        videoZoom = value.coerceIn(100, 300)
+        store.update { c -> c.copy(videoZoom = videoZoom) }
+    }
+
     fun setHiddenLive(id: String, hidden: List<String>) {
         store.update { c -> c.copy(accounts = c.accounts.map { if (it.id == id) it.copy(hiddenLive = hidden) else it }) }
         accounts = store.config.accounts

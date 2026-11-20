@@ -72,6 +72,9 @@ data class ConfigDto(
     val history: List<String> = emptyList(),
     val hideAdult: Boolean = true,
     val autoplayNext: Boolean = true,
+    /** The picture of the player: brightness from -100 to 100 and zoom in percent (100 to 300). Kept for the next start. */
+    val videoBrightness: Int = 0,
+    val videoZoom: Int = 100,
     /** The folder for downloads, recordings and backups; null: the standard place. */
     val storageDir: String? = null,
     val reminders: List<ReminderDto> = emptyList(),

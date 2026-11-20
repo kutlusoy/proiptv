@@ -176,6 +176,9 @@
     <string name="backup_transfer_hint">Kodu telefonunuzla veya bilgisayarınızla okutun (aynı Wi-Fi). Sayfada yedeği o cihaza kaydedebilir veya oradan geri yükleyebilirsiniz.</string>
     <string name="backup_not_public">Bu cihaz uygulama dışında bir klasöre izin vermiyor. Yedek uygulama klasöründe, kaldırma onu siler. Telefon veya bilgisayarla aktarımı kullanın.</string>
     <string name="backup_latest">En yeni yedek: %1$s</string>
+    <string name="player_brightness">Parlaklık</string>
+    <string name="player_zoom">Yakınlaştırma</string>
+    <string name="player_video_reset">Sıfırla</string>
     <string name="detail_cast">Oyuncular</string>
     <string name="detail_director">Yönetmen</string>
     <string name="detail_released">Yayın tarihi</string>

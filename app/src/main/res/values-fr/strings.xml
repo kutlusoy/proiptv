@@ -180,6 +180,9 @@
     <string name="backup_transfer_hint">Scannez le code avec votre téléphone ou PC (même Wi-Fi). Sur la page, vous enregistrez la sauvegarde sur cet appareil ou en restaurez une.</string>
     <string name="backup_not_public">Cet appareil n\'autorise pas de dossier hors de l\'application. La sauvegarde est dans le dossier de l\'application, une désinstallation la supprime. Utilisez le transfert par téléphone ou PC.</string>
     <string name="backup_latest">Dernière sauvegarde : %1$s</string>
+    <string name="player_brightness">Luminosité</string>
+    <string name="player_zoom">Zoom</string>
+    <string name="player_video_reset">Réinitialiser</string>
     <string name="detail_cast">Distribution</string>
     <string name="detail_director">Réalisation</string>
     <string name="detail_released">Sortie</string>

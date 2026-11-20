@@ -72,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -469,7 +470,7 @@ fun PlayerScreen(state: AppState, controller: PlayerController) {
             VideoSurface(engine, modifier, onDoubleClick = {
                 // in the channel browser a double click makes the stream big (like the menu button), in the big picture it makes the window borderless
                 if (controller.listOpen && controller.live && !state.compact) controller.listOpen = false else state.toggleFullscreen()
-            }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) })
+            }, onScroll = { dy -> controller.changeVolume(controller.volume - dy * 5) }, brightness = state.videoBrightness, zoom = state.videoZoom)
         }
         controller.failed?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(24.dp)) }
         if (controller.reconnecting && controller.failed == null) Text(t("player_retrying"), Modifier.background(Color(0xAA000000)).padding(12.dp), color = Color.White)
@@ -871,6 +872,8 @@ private fun ColumnsIcon(active: Boolean) {
 private fun ControlBar(state: AppState, controller: PlayerController, modifier: Modifier, floating: Boolean) {
     var tracksOpen by remember { mutableStateOf(false) }
     var castOpen by remember { mutableStateOf(false) }
+    var brightnessOpen by remember { mutableStateOf(false) }
+    var zoomOpen by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
     var recordOpen by remember { mutableStateOf(false) }
     var guideOpen by remember { mutableStateOf(false) }
@@ -886,6 +889,8 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
     }
     if (tracksOpen) TracksDialog(state.engine) { tracksOpen = false }
     if (castOpen) CastDialog(state, controller) { castOpen = false }
+    if (brightnessOpen) PictureDialog(t("player_brightness"), state.videoBrightness, -100..100, "%+d", 0, state::changeBrightness) { brightnessOpen = false }
+    if (zoomOpen) PictureDialog(t("player_zoom"), state.videoZoom, 100..300, "%d %%", 100, state::changeZoom) { zoomOpen = false }
     Row(
         modifier.fillMaxWidth().background(if (floating) Color(0xCC000000) else Palette.Surface).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -946,6 +951,8 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
             Tip(t("player_more"), above = true) { RoundControl(PlayerGlyph.GEAR, t("player_more"), { moreMenu = true }, diameter = 38.dp) }
             androidx.compose.material3.DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_tracks")) }, onClick = { moreMenu = false; tracksOpen = true })
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_brightness")) }, onClick = { moreMenu = false; brightnessOpen = true })
+                androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_zoom")) }, onClick = { moreMenu = false; zoomOpen = true })
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("cast_open")) }, onClick = { moreMenu = false; castOpen = true })
             }
         }
@@ -1066,6 +1073,23 @@ private fun TracksDialog(engine: VlcEngine, onClose: () -> Unit) {
     )
 }
 
+/** One setting of the picture (brightness or zoom) with a slider; it works at once and is kept for the next start. */
+@Composable
+private fun PictureDialog(title: String, value: Int, range: IntRange, format: String, standard: Int, onChange: (Int) -> Unit, onClose: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(format.format(value), style = MaterialTheme.typography.titleMedium)
+                Slider(value = value.toFloat(), onValueChange = { onChange(it.toInt()) }, valueRange = range.first.toFloat()..range.last.toFloat(), modifier = Modifier.width(320.dp))
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(t("action_close")) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { onChange(standard) }, enabled = value != standard) { Text(t("player_video_reset")) } },
+    )
+}
+
 /** The TVs of the network (Google Cast). A tap sends the running stream to that TV. */
 @Composable
 private fun CastDialog(state: AppState, controller: PlayerController, onClose: () -> Unit) {
@@ -1098,7 +1122,7 @@ private fun TrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null) {
+private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null, brightness: Int = 0, zoom: Int = 100) {
     var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(engine) {
         var shown = -1L
@@ -1126,10 +1150,17 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
                 .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> onScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
         ) {
             val img = image ?: return@Canvas
-            val scale = minOf(size.width / img.width, size.height / img.height)
+            // the zoom makes the picture bigger around its middle (what leaves the window is cut off), the brightness is added to the colors
+            val scale = minOf(size.width / img.width, size.height / img.height) * zoom / 100f
             val w = (img.width * scale).toInt()
             val h = (img.height * scale).toInt()
-            drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - w) / 2).toInt(), ((size.height - h) / 2).toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h))
+            val shift = brightness * 1.2f
+            val filter = if (brightness == 0) null else androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+                androidx.compose.ui.graphics.ColorMatrix(floatArrayOf(1f, 0f, 0f, 0f, shift, 0f, 1f, 0f, 0f, shift, 0f, 0f, 1f, 0f, shift, 0f, 0f, 0f, 1f, 0f)),
+            )
+            clipRect {
+                drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - w) / 2).toInt(), ((size.height - h) / 2).toInt()), dstSize = androidx.compose.ui.unit.IntSize(w, h), colorFilter = filter)
+            }
         }
         // until the first picture has arrived a symbol shows what is coming
         if (image == null) placeholder?.invoke()
