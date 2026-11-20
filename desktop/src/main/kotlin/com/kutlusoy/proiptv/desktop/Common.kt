@@ -211,6 +211,29 @@ fun ScrollRow(modifier: Modifier = Modifier, content: androidx.compose.foundatio
     }
 }
 
+/**
+ * A band with several rows that moves as a whole: the items fill [rows] rows, the next ones continue to the right. The arrows at the edges (mouse) move the whole band.
+ */
+@Composable
+fun ScrollGrid(rows: Int, cellHeight: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, content: androidx.compose.foundation.lazy.grid.LazyGridScope.() -> Unit) {
+    val state = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val previous = t("player_list_previous")
+    val next = t("player_list_next")
+    val gap = 8.dp
+    fun move(direction: Int) {
+        scope.launch { state.animateScrollBy(direction * state.layoutInfo.viewportSize.width * 0.8f) }
+    }
+    Box(modifier) {
+        androidx.compose.foundation.lazy.grid.LazyHorizontalGrid(
+            androidx.compose.foundation.lazy.grid.GridCells.Fixed(rows), Modifier.fillMaxWidth().height(cellHeight * rows + gap * (rows - 1)), state = state,
+            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(gap), content = content,
+        )
+        if (state.canScrollBackward) RowArrow(Alignment.CenterStart, previous, Icons.Filled.KeyboardArrowLeft) { move(-1) }
+        if (state.canScrollForward) RowArrow(Alignment.CenterEnd, next, Icons.Filled.KeyboardArrowRight) { move(1) }
+    }
+}
+
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.RowArrow(align: Alignment, description: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     androidx.compose.material3.IconButton(

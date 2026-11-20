@@ -50,6 +50,10 @@
     <string name="live_search">Suchen</string>
     <string name="nav_home">Start</string>
     <string name="home_continue">Weiterschauen</string>
+    <string name="home_fav_live">Live-TV Favoriten</string>
+    <string name="home_fav_movies">Filme Favoriten</string>
+    <string name="home_fav_series">Serien Favoriten</string>
+    <string name="home_empty">Noch nichts da. Angefangene Titel und deine Favoriten erscheinen hier.</string>
     <string name="home_search">Sender, Filme und Serien suchen</string>
     <string name="home_no_results">Nichts gefunden</string>
     <string name="live_no_results">Nichts gefunden.</string>

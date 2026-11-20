@@ -50,6 +50,10 @@
     <string name="live_search">Rechercher</string>
     <string name="nav_home">Accueil</string>
     <string name="home_continue">Reprendre la lecture</string>
+    <string name="home_fav_live">Favoris TV en direct</string>
+    <string name="home_fav_movies">Favoris films</string>
+    <string name="home_fav_series">Favoris séries</string>
+    <string name="home_empty">Rien ici pour le moment. Les titres commencés et vos favoris apparaissent sur cette page.</string>
     <string name="home_search">Rechercher chaînes, films et séries</string>
     <string name="home_no_results">Rien trouvé</string>
     <string name="live_no_results">Aucun résultat.</string>

@@ -51,6 +51,10 @@
     <string name="live_search">Search</string>
     <string name="nav_home">Home</string>
     <string name="home_continue">Continue watching</string>
+    <string name="home_fav_live">Live TV favorites</string>
+    <string name="home_fav_movies">Movie favorites</string>
+    <string name="home_fav_series">Series favorites</string>
+    <string name="home_empty">Nothing here yet. Titles you begin and your favorites appear on this page.</string>
     <string name="home_search">Search channels, movies and series</string>
     <string name="home_no_results">Nothing found</string>
     <string name="live_no_results">Nothing found.</string>

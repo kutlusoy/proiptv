@@ -282,6 +282,10 @@
     <string name="exit_confirm">ProIPTV kapatılsın mı?</string>
     <string name="nav_home">Ana sayfa</string>
     <string name="home_continue">İzlemeye devam et</string>
+    <string name="home_fav_live">Canlı TV favorileri</string>
+    <string name="home_fav_movies">Film favorileri</string>
+    <string name="home_fav_series">Dizi favorileri</string>
+    <string name="home_empty">Henüz bir şey yok. Başladığınız içerikler ve favorileriniz burada görünür.</string>
     <string name="home_search">Kanal, film ve dizi ara</string>
     <string name="home_no_results">Sonuç bulunamadı</string>
     <string name="dl_pause">Duraklat</string>
