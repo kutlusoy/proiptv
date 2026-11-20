@@ -184,6 +184,7 @@
     <string name="player_zoom">Zoom</string>
     <string name="player_video_reset">Ripristina</string>
     <string name="player_zoom_fit">Zoom Fit (riempi)</string>
+    <string name="player_zoom_fit_reset">Ripristina Zoom Fit</string>
     <string name="player_pan_x">Posizione orizzontale</string>
     <string name="player_pan_y">Posizione verticale</string>
     <string name="player_pan_hint">Puoi spostare l\'immagine anche con il mouse.</string>

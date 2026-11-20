@@ -956,6 +956,10 @@ private fun ControlBar(state: AppState, controller: PlayerController, modifier: 
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_brightness")) }, onClick = { moreMenu = false; brightnessOpen = true })
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_zoom")) }, onClick = { moreMenu = false; zoomOpen = true })
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("player_zoom_fit")) }, onClick = { moreMenu = false; state.requestZoomFit() })
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(t("player_zoom_fit_reset")) }, enabled = state.videoZoom != 100 || state.videoPanX != 0 || state.videoPanY != 0,
+                    onClick = { moreMenu = false; state.resetPicture() },
+                )
                 androidx.compose.material3.DropdownMenuItem(text = { Text(t("cast_open")) }, onClick = { moreMenu = false; castOpen = true })
             }
         }
