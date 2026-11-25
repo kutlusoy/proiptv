@@ -718,7 +718,8 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                         }
                         // Left goes to the lists (the column opens when it is not shown), Right goes back to the channels
                         Key.DirectionLeft -> { if (browseFocus != 1 && browseLists.size > 1) browseFocus = 1; true }
-                        Key.DirectionRight -> { if (browseFocus == 1) browseFocus = 0; true }
+                        // Right from the channels opens the highlighted channel in the full screen
+                        Key.DirectionRight -> { if (browseFocus == 1) browseFocus = 0 else if (browseFocus == 0) confirmBrowse(); true }
                         else -> false
                     }
                 }
