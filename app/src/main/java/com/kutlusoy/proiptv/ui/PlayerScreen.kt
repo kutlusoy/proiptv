@@ -207,7 +207,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var count by remember { mutableIntStateOf(1) }
     // TV: a click in a list opens the browser (list, small video, info, guide), OK there opens the full player
     val tvMode = LocalTv.current
-    var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap && request.source != Source.History && !request.direct) }
+    var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap && request.source !is Source.History && !request.direct) }
     var playSource by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
     var browseList by remember { mutableIntStateOf(0) }
     // the list the browser opened with (always first) and the position of the list that the running channel comes from
@@ -400,7 +400,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         if (tvBrowse || request !is PlayRequest.Zap) return@LaunchedEffect
         vm.repo.recordHistory(i)
         // the channel is now the first of the last channels
-        if (playSource == Source.History && index != 0) { index = 0; browseIndex = 0 }
+        if (playSource is Source.History && index != 0) { index = 0; browseIndex = 0 }
     }
 
     LaunchedEffect(failed) {
@@ -535,7 +535,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             is Source.Browse -> if (current.query.isNotBlank()) "\u201C${current.query}\u201D" else current.category?.let { cat -> enabled.firstNotNullOfOrNull { a -> vm.repo.db.items().categories(a.id, Kind.LIVE).first().firstOrNull { it.remoteId == cat }?.name } }
         } ?: allLabel
         out += BrowseList(currentName, current)
-        if (current != Source.History) out += BrowseList(histLabel, Source.History)
+        if (current !is Source.History) out += BrowseList(histLabel, Source.History())
         allFavLists.filter { it.kind == Kind.LIVE }.forEach { l -> Source.Favs(l.id).let { if (it != current) out += BrowseList(l.name, it) } }
         for (a in enabled) {
             for (c in vm.repo.db.items().categories(a.id, Kind.LIVE).first()) {

@@ -135,7 +135,7 @@ fun HomeScreen(vm: MainViewModel) {
     val historyCards = remember(historyRows) {
         historyRows.mapIndexed { i, h ->
             Card("${h.item.accountId}|0|${h.item.remoteId}", h.item.name, h.item.logo, true, null, h.item.accountId) {
-                vm.player.value = PlayRequest.Zap(Source.History, i)
+                vm.player.value = PlayRequest.Zap(Source.History(), i)
             }
         }
     }

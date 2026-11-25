@@ -13,8 +13,9 @@ import kotlinx.coroutines.withContext
 
 sealed interface Source {
     data class Browse(val kind: Int, val accountIds: List<Long>, val category: String?, val query: String, val country: String? = null, val year: Int? = null, val flags: Int = 0) : Source
-    data class Favs(val listId: Long) : Source
-    data object History : Source
+    /** [accountIds] limits the list to some accounts (null: all). */
+    data class Favs(val listId: Long, val accountIds: List<Long>? = null) : Source
+    data class History(val accountIds: List<Long>? = null) : Source
 }
 
 data class PlayTarget(
@@ -104,15 +105,17 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
 
     suspend fun count(src: Source): Int = when (src) {
         is Source.Browse -> { val (w1, w2, w3, w4) = com.kutlusoy.proiptv.parse.SearchMatch.four(src.query); db.items().count(src.kind, src.accountIds, src.category, w1, w2, w3, w4, src.country, src.year, src.flags) }
-        is Source.Favs -> db.favorites().presentCount(src.listId)
-        is Source.History -> db.history().items().size
+        is Source.Favs -> src.accountIds?.let { db.favorites().presentCountFor(src.listId, it) } ?: db.favorites().presentCount(src.listId)
+        is Source.History -> historyOf(src).size
     }
 
     suspend fun at(src: Source, index: Int): Item? = when (src) {
         is Source.Browse -> { val (w1, w2, w3, w4) = com.kutlusoy.proiptv.parse.SearchMatch.four(src.query); db.items().at(src.kind, src.accountIds, src.category, w1, w2, w3, w4, src.country, src.year, src.flags, index) }
-        is Source.Favs -> db.favorites().itemAt(src.listId, index)
-        is Source.History -> db.history().items().getOrNull(index)
+        is Source.Favs -> src.accountIds?.let { db.favorites().itemAtFor(src.listId, index, it) } ?: db.favorites().itemAt(src.listId, index)
+        is Source.History -> historyOf(src).getOrNull(index)
     }
+
+    private suspend fun historyOf(src: Source.History): List<Item> = db.history().items().filter { src.accountIds == null || it.accountId in src.accountIds }
 
     suspend fun target(item: Item): PlayTarget? = withContext(Dispatchers.IO) {
         val account = db.accounts().get(item.accountId) ?: return@withContext null
@@ -262,6 +265,30 @@ class Repository(val db: AppDatabase, private val secrets: SecretBox, val sync: 
             db.favorites().add(Favorite(listId, accountId, kind, remoteId, name, (max ?: 0.0) + SortKeys.STEP))
         } else {
             db.favorites().remove(listId, accountId, kind, remoteId)
+        }
+    }
+
+    /**
+     * Puts a favorite right behind another one ([afterRemoteId] null: to the front) in the whole list. The list on the screen may show only some accounts,
+     * so the place is given by the neighbor and not by a number.
+     */
+    suspend fun moveFavoriteAfter(listId: Long, kind: Int, accountId: Long, remoteId: String, afterAccountId: Long?, afterRemoteId: String?) {
+        val entries = db.favorites().entries(listId).filter { it.kind == kind }
+        val from = entries.indexOfFirst { it.accountId == accountId && it.remoteId == remoteId }
+        if (from < 0) return
+        val moved = entries[from]
+        val rest = entries.toMutableList().also { it.removeAt(from) }
+        val to = if (afterRemoteId == null) 0 else rest.indexOfFirst { it.accountId == afterAccountId && it.remoteId == afterRemoteId } + 1
+        if (afterRemoteId != null && to == 0) return
+        val prev = rest.getOrNull(to - 1)?.sortKey
+        val next = rest.getOrNull(to)?.sortKey
+        val key = SortKeys.between(prev, next)
+        if (key != null) {
+            db.favorites().setKey(listId, moved.accountId, moved.kind, moved.remoteId, key)
+        } else {
+            rest.add(to, moved)
+            val keys = SortKeys.evenly(rest.size)
+            rest.forEachIndexed { i, f -> db.favorites().setKey(listId, f.accountId, f.kind, f.remoteId, keys[i]) }
         }
     }
 

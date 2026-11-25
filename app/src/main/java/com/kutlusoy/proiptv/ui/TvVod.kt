@@ -90,8 +90,10 @@ internal fun TvVodTopBar(showSort: Boolean, title: String, sort: Int, onSort: (I
 
 /** The titles that were started and not finished, for the list "Continue watching" (movies; series by their last started episode). */
 @Composable
-internal fun ContinuePane(vm: MainViewModel, kind: Int, favKeys: Set<Triple<Long, Int, String>>, onToggleFavorite: (Item) -> Unit, onOpen: (Item) -> Unit) {
-    val rows by vm.repo.db.progress().continueWatching().collectAsState(initial = emptyList())
+internal fun ContinuePane(vm: MainViewModel, kind: Int, favKeys: Set<Triple<Long, Int, String>>, onToggleFavorite: (Item) -> Unit, accountIds: List<Long>? = null, onOpen: (Item) -> Unit) {
+    val allRows by vm.repo.db.progress().continueWatching().collectAsState(initial = emptyList())
+    // only the accounts that are chosen in the filter
+    val rows = if (accountIds == null) allRows else allRows.filter { it.accountId in accountIds }
     val items by produceState(emptyList<Item>(), rows, kind) {
         val seen = HashSet<Long>()
         val out = ArrayList<Item>()

@@ -310,6 +310,24 @@ interface FavoriteDao {
     suspend fun itemAt(listId: Long, offset: Int): Item?
 
     @Query(
+        "SELECT i.* FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
+            "WHERE f.listId = :listId AND i.kind = 0 AND f.accountId IN (:ids) AND i.accountId IN (SELECT id FROM accounts WHERE enabled = 1) ORDER BY f.sortKey LIMIT 1 OFFSET :offset",
+    )
+    suspend fun itemAtFor(listId: Long, offset: Int, ids: List<Long>): Item?
+
+    @Query(
+        "SELECT COUNT(*) FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
+            "WHERE f.listId = :listId AND i.kind = 0 AND f.accountId IN (:ids) AND i.accountId IN (SELECT id FROM accounts WHERE enabled = 1)",
+    )
+    suspend fun presentCountFor(listId: Long, ids: List<Long>): Int
+
+    @Query(
+        "SELECT i.* FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
+            "WHERE f.listId = :listId AND i.kind = 0 AND f.accountId IN (:ids) AND i.accountId IN (SELECT id FROM accounts WHERE enabled = 1) ORDER BY f.sortKey",
+    )
+    fun channelItemsFor(listId: Long, ids: List<Long>): Flow<List<Item>>
+
+    @Query(
         "SELECT COUNT(*) FROM favorites f JOIN items i ON i.accountId = f.accountId AND i.kind = f.kind AND i.remoteId = f.remoteId " +
             "WHERE f.listId = :listId AND i.kind = 0 AND i.accountId IN (SELECT id FROM accounts WHERE enabled = 1)",
     )

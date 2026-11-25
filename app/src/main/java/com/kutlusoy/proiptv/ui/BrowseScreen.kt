@@ -383,12 +383,14 @@ fun BrowseScreen(kind: Int, vm: MainViewModel) {
         val useRows = kind != Kind.LIVE && !favMode && !contMode && category == null && query.isBlank() && genre == null && effective != null && categories.isNotEmpty()
         Box(Modifier.fillMaxSize().focusRequester(contentEntry).focusGroup()) {
         androidx.compose.runtime.CompositionLocalProvider(LocalRestoreId provides restoreId) {
+        // with one account chosen in the filter the lists show only that account
+        val accountFilter = if (selected != null) ids else null
         if (showHist) {
-            HistoryPane(vm)
+            HistoryPane(vm, accountFilter)
         } else if (showCont) {
-            ContinuePane(vm, kind, favKeys, onToggleFavorite = toggleFavorite) { open(it) }
+            ContinuePane(vm, kind, favKeys, onToggleFavorite = toggleFavorite, accountIds = accountFilter) { open(it) }
         } else if (showFav) {
-            FavoritesPane(vm, kind, tvFavId.takeIf { tvLists } ?: favList, manage = !tvLists, onSelect = { favList = it }, onOpen = open)
+            FavoritesPane(vm, kind, tvFavId.takeIf { tvLists } ?: favList, manage = !tvLists, onSelect = { favList = it }, onOpen = open, accountIds = accountFilter)
         } else if (useRows) {
             LazyColumn(Modifier.fillMaxSize(), state = rowsState, contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(categories, key = { it.id }) { c ->
@@ -580,7 +582,7 @@ private fun CategoryRow(
 }
 
 @Composable
-private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, manage: Boolean, onSelect: (Long) -> Unit, onOpen: (Item) -> Unit) {
+private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, manage: Boolean, onSelect: (Long) -> Unit, onOpen: (Item) -> Unit, accountIds: List<Long>? = null) {
     val allLists by vm.favLists.collectAsState()
     val lists = allLists.filter { it.kind == kind }
     val listId = selectedList?.takeIf { id -> lists.any { it.id == id } } ?: lists.firstOrNull()?.id
@@ -615,7 +617,9 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, man
             }
         }
         if (current != null) {
-            val rows by vm.favoriteRows(current.id, kind).collectAsState(initial = emptyList())
+            val allRows by vm.favoriteRows(current.id, kind).collectAsState(initial = emptyList())
+            // only the accounts that are chosen in the filter
+            val rows = if (accountIds == null) allRows else allRows.filter { it.accountId in accountIds }
             val latestRows by rememberUpdatedState(rows)
             var picked by remember { mutableStateOf<String?>(null) }
             var working by remember { mutableStateOf<List<FavoriteRow>?>(null) }
@@ -642,8 +646,10 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, man
                 val to = list?.indexOfFirst { keyOf(it) == picked } ?: -1
                 picked = null
                 if (list != null && to >= 0 && to != origin) {
-                    val from = origin
-                    vm.run { vm.repo.moveFavorite(current.id, kind, from, to) }
+                    // the place is given by the neighbor in front of it (the list may show only some of the accounts)
+                    val moved = list[to]
+                    val before = list.getOrNull(to - 1)
+                    vm.run { vm.repo.moveFavoriteAfter(current.id, kind, moved.accountId, moved.remoteId, before?.accountId, before?.remoteId) }
                 } else {
                     working = null
                 }
@@ -722,7 +728,7 @@ private fun FavoritesPane(vm: MainViewModel, kind: Int, selectedList: Long?, man
                                 if (isPicked) drop()
                             } else if (kind == Kind.LIVE) {
                                 val present = rows.take(index).count { it.itemId != null }
-                                vm.player.value = PlayRequest.Zap(Source.Favs(current.id), present)
+                                vm.player.value = PlayRequest.Zap(Source.Favs(current.id, accountIds), present)
                             } else {
                                 val id = row.itemId ?: return@ChannelRow
                                 vm.run { vm.repo.db.items().get(id)?.let(onOpen) }

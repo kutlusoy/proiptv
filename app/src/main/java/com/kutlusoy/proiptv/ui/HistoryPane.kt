@@ -35,8 +35,10 @@ import com.kutlusoy.proiptv.data.Source
 
 /** The last watched live channels as logo tiles, the newest one first. */
 @Composable
-fun HistoryPane(vm: MainViewModel) {
-    val rows by vm.repo.db.history().rows().collectAsState(initial = emptyList())
+fun HistoryPane(vm: MainViewModel, accountIds: List<Long>? = null) {
+    val all by vm.repo.db.history().rows().collectAsState(initial = emptyList())
+    // only the accounts that are chosen in the filter
+    val rows = if (accountIds == null) all else all.filter { it.item.accountId in accountIds }
     if (rows.isEmpty()) {
         Text(stringResource(R.string.history_empty), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(16.dp))
         return
@@ -48,7 +50,7 @@ fun HistoryPane(vm: MainViewModel) {
     ) {
         itemsIndexed(rows, key = { _, r -> "${r.item.accountId}|${r.item.remoteId}" }) { i, row ->
             Column(
-                Modifier.clip(RoundedCornerShape(10.dp)).focusHighlight().clickable { vm.player.value = PlayRequest.Zap(Source.History, i) }.padding(6.dp),
+                Modifier.clip(RoundedCornerShape(10.dp)).focusHighlight().clickable { vm.player.value = PlayRequest.Zap(Source.History(accountIds), i) }.padding(6.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Box(

@@ -199,7 +199,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun liveChannels(ids: List<Long>, category: String?) = db.items().liveChannels(ids, category)
 
-    fun favoriteChannels(listId: Long) = db.favorites().channelItems(listId)
+    fun favoriteChannels(listId: Long, accountIds: List<Long>? = null) = if (accountIds == null) db.favorites().channelItems(listId) else db.favorites().channelItemsFor(listId, accountIds)
 
     fun guideChannels(ids: List<Long>, category: String?, query: String, from: Long) = com.kutlusoy.proiptv.parse.SearchMatch.four(query).let { (w1, w2, w3, w4) -> db.programs().guideChannels(ids, category, w1, w2, w3, w4, from) }
 

@@ -109,7 +109,7 @@ fun EpgScreen(vm: MainViewModel) {
     val tvSource = tvLists.getOrNull(tab)?.source
     val tvChannels by remember(tvSource) {
         when (tvSource) {
-            is Source.Favs -> vm.favoriteChannels(tvSource.listId)
+            is Source.Favs -> vm.favoriteChannels(tvSource.listId, tvSource.accountIds)
             is Source.Browse -> vm.liveChannels(tvSource.accountIds, tvSource.category)
             is Source.History, null -> flowOf(emptyList())
         }
