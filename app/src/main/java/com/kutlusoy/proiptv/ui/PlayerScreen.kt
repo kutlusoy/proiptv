@@ -932,9 +932,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             extra = if (zoom > 100) {
                 {
                     Text(stringResource(R.string.player_pan_x), style = MaterialTheme.typography.labelLarge)
-                    androidx.compose.material3.Slider(value = panX.toFloat(), onValueChange = { panX = it.toInt(); app.prefs.videoPanX = panX }, valueRange = -100f..100f, modifier = Modifier.focusHighlight())
+                    androidx.compose.material3.Slider(value = panX.toFloat(), onValueChange = { panX = it.toInt(); app.prefs.videoPanX = panX }, valueRange = -100f..100f, modifier = Modifier.focusHighlight().leaveOnUpDown())
                     Text(stringResource(R.string.player_pan_y), style = MaterialTheme.typography.labelLarge)
-                    androidx.compose.material3.Slider(value = panY.toFloat(), onValueChange = { panY = it.toInt(); app.prefs.videoPanY = panY }, valueRange = -100f..100f, modifier = Modifier.focusHighlight())
+                    androidx.compose.material3.Slider(value = panY.toFloat(), onValueChange = { panY = it.toInt(); app.prefs.videoPanY = panY }, valueRange = -100f..100f, modifier = Modifier.focusHighlight().leaveOnUpDown())
                 }
             } else null,
         ) { zoomDialog = false }
@@ -1178,7 +1178,7 @@ private fun PictureDialog(
         text = {
             Column {
                 Text(valueText, style = MaterialTheme.typography.titleMedium)
-                androidx.compose.material3.Slider(value = value, onValueChange = { onChange(it.toInt()) }, valueRange = range, modifier = Modifier.focusHighlight())
+                androidx.compose.material3.Slider(value = value, onValueChange = { onChange(it.toInt()) }, valueRange = range, modifier = Modifier.focusHighlight().leaveOnUpDown())
                 extra?.invoke()
             }
         },

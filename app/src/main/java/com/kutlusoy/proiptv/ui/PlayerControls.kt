@@ -27,6 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -108,6 +112,22 @@ fun RoundControl(glyph: PlayerGlyph, description: String, onClick: () -> Unit, m
 }
 
 
+/**
+ * A slider takes Up and Down as "more" and "less" as well as Left and Right, so a remote control cannot leave it. With this modifier Up and Down move
+ * the focus to the neighbor above or below and only Left and Right change the value.
+ */
+fun Modifier.leaveOnUpDown(): Modifier = composed {
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    onPreviewKeyEvent { e ->
+        if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) false
+        else when (e.key) {
+            androidx.compose.ui.input.key.Key.DirectionUp -> { focus.moveFocus(androidx.compose.ui.focus.FocusDirection.Up); true }
+            androidx.compose.ui.input.key.Key.DirectionDown -> { focus.moveFocus(androidx.compose.ui.focus.FocusDirection.Down); true }
+            else -> false
+        }
+    }
+}
+
 /** Hours and minutes with an h, for example 01:35h. */
 fun hoursMinutes(ms: Long): String {
     val minutes = (ms / 60_000).coerceAtLeast(0)
@@ -132,7 +152,7 @@ fun TimeBar(
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
             }
-            if (onSeek != null) Slider(value = f, onValueChange = onSeek, modifier = sliderModifier.fillMaxWidth())
+            if (onSeek != null) Slider(value = f, onValueChange = onSeek, modifier = sliderModifier.leaveOnUpDown().fillMaxWidth())
             else LinearProgressIndicator(progress = { f }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
         }
         Text(right, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 10.dp, bottom = 2.dp))
