@@ -211,6 +211,8 @@
     <string name="detail_season_watched">Sezonu izlendi olarak işaretle</string>
     <string name="detail_season_unwatched">Sezonu izlenmedi olarak işaretle</string>
     <string name="settings_interface">Arayüz</string>
+    <string name="settings_tv_columns">Üç sütun (TV)</string>
+    <string name="settings_tv_columns_hint">Kanal tarayıcısı listeleri, kanalları ve önizlemeyi yan yana gösterir. Sol listeleri, sağ tam ekranı açar.</string>
     <string name="settings_font_size">Yazı boyutu</string>
     <string name="font_fine">İnce</string>
     <string name="font_medium">Orta</string>
@@ -327,7 +329,7 @@
     <string name="epg_earlier">Daha erken</string>
     <string name="epg_later">Daha geç</string>
     <string name="tv_live_badge">CANLI TV</string>
-    <string name="tv_browse_hint">Sol: listeler. İlk kanaldan yukarı: sütunlar. OK\'e basılı tut: favori.</string>
+    <string name="tv_browse_hint">Sol: listeler. Sağ: tam ekran. OK\'e basılı tut: favori.</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
     <string name="settings_intro">Başlangıçta girişi göster</string>

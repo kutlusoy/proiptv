@@ -221,6 +221,8 @@
     <string name="detail_season_watched">Marcar la temporada como vista</string>
     <string name="detail_season_unwatched">Marcar la temporada como no vista</string>
     <string name="settings_interface">Interfaz</string>
+    <string name="settings_tv_columns">Tres columnas (TV)</string>
+    <string name="settings_tv_columns_hint">El navegador de canales muestra listas, canales y vista previa juntos. Izquierda abre las listas, derecha la pantalla completa.</string>
     <string name="settings_font_size">Tamaño del texto</string>
     <string name="font_fine">Fina</string>
     <string name="font_medium">Media</string>
@@ -327,7 +329,7 @@
     <string name="epg_earlier">Antes</string>
     <string name="epg_later">Después</string>
     <string name="tv_live_badge">TV EN DIRECTO</string>
-    <string name="tv_browse_hint">Izquierda: listas. Arriba desde el primer canal: columnas. OK mantenido: favorito.</string>
+    <string name="tv_browse_hint">Izquierda: listas. Derecha: pantalla completa. OK mantenido: favorito.</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
     <string name="settings_intro">Mostrar la intro al iniciar</string>

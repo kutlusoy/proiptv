@@ -97,8 +97,6 @@ internal fun TvBrowseLayer(
     wide: Boolean = false,
     favorites: Set<Triple<Long, Int, String>> = emptySet(),
     listFocused: Boolean = false,
-    buttonFocused: Boolean = false,
-    columnsOn: Boolean = false,
 ) {
     val source = lists.getOrNull(listPos)?.source
     val time = DateFormat.getTimeInstance(DateFormat.SHORT)
@@ -124,11 +122,6 @@ internal fun TvBrowseLayer(
             Row(Modifier.fillMaxWidth().height(64.dp).background(Palette.WineDeep), verticalAlignment = Alignment.CenterVertically) {
                 if (!wide) Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, Modifier.padding(start = 8.dp).size(36.dp), tint = Color.White)
                 Text(lists.getOrNull(listPos)?.name.orEmpty(), Modifier.weight(1f).padding(horizontal = if (wide) 12.dp else 0.dp), color = Color.White, style = MaterialTheme.typography.titleLarge, textAlign = if (wide) TextAlign.Start else TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                // the switch of the three columns (Up from the first channel reaches it, OK switches)
-                Box(
-                    Modifier.padding(end = 8.dp).size(44.dp).then(if (buttonFocused) Modifier.border(3.dp, Color.White, RoundedCornerShape(8.dp)) else Modifier),
-                    contentAlignment = Alignment.Center,
-                ) { ColumnsGlyph(if (columnsOn) Palette.WineSoft else Color.White) }
             }
             val state = rememberLazyListState()
             LaunchedEffect(highlighted, source) { runCatching { state.animateScrollToItem((highlighted - 3).coerceAtLeast(0)) } }
@@ -150,7 +143,7 @@ internal fun TvBrowseLayer(
                     }
                 }
             }
-            Text(stringResource(R.string.tv_browse_hint), Modifier.padding(top = 6.dp, end = 8.dp), color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelMedium, maxLines = 2)
+            if (wide) Text(stringResource(R.string.tv_browse_hint), Modifier.padding(top = 6.dp, end = 8.dp), color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelMedium, maxLines = 2)
         }
         }
         Column(Modifier.weight(1f - left).fillMaxHeight()) {
@@ -193,13 +186,5 @@ internal fun TvBrowseLayer(
                 }
             }
         }
-    }
-}
-
-/** Three upright bars: the switch for the view with the lists and the channels side by side. */
-@Composable
-private fun ColumnsGlyph(color: Color) {
-    Row(Modifier.size(28.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-        repeat(3) { Box(Modifier.width(4.dp).height(22.dp).background(color, RoundedCornerShape(2.dp))) }
     }
 }

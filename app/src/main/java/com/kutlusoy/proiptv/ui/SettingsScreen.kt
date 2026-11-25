@@ -121,6 +121,14 @@ fun SettingsScreen(vm: MainViewModel) {
                     )
                     Hint(stringResource(R.string.settings_interface_hint))
                 }
+                if (LocalTv.current) {
+                    var columns by remember { mutableStateOf(prefs.tvColumns) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.settings_tv_columns), Modifier.weight(1f))
+                        androidx.compose.material3.Switch(checked = columns, onCheckedChange = { columns = it; prefs.tvColumns = it }, modifier = Modifier.focusHighlight())
+                    }
+                    Hint(stringResource(R.string.settings_tv_columns_hint))
+                }
                 Labeled(stringResource(R.string.settings_font_size)) {
                     val size by vm.fontSize.collectAsState()
                     val sizes = listOf(0 to stringResource(R.string.font_fine), 1 to stringResource(R.string.font_medium), 2 to stringResource(R.string.font_large))

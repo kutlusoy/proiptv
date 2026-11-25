@@ -221,6 +221,8 @@
     <string name="detail_season_watched">Marquer la saison comme vue</string>
     <string name="detail_season_unwatched">Marquer la saison comme non vue</string>
     <string name="settings_interface">Interface</string>
+    <string name="settings_tv_columns">Trois colonnes (TV)</string>
+    <string name="settings_tv_columns_hint">Le navigateur de chaînes affiche les listes, les chaînes et l\'aperçu côte à côte. Gauche ouvre les listes, droite le plein écran.</string>
     <string name="settings_font_size">Taille du texte</string>
     <string name="font_fine">Fine</string>
     <string name="font_medium">Moyenne</string>
@@ -327,7 +329,7 @@
     <string name="epg_earlier">Plus tôt</string>
     <string name="epg_later">Plus tard</string>
     <string name="tv_live_badge">TV EN DIRECT</string>
-    <string name="tv_browse_hint">Gauche : listes. Haut depuis la première chaîne : colonnes. OK maintenu : favori.</string>
+    <string name="tv_browse_hint">Gauche : listes. Droite : plein écran. OK maintenu : favori.</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
     <string name="settings_intro">Afficher l\'intro au démarrage</string>

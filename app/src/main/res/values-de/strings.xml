@@ -221,6 +221,8 @@
     <string name="detail_season_watched">Staffel als gesehen markieren</string>
     <string name="detail_season_unwatched">Staffel als ungesehen markieren</string>
     <string name="settings_interface">Oberfläche</string>
+    <string name="settings_tv_columns">Drei Spalten (TV)</string>
+    <string name="settings_tv_columns_hint">Der Senderbrowser zeigt Listen, Sender und Vorschau nebeneinander. Links öffnet die Listen, Rechts das Vollbild.</string>
     <string name="settings_font_size">Schriftgröße</string>
     <string name="font_fine">Fein</string>
     <string name="font_medium">Mittel</string>
@@ -327,7 +329,7 @@
     <string name="epg_earlier">Früher</string>
     <string name="epg_later">Später</string>
     <string name="tv_live_badge">LIVE-TV</string>
-    <string name="tv_browse_hint">Links: Listen. Hoch vom ersten Sender: Spalten. OK halten: Favorit.</string>
+    <string name="tv_browse_hint">Links: Listen. Rechts: Vollbild. OK halten: Favorit.</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
     <string name="settings_intro">Intro beim Start zeigen</string>

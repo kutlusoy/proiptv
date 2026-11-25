@@ -222,6 +222,8 @@
     <string name="detail_season_watched">Mark season as watched</string>
     <string name="detail_season_unwatched">Mark season as unwatched</string>
     <string name="settings_interface">Interface</string>
+    <string name="settings_tv_columns">Three columns (TV)</string>
+    <string name="settings_tv_columns_hint">The channel browser shows the lists, the channels and the preview side by side. Left opens the lists, Right opens the full screen.</string>
     <string name="settings_font_size">Font size</string>
     <string name="font_fine">Fine</string>
     <string name="font_medium">Medium</string>
@@ -328,7 +330,7 @@
     <string name="epg_earlier">Earlier</string>
     <string name="epg_later">Later</string>
     <string name="tv_live_badge">LIVE TV</string>
-    <string name="tv_browse_hint">Left: lists. Up from the first channel: columns. Hold OK: favorite.</string>
+    <string name="tv_browse_hint">Left: lists. Right: full screen. Hold OK: favorite.</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
     <string name="settings_intro">Show the intro at start</string>
