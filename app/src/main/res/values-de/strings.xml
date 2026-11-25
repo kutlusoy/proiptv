@@ -323,6 +323,7 @@
     <string name="epg_earlier">Früher</string>
     <string name="epg_later">Später</string>
     <string name="tv_live_badge">LIVE-TV</string>
+    <string name="tv_browse_hint">Links: Listen. OK halten: zu Favoriten.</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
     <string name="settings_intro">Intro beim Start zeigen</string>

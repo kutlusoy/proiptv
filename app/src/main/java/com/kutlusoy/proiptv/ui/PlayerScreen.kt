@@ -210,6 +210,11 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap && request.source !is Source.History && !request.direct) }
     var playSource by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
     var browseList by remember { mutableIntStateOf(0) }
+    // TV browser: 0 the channels have the focus, 1 the column with the lists (favorites, categories) is open and has it
+    var browseFocus by remember { mutableIntStateOf(0) }
+    var tvFavTarget by remember { mutableStateOf<Item?>(null) }
+    var tvRemoveFav by remember { mutableStateOf<Item?>(null) }
+    val okHold = remember { booleanArrayOf(false, false) }
     // the list the browser opened with (always first) and the position of the list that the running channel comes from
     var browseOrigin by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
     var playingList by remember { mutableIntStateOf(0) }
@@ -274,7 +279,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     val first = remember { FocusRequester() }
     val active = catchup ?: target
     val zapping = request is PlayRequest.Zap && catchup == null
-    val dialogOpen = brightnessDialog || zoomDialog || tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog || listOpen
+    val dialogOpen = tvFavTarget != null || tvRemoveFav != null || brightnessDialog || zoomDialog || tracksDialog || guideDialog || listsDialog || recordDialog || moreDialog || removeFavDialog || listOpen
     val activeNow by rememberUpdatedState(active)
     val hubKey = active?.let { "${it.accountId}:${it.remoteId}" }
     val recordingHere = hubKey?.let { k -> activeRecs.firstOrNull { it.hubKey == k } }
@@ -572,16 +577,33 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     fun okInBrowser() {
         if (browseList == playingList && browseIndex == index) confirmBrowse() else playHighlighted()
     }
+    // hold OK on a channel: it joins the favorites (or leaves them); with several lists the dialog asks which
+    fun favoriteHighlighted() {
+        val target = highlightedItem ?: return
+        val isFav = Triple(target.accountId, target.kind, target.remoteId) in favKeys
+        if (allFavLists.filter { it.kind == target.kind }.size > 1) {
+            tvFavTarget = target
+        } else {
+            val list = allFavLists.firstOrNull { it.kind == target.kind } ?: return
+            if (isFav) tvRemoveFav = target
+            else {
+                vm.run { vm.repo.setFavorite(list.id, target.accountId, target.kind, target.remoteId, target.name, true) }
+                info = ctx.getString(R.string.fav_add) + ": " + target.name
+            }
+        }
+    }
     fun switchList(delta: Int) {
         if (browseLists.isEmpty()) return
         browseList = ((browseList + delta) % browseLists.size + browseLists.size) % browseLists.size
         browseIndex = if (browseList == playingList) index else 0
     }
+    // the list column grows when the lists column is open (three columns)
+    val browseLeft by androidx.compose.animation.core.animateFloatAsState(if (browseFocus == 1) TV_LEFT_THREE else TV_LEFT_TWO, androidx.compose.animation.core.tween(220), label = "browse width")
     val tvBack = LocalTv.current && request is PlayRequest.Zap
     BackHandler {
         when {
             // the browser is left to the list of channels (the grid), the full player goes back to the browser
-            tvBrowse -> onClose()
+            tvBrowse -> if (browseFocus == 1) browseFocus = 0 else onClose()
             listOpen -> listOpen = false
             tvBack -> scope.launch {
                 var origin = playSource
@@ -649,14 +671,32 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             .focusRequester(root)
             .focusable()
             .onPreviewKeyEvent { e ->
+                // OK in the browser: a short press does what it did before (it is done when the key comes up), a long press adds the channel to the favorites
+                if (tvBrowse && !dialogOpen && (e.key == Key.DirectionCenter || e.key == Key.Enter)) {
+                    return@onPreviewKeyEvent when (e.type) {
+                        KeyEventType.KeyDown -> {
+                            if (e.nativeKeyEvent.repeatCount == 0) { okHold[0] = true; okHold[1] = false }
+                            else if (okHold[0] && !okHold[1] && browseFocus == 0) { okHold[1] = true; favoriteHighlighted() }
+                            true
+                        }
+                        KeyEventType.KeyUp -> {
+                            val shortPress = okHold[0] && !okHold[1]
+                            okHold[0] = false
+                            okHold[1] = false
+                            if (shortPress) { if (browseFocus == 1) browseFocus = 0 else okInBrowser() }
+                            true
+                        }
+                        else -> false
+                    }
+                }
                 if (e.type != KeyEventType.KeyDown || dialogOpen) return@onPreviewKeyEvent false
                 if (tvBrowse) {
                     return@onPreviewKeyEvent when (e.key) {
-                        Key.DirectionUp, Key.ChannelDown, Key.PageUp -> { browseStep(-1); true }
-                        Key.DirectionDown, Key.ChannelUp, Key.PageDown -> { browseStep(1); true }
-                        Key.DirectionLeft -> { switchList(-1); true }
-                        Key.DirectionRight -> { switchList(1); true }
-                        Key.DirectionCenter, Key.Enter -> { okInBrowser(); true }
+                        Key.DirectionUp, Key.ChannelDown, Key.PageUp -> { if (browseFocus == 1) switchList(-1) else browseStep(-1); true }
+                        Key.DirectionDown, Key.ChannelUp, Key.PageDown -> { if (browseFocus == 1) switchList(1) else browseStep(1); true }
+                        // Left opens the column with the lists, Right closes it again
+                        Key.DirectionLeft -> { if (browseFocus == 0 && browseLists.size > 1) browseFocus = 1; true }
+                        Key.DirectionRight -> { if (browseFocus == 1) browseFocus = 0; true }
                         else -> false
                     }
                 }
@@ -742,7 +782,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         val textured = zoomed || brightness != 0
         androidx.compose.runtime.key(textured) {
             AndroidView(
-                modifier = if (tvBrowse) Modifier.tvPreviewRect() else Modifier.fillMaxSize(),
+                modifier = if (tvBrowse) Modifier.tvPreviewRect(browseLeft) else Modifier.fillMaxSize(),
                 factory = { c ->
                     (if (textured) android.view.LayoutInflater.from(c).inflate(R.layout.player_view_texture, null) as PlayerView else PlayerView(c))
                         .apply { useController = false; player = exo; keepScreenOn = true; clipChildren = false }
@@ -871,7 +911,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             }
         }
         if (tvBrowse) {
-            TvBrowseLayer(vm, browseLists, browseList, browseCount, browseIndex, highlightedItem, item, nowNext.first)
+            TvBrowseLayer(vm, browseLists, browseList, browseCount, browseIndex, highlightedItem, item, nowNext.first, browseLeft, browseFocus == 1, favKeys)
         }
         if (listOpen && request is PlayRequest.Zap) {
             Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { listOpen = false })
@@ -982,6 +1022,13 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         }
     }
     if (listsDialog) item?.let { ListsDialog(vm, it) { listsDialog = false } }
+    tvFavTarget?.let { ListsDialog(vm, it) { tvFavTarget = null } }
+    tvRemoveFav?.let { target ->
+        RemoveFavoriteDialog(target.name, onConfirm = {
+            allFavLists.filter { it.kind == target.kind }.firstOrNull()?.let { list -> vm.run { vm.repo.setFavorite(list.id, target.accountId, target.kind, target.remoteId, target.name, false) } }
+            tvRemoveFav = null
+        }, onDismiss = { tvRemoveFav = null })
+    }
     if (removeFavDialog) {
         item?.let { i ->
             RemoveFavoriteDialog(i.name, onConfirm = {

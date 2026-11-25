@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -62,17 +63,18 @@ internal suspend fun browseListsFor(vm: MainViewModel, enabled: List<com.kutluso
 /** A list that the channel browser of the TV player can show: a favorites list, all channels or one category. */
 internal data class BrowseList(val name: String, val source: Source)
 
-private const val LEFT = 0.32f
-private const val RIGHT = 0.68f
+/** The share of the width that the list column has: with the lists column next to it (three columns) it is wider. */
+internal const val TV_LEFT_TWO = 0.32f
+internal const val TV_LEFT_THREE = 0.52f
 private const val VIDEO_OF_RIGHT = 0.62f
 private const val TOP = 0.5f
 
-/** Places the video in the window of the browser: top, right of the list, left of the info card. */
-internal fun Modifier.tvPreviewRect(): Modifier = layout { measurable, constraints ->
+/** Places the video in the window of the browser: top, right of the list(s), left of the info card. */
+internal fun Modifier.tvPreviewRect(left: Float = TV_LEFT_TWO): Modifier = layout { measurable, constraints ->
     val w = constraints.maxWidth
     val h = constraints.maxHeight
-    val placeable = measurable.measure(Constraints.fixed((w * RIGHT * VIDEO_OF_RIGHT).toInt(), (h * TOP).toInt()))
-    layout(w, h) { placeable.place((w * LEFT).toInt(), 0) }
+    val placeable = measurable.measure(Constraints.fixed((w * (1f - left) * VIDEO_OF_RIGHT).toInt(), (h * TOP).toInt()))
+    layout(w, h) { placeable.place((w * left).toInt(), 0) }
 }
 
 /**
@@ -89,16 +91,34 @@ internal fun TvBrowseLayer(
     highlightedItem: Item?,
     playing: Item?,
     playingNow: Program?,
+    left: Float = TV_LEFT_TWO,
+    wide: Boolean = false,
+    favorites: Set<Triple<Long, Int, String>> = emptySet(),
 ) {
     val source = lists.getOrNull(listPos)?.source
     val time = DateFormat.getTimeInstance(DateFormat.SHORT)
     Row(Modifier.fillMaxSize()) {
         // the TV cuts a little off the edges of the picture, so the list keeps a safe margin to the left, top and bottom
-        Column(Modifier.weight(LEFT).fillMaxHeight().background(Palette.Velvet).padding(start = 40.dp, top = 20.dp, bottom = 16.dp)) {
+        Row(Modifier.weight(left).fillMaxHeight().background(Palette.Velvet).padding(start = 40.dp, top = 20.dp, bottom = 16.dp)) {
+        if (wide) {
+            // the lists (favorites, categories) in a column of their own: Up and Down choose, OK or Right goes back to the channels
+            val listsState = rememberLazyListState()
+            LaunchedEffect(listPos) { runCatching { listsState.animateScrollToItem((listPos - 3).coerceAtLeast(0)) } }
+            LazyColumn(Modifier.weight(0.46f).fillMaxHeight().background(Palette.Surface), state = listsState) {
+                items(lists.size, key = { it }) { i ->
+                    Row(
+                        Modifier.fillMaxWidth().then(if (i == listPos) Modifier.background(Palette.Wine, RoundedCornerShape(6.dp)) else Modifier).padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(lists[i].name, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = if (i == listPos) FontWeight.Bold else FontWeight.Normal)
+                    }
+                }
+            }
+        }
+        Column(Modifier.weight(if (wide) 0.54f else 1f).fillMaxHeight().padding(start = if (wide) 8.dp else 0.dp)) {
             Row(Modifier.fillMaxWidth().height(64.dp).background(Palette.WineDeep), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, Modifier.padding(start = 8.dp).size(36.dp), tint = Color.White)
-                Text(lists.getOrNull(listPos)?.name.orEmpty(), Modifier.weight(1f), color = Color.White, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.padding(end = 8.dp).size(36.dp), tint = Color.White)
+                if (!wide) Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, Modifier.padding(start = 8.dp).size(36.dp), tint = Color.White)
+                Text(lists.getOrNull(listPos)?.name.orEmpty(), Modifier.weight(1f).padding(horizontal = if (wide) 12.dp else 0.dp), color = Color.White, style = MaterialTheme.typography.titleLarge, textAlign = if (wide) TextAlign.Start else TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             val state = rememberLazyListState()
             LaunchedEffect(highlighted, source) { runCatching { state.animateScrollToItem((highlighted - 3).coerceAtLeast(0)) } }
@@ -112,12 +132,18 @@ internal fun TvBrowseLayer(
                         ) {
                             Logo(channel?.logo, Modifier.size(width = 56.dp, height = 36.dp), name = channel?.name)
                             Text(channel?.let { TitleParser.parse(it.name).title.ifBlank { it.name } } ?: "", color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            // the star of a favorite (Hold OK on a channel adds it or takes it away)
+                            if (channel?.let { Triple(it.accountId, it.kind, it.remoteId) in favorites } == true) {
+                                Icon(Icons.Filled.Star, null, Modifier.size(20.dp), tint = Color(0xFFFFC107))
+                            }
                         }
                     }
                 }
             }
+            Text(stringResource(R.string.tv_browse_hint), Modifier.padding(top = 6.dp, end = 8.dp), color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelMedium, maxLines = 2)
         }
-        Column(Modifier.weight(RIGHT).fillMaxHeight()) {
+        }
+        Column(Modifier.weight(1f - left).fillMaxHeight()) {
             Row(Modifier.weight(TOP).fillMaxWidth()) {
                 // the window of the video
                 Spacer(Modifier.weight(VIDEO_OF_RIGHT).fillMaxHeight())
