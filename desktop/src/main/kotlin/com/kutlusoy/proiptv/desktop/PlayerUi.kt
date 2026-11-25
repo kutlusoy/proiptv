@@ -74,6 +74,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -1200,6 +1201,12 @@ private fun TrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+/** A pointer that cannot be seen: it replaces the arrow while the picture is watched. */
+private val BlankPointer: androidx.compose.ui.input.pointer.PointerIcon by lazy {
+    val blank = java.awt.Toolkit.getDefaultToolkit().createCustomCursor(java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB), java.awt.Point(0, 0), "blank")
+    androidx.compose.ui.input.pointer.PointerIcon(blank)
+}
+
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: () -> Unit, onScroll: (Int) -> Unit, onTap: (() -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null, brightness: Int = 0, zoom: Int = 100, panX: Int = 0, panY: Int = 0, fitRequest: Int = 0, onFit: (Int) -> Unit = {}, onPan: (Int, Int) -> Unit = { _, _ -> }, onClick: (() -> Unit)? = null) {
@@ -1241,6 +1248,18 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
     val latestPan by androidx.compose.runtime.rememberUpdatedState(onPan)
     val latestPanX by androidx.compose.runtime.rememberUpdatedState(panX)
     val latestPanY by androidx.compose.runtime.rememberUpdatedState(panY)
+    // the mouse pointer goes away after 5 seconds without a move over the picture and comes back with the next move (the main picture only)
+    var pointerInside by remember { mutableStateOf(false) }
+    var lastPointerMove by remember { mutableStateOf(System.currentTimeMillis()) }
+    var pointerHidden by remember { mutableStateOf(false) }
+    LaunchedEffect(pointerInside, lastPointerMove) {
+        if (pointerInside && onTap == null) {
+            delay(5_000)
+            pointerHidden = true
+        } else {
+            pointerHidden = false
+        }
+    }
     // "Zoom Fit": the zoom that makes the picture fill the window (no black bars); the position goes back to the middle
     var area by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     var handledFit by remember { mutableStateOf(fitRequest) }
@@ -1277,6 +1296,11 @@ private fun VideoSurface(engine: VlcEngine, modifier: Modifier, onDoubleClick: (
                 .pointerInput(onTap != null) {
                     if (onTap != null) detectTapGestures(onTap = { latestTap?.invoke() }) else detectTapGestures(onDoubleTap = { latestDouble() }, onTap = { latestClick?.invoke() })
                 }
+                .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { pointerInside = true; pointerHidden = false; lastPointerMove = System.currentTimeMillis() }
+                .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Exit) { pointerInside = false; pointerHidden = false }
+                .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Move) { pointerHidden = false; lastPointerMove = System.currentTimeMillis() }
+                .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Press) { pointerHidden = false; lastPointerMove = System.currentTimeMillis() }
+                .pointerHoverIcon(if (pointerHidden) BlankPointer else androidx.compose.ui.input.pointer.PointerIcon.Default)
                 .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Scroll) { e -> latestScroll(e.changes.firstOrNull()?.scrollDelta?.y?.toInt() ?: 0) },
         ) {
             val img = image ?: return@Canvas
