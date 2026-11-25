@@ -136,12 +136,16 @@ private object FocusRingIndication : androidx.compose.foundation.IndicationNodeF
 }
 
 @Composable
-fun ProIptvTheme(tv: Boolean = false, content: @Composable () -> Unit) {
+fun ProIptvTheme(tv: Boolean = false, fontSize: Int = 2, content: @Composable () -> Unit) {
+    val base = androidx.compose.ui.platform.LocalDensity.current
+    val scale = when (fontSize) { 0 -> 0.85f; 1 -> 0.92f; else -> 1f }
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(base.density, base.fontScale * scale)) {
     MaterialTheme(colorScheme = Colors, shapes = AppShapes, typography = if (tv) tvTypography() else Typography()) {
         if (tv) {
             androidx.compose.runtime.CompositionLocalProvider(LocalTv provides true, androidx.compose.foundation.LocalIndication provides FocusRingIndication, androidx.compose.material3.LocalContentColor provides Colors.onBackground, content = content)
         } else {
             androidx.compose.runtime.CompositionLocalProvider(LocalTv provides false, androidx.compose.material3.LocalContentColor provides Colors.onBackground, content = content)
         }
+    }
     }
 }

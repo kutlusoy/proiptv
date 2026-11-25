@@ -49,6 +49,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = (app as ProIptvApp).prefs
     val uiMode = kotlinx.coroutines.flow.MutableStateFlow(prefs.uiMode)
 
+    val fontSize = kotlinx.coroutines.flow.MutableStateFlow(prefs.fontSize)
+
+    fun setFontSize(size: Int) {
+        prefs.fontSize = size
+        fontSize.value = size
+    }
+
     fun setUiMode(mode: Int) {
         prefs.uiMode = mode
         uiMode.value = mode

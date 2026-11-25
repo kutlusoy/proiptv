@@ -211,6 +211,10 @@
     <string name="detail_season_watched">Sezonu izlendi olarak işaretle</string>
     <string name="detail_season_unwatched">Sezonu izlenmedi olarak işaretle</string>
     <string name="settings_interface">Arayüz</string>
+    <string name="settings_font_size">Yazı boyutu</string>
+    <string name="font_fine">İnce</string>
+    <string name="font_medium">Orta</string>
+    <string name="font_large">Büyük</string>
     <string name="interface_tv">TV (büyük, kumanda)</string>
     <string name="interface_touch">Dokunmatik (telefon, tablet)</string>
     <string name="settings_interface_hint">Otomatik, Android TV ve TV kutularında TV görünümünü kullanır: solda menü, daha büyük yazılar ve afişler, kumanda dostu. Yalnızca cihazınız yanlış algılanırsa değiştirin.</string>

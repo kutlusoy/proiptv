@@ -134,7 +134,8 @@ class MainActivity : AppCompatActivity() {
         val systemTv = isTelevision(this)
         setContent {
             val mode by vm.uiMode.collectAsState()
-            ProIptvTheme(useTvLayout(mode, systemTv)) { AppRoot(vm) }
+            val font by vm.fontSize.collectAsState()
+            ProIptvTheme(useTvLayout(mode, systemTv), font) { AppRoot(vm) }
         }
     }
 }

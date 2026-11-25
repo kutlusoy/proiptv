@@ -17,6 +17,11 @@ class Prefs(context: Context) {
         get() = sp.getInt("ui_mode", 0)
         set(value) = sp.edit().putInt("ui_mode", value).apply()
 
+    /** Text size: 0 fine, 1 medium, 2 large (the former size). */
+    var fontSize: Int
+        get() = sp.getInt("font_size", 1)
+        set(value) = sp.edit().putInt("font_size", value).apply()
+
     /** Counts the changes of how the lists are filtered; a lower number than the app knows means the stored lists must be loaded again once. */
     var filterSync: Int
         get() = sp.getInt("filter_sync", 0)

@@ -121,6 +121,11 @@ fun SettingsScreen(vm: MainViewModel) {
                     )
                     Hint(stringResource(R.string.settings_interface_hint))
                 }
+                Labeled(stringResource(R.string.settings_font_size)) {
+                    val size by vm.fontSize.collectAsState()
+                    val sizes = listOf(0 to stringResource(R.string.font_fine), 1 to stringResource(R.string.font_medium), 2 to stringResource(R.string.font_large))
+                    DropdownField(selected = sizes.first { it.first == size }.second, options = sizes, onSelect = { vm.setFontSize(it) })
+                }
             }
 
             if (com.kutlusoy.proiptv.BuildConfig.DEBUG) {
