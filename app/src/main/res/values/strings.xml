@@ -324,7 +324,7 @@
     <string name="epg_earlier">Earlier</string>
     <string name="epg_later">Later</string>
     <string name="tv_live_badge">LIVE TV</string>
-    <string name="tv_browse_hint">Left: lists. Hold OK: add to favorites.</string>
+    <string name="tv_browse_hint">Left: lists. Up from the first channel: columns. Hold OK: favorite.</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
     <string name="settings_intro">Show the intro at start</string>

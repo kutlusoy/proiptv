@@ -58,6 +58,11 @@ class Prefs(context: Context) {
         get() = sp.getString("storage_tree", null)
         set(value) = sp.edit().apply { if (value == null) remove("storage_tree") else putString("storage_tree", value) }.apply()
 
+    /** TV channel browser: the column with the lists stays open next to the channels (three columns). */
+    var tvColumns: Boolean
+        get() = sp.getBoolean("tv_columns", false)
+        set(value) = sp.edit().putBoolean("tv_columns", value).apply()
+
     var tmdbKey: String
         get() = sp.getString("tmdb_key", "") ?: ""
         set(value) = sp.edit().putString("tmdb_key", value.trim()).apply()

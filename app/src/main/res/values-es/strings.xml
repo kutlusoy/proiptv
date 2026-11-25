@@ -323,7 +323,7 @@
     <string name="epg_earlier">Antes</string>
     <string name="epg_later">Después</string>
     <string name="tv_live_badge">TV EN DIRECTO</string>
-    <string name="tv_browse_hint">Izquierda: listas. OK mantenido: a favoritos.</string>
+    <string name="tv_browse_hint">Izquierda: listas. Arriba desde el primer canal: columnas. OK mantenido: favorito.</string>
     <string name="sort_az">A–Z</string>
     <string name="sort_za">Z–A</string>
     <string name="settings_intro">Mostrar la intro al iniciar</string>

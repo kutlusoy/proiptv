@@ -210,8 +210,9 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
     var tvBrowse by remember { mutableStateOf(tvMode && request is PlayRequest.Zap && request.source !is Source.History && !request.direct) }
     var playSource by remember { mutableStateOf<Source?>((request as? PlayRequest.Zap)?.source) }
     var browseList by remember { mutableIntStateOf(0) }
-    // TV browser: 0 the channels have the focus, 1 the column with the lists (favorites, categories) is open and has it
+    // TV browser: 0 the channels have the focus, 1 the column with the lists (favorites, categories) has it, 2 the switch of the three columns has it
     var browseFocus by remember { mutableIntStateOf(0) }
+    var tvColumns by remember { mutableStateOf(app.prefs.tvColumns) }
     var tvFavTarget by remember { mutableStateOf<Item?>(null) }
     var tvRemoveFav by remember { mutableStateOf<Item?>(null) }
     val okHold = remember { booleanArrayOf(false, false) }
@@ -598,12 +599,12 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
         browseIndex = if (browseList == playingList) index else 0
     }
     // the list column grows when the lists column is open (three columns)
-    val browseLeft by androidx.compose.animation.core.animateFloatAsState(if (browseFocus == 1) TV_LEFT_THREE else TV_LEFT_TWO, androidx.compose.animation.core.tween(220), label = "browse width")
+    val browseLeft by androidx.compose.animation.core.animateFloatAsState(if (tvColumns || browseFocus == 1) TV_LEFT_THREE else TV_LEFT_TWO, androidx.compose.animation.core.tween(220), label = "browse width")
     val tvBack = LocalTv.current && request is PlayRequest.Zap
     BackHandler {
         when {
             // the browser is left to the list of channels (the grid), the full player goes back to the browser
-            tvBrowse -> if (browseFocus == 1) browseFocus = 0 else onClose()
+            tvBrowse -> if (browseFocus != 0) browseFocus = 0 else onClose()
             listOpen -> listOpen = false
             tvBack -> scope.launch {
                 var origin = playSource
@@ -683,7 +684,13 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                             val shortPress = okHold[0] && !okHold[1]
                             okHold[0] = false
                             okHold[1] = false
-                            if (shortPress) { if (browseFocus == 1) browseFocus = 0 else okInBrowser() }
+                            if (shortPress) {
+                                when (browseFocus) {
+                                    1 -> browseFocus = 0
+                                    2 -> { tvColumns = !tvColumns; app.prefs.tvColumns = tvColumns; browseFocus = 0 }
+                                    else -> okInBrowser()
+                                }
+                            }
                             true
                         }
                         else -> false
@@ -692,10 +699,25 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
                 if (e.type != KeyEventType.KeyDown || dialogOpen) return@onPreviewKeyEvent false
                 if (tvBrowse) {
                     return@onPreviewKeyEvent when (e.key) {
-                        Key.DirectionUp, Key.ChannelDown, Key.PageUp -> { if (browseFocus == 1) switchList(-1) else browseStep(-1); true }
-                        Key.DirectionDown, Key.ChannelUp, Key.PageDown -> { if (browseFocus == 1) switchList(1) else browseStep(1); true }
-                        // Left opens the column with the lists, Right closes it again
-                        Key.DirectionLeft -> { if (browseFocus == 0 && browseLists.size > 1) browseFocus = 1; true }
+                        // Up from the first channel reaches the switch of the columns, Down comes back
+                        Key.DirectionUp, Key.ChannelDown, Key.PageUp -> {
+                            when (browseFocus) {
+                                1 -> switchList(-1)
+                                2 -> Unit
+                                else -> if (browseIndex == 0 && e.key == Key.DirectionUp) browseFocus = 2 else browseStep(-1)
+                            }
+                            true
+                        }
+                        Key.DirectionDown, Key.ChannelUp, Key.PageDown -> {
+                            when (browseFocus) {
+                                1 -> switchList(1)
+                                2 -> browseFocus = 0
+                                else -> browseStep(1)
+                            }
+                            true
+                        }
+                        // Left goes to the lists (the column opens when it is not shown), Right goes back to the channels
+                        Key.DirectionLeft -> { if (browseFocus != 1 && browseLists.size > 1) browseFocus = 1; true }
                         Key.DirectionRight -> { if (browseFocus == 1) browseFocus = 0; true }
                         else -> false
                     }
@@ -911,7 +933,7 @@ fun PlayerScreen(vm: MainViewModel, request: PlayRequest, onClose: () -> Unit) {
             }
         }
         if (tvBrowse) {
-            TvBrowseLayer(vm, browseLists, browseList, browseCount, browseIndex, highlightedItem, item, nowNext.first, browseLeft, browseFocus == 1, favKeys)
+            TvBrowseLayer(vm, browseLists, browseList, browseCount, browseIndex, highlightedItem, item, nowNext.first, browseLeft, tvColumns || browseFocus == 1, favKeys, browseFocus == 1, browseFocus == 2, tvColumns)
         }
         if (listOpen && request is PlayRequest.Zap) {
             Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { listOpen = false })
