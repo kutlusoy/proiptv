@@ -47,6 +47,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -241,6 +243,38 @@ fun BrowseScreen(state: AppState, kind: Int) {
             var dragStart by remember { mutableStateOf(0) }
             var dragEnded by remember { mutableStateOf(0L) }
             val rows = dragOrder ?: shown
+            // the dragged row moves to the place of the row it is dragged over
+            fun reorder() {
+                val key = dragKey ?: return
+                val order = dragOrder ?: return
+                val infos = listState.layoutInfo.visibleItemsInfo
+                val own = infos.firstOrNull { it.key == key } ?: return
+                val center = dragStart + dragY + own.size / 2f
+                val target = infos.firstOrNull { it.key != key && center >= it.offset && center < it.offset + it.size } ?: return
+                val from = order.indexOfFirst { it.key == key }
+                val to = order.indexOfFirst { it.key == target.key }
+                if (from < 0 || to < 0) return
+                dragOrder = order.toMutableList().also { val moved = it.removeAt(from); it.add(to, moved) }
+            }
+            // near the top or bottom edge the list scrolls on its own while a row is held
+            LaunchedEffect(dragKey) {
+                if (dragKey == null) return@LaunchedEffect
+                while (dragKey != null) {
+                    val info = listState.layoutInfo
+                    val own = info.visibleItemsInfo.firstOrNull { it.key == dragKey }
+                    if (own != null) {
+                        val center = dragStart + dragY + own.size / 2f
+                        val zone = own.size * 0.9f
+                        val delta = when {
+                            center < info.viewportStartOffset + zone -> -((info.viewportStartOffset + zone - center) / zone).coerceIn(0.1f, 1f) * 18f
+                            center > info.viewportEndOffset - zone -> ((center - (info.viewportEndOffset - zone)) / zone).coerceIn(0.1f, 1f) * 18f
+                            else -> 0f
+                        }
+                        if (delta != 0f) { listState.scrollBy(delta); reorder() }
+                    }
+                    kotlinx.coroutines.delay(16)
+                }
+            }
             val sortable = inFavorites && q.isEmpty() && currentList != null
             LazyColumn(Modifier.fillMaxSize(), state = listState, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 itemsIndexed(rows, key = { _, e -> e.key }) { index, e ->
@@ -254,16 +288,8 @@ fun BrowseScreen(state: AppState, kind: Int) {
                                 dragStart = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == e.key }?.offset ?: 0
                             }
                             override fun move(dy: Float) {
-                                val order = dragOrder ?: return
                                 dragY += dy
-                                val infos = listState.layoutInfo.visibleItemsInfo
-                                val own = infos.firstOrNull { it.key == e.key } ?: return
-                                val center = own.offset + (dragY - (own.offset - dragStart)) + own.size / 2f
-                                val target = infos.firstOrNull { it.key != e.key && center >= it.offset && center < it.offset + it.size } ?: return
-                                val from = order.indexOfFirst { it.key == e.key }
-                                val to = order.indexOfFirst { it.key == target.key }
-                                if (from < 0 || to < 0) return
-                                dragOrder = order.toMutableList().also { val moved = it.removeAt(from); it.add(to, moved) }
+                                reorder()
                             }
                             override fun end(save: Boolean) {
                                 val order = dragOrder
