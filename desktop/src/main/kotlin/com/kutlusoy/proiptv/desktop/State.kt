@@ -401,15 +401,14 @@ class AppState(val store: Store, val scope: CoroutineScope) {
         favorites = store.config.favorites
     }
 
-    /** The order of a list is the order of its entries in the settings file. Moves one entry up or down. */
-    fun moveFavorite(listId: String, e: Entry, delta: Int) {
+    /** The order of a list is the order of its entries in the settings file. */
+    /** Stores the order that was made by dragging: [ordered] are the entries of the list as they are shown now. */
+    fun setFavoriteOrder(listId: String, ordered: List<Entry>) {
+        val rank = ordered.withIndex().associate { (i, e) -> e.key to i }
         store.update { c ->
             val inList = c.favorites.filter { it.listId == listId }
-            val i = inList.indexOfFirst { it.account == e.accountId && it.kind == e.kind && it.remoteId == e.remoteId }
-            val j = i + delta
-            if (i < 0 || j !in inList.indices) return@update c
-            val reordered = inList.toMutableList().also { java.util.Collections.swap(it, i, j) }
-            c.copy(favorites = c.favorites.filter { it.listId != listId } + reordered)
+            val sorted = inList.sortedBy { rank["${it.account}|${it.kind}|${it.remoteId}"] ?: Int.MAX_VALUE }
+            c.copy(favorites = c.favorites.filter { it.listId != listId } + sorted)
         }
         favorites = store.config.favorites
     }

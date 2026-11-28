@@ -43,6 +43,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -230,12 +234,46 @@ fun BrowseScreen(state: AppState, kind: Int) {
         if (historyOnly && kind == Kind.LIVE && !inFavorites) {
             HistoryTiles(state, all)
         } else if (kind == Kind.LIVE || inFavorites) {
+            // favorites are sorted by dragging: hold the mouse on a row and pull it up or down, the order is stored on release
+            var dragOrder by remember { mutableStateOf<List<Entry>?>(null) }
+            var dragKey by remember { mutableStateOf<String?>(null) }
+            var dragY by remember { mutableStateOf(0f) }
+            var dragStart by remember { mutableStateOf(0) }
+            var dragEnded by remember { mutableStateOf(0L) }
+            val rows = dragOrder ?: shown
+            val sortable = inFavorites && q.isEmpty() && currentList != null
             LazyColumn(Modifier.fillMaxSize(), state = listState, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                itemsIndexed(shown, key = { _, e -> e.key }) { index, e ->
+                itemsIndexed(rows, key = { _, e -> e.key }) { index, e ->
                     ChannelRow(
                         state, e,
-                        onMove = if (inFavorites && q.isEmpty()) { delta -> state.moveFavorite(currentList!!.id, e, delta) } else null,
+                        dragging = dragKey == e.key,
+                        dragOffset = { listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == e.key }?.let { dragY - (it.offset - dragStart) } ?: 0f },
+                        onDrag = if (!sortable) null else object : RowDrag {
+                            override fun start() {
+                                dragOrder = shown; dragKey = e.key; dragY = 0f
+                                dragStart = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == e.key }?.offset ?: 0
+                            }
+                            override fun move(dy: Float) {
+                                val order = dragOrder ?: return
+                                dragY += dy
+                                val infos = listState.layoutInfo.visibleItemsInfo
+                                val own = infos.firstOrNull { it.key == e.key } ?: return
+                                val center = own.offset + (dragY - (own.offset - dragStart)) + own.size / 2f
+                                val target = infos.firstOrNull { it.key != e.key && center >= it.offset && center < it.offset + it.size } ?: return
+                                val from = order.indexOfFirst { it.key == e.key }
+                                val to = order.indexOfFirst { it.key == target.key }
+                                if (from < 0 || to < 0) return
+                                dragOrder = order.toMutableList().also { val moved = it.removeAt(from); it.add(to, moved) }
+                            }
+                            override fun end(save: Boolean) {
+                                val order = dragOrder
+                                if (save && order != null) state.setFavoriteOrder(currentList!!.id, order)
+                                dragEnded = System.currentTimeMillis()
+                                dragKey = null; dragOrder = null; dragY = 0f
+                            }
+                        },
                     ) {
+                        if (dragKey != null || System.currentTimeMillis() - dragEnded < 400) return@ChannelRow
                         if (kind == Kind.LIVE) {
                             // the search goes with the player, together with the list it started from
                             val origin = if (q.isEmpty()) emptyList() else all.filter { e ->
@@ -276,11 +314,32 @@ fun BrowseScreen(state: AppState, kind: Int) {
     }
 }
 
+private interface RowDrag {
+    fun start()
+    fun move(dy: Float)
+    fun end(save: Boolean)
+}
+
 @Composable
-private fun ChannelRow(state: AppState, e: Entry, onMove: ((Int) -> Unit)? = null, onClick: () -> Unit) {
+private fun ChannelRow(state: AppState, e: Entry, dragging: Boolean = false, dragOffset: () -> Float = { 0f }, onDrag: RowDrag? = null, onClick: () -> Unit) {
     val info = remember(e.name) { TitleParser.parse(e.name) }
+    val current = androidx.compose.runtime.rememberUpdatedState(onDrag)
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth()
+            .graphicsLayer { if (dragging) translationY = dragOffset() }
+            .zIndex(if (dragging) 1f else 0f)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (dragging) Palette.Wine.copy(alpha = 0.75f) else Color.Transparent)
+            .clickable(onClick = onClick)
+            .then(if (onDrag == null) Modifier else Modifier.pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { current.value?.start() },
+                    onDrag = { change, amount -> change.consume(); current.value?.move(amount.y) },
+                    onDragEnd = { current.value?.end(true) },
+                    onDragCancel = { current.value?.end(false) },
+                )
+            })
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Logo(e.logo, Modifier.size(width = 64.dp, height = 40.dp), name = e.name)
@@ -298,10 +357,6 @@ private fun ChannelRow(state: AppState, e: Entry, onMove: ((Int) -> Unit)? = nul
             }
         }
         if (info.year > 0) Badge(info.year.toString())
-        if (onMove != null) {
-            Tip(t("fav_move_up")) { IconButton(onClick = { onMove(-1) }) { Icon(Icons.Filled.KeyboardArrowUp, t("fav_move_up")) } }
-            Tip(t("fav_move_down")) { IconButton(onClick = { onMove(1) }) { Icon(Icons.Filled.KeyboardArrowDown, t("fav_move_down")) } }
-        }
         Tip(t(if (state.isFavorite(e)) "fav_remove" else "fav_add")) { IconButton(onClick = { state.toggleFavorite(e) }) {
             Icon(if (state.isFavorite(e)) Icons.Filled.Star else Icons.Filled.StarBorder, null, tint = if (state.isFavorite(e)) Color(0xFFFFC107) else Color.White.copy(alpha = 0.4f))
         } }
